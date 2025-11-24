@@ -112,7 +112,15 @@ const BEAM_BASE_LIFE     = 1500;  // ms
 const BEAM_BASE_COOLDOWN = 900;   // ms
 
 // 武器チャージ
-const WEAPON_CHARGE_TIME = 5000; // ms
+const WEAPON_CHARGE_TIME = 3000; // ms
+
+// アイテム
+const ITEM_SPAWN_MIN = 4000; // ms
+const ITEM_SPAWN_MAX = 9000; // ms
+const ITEM_FALL_ACCEL = 0.18;
+const ITEM_LIFETIME = 12000; // ms
+const ATTACK_BOOST_DURATION = 7000; // ms
+const ATTACK_BOOST_MULTIPLIER = 1.5;
 
 // ===== スプライト（256x256想定） =====
 const iboImg  = new Image();
@@ -139,6 +147,7 @@ let stageClearText = "";
 
 let weaponCharge = 0; // 0.0〜1.0
 let timeSinceAttack = 0;
+let attackBoostTime = 0;
 
 class Fighter {
   constructor(x, colorBase, isEnemy=false) {
@@ -180,6 +189,8 @@ const btnEnter = document.getElementById("btnEnter");
 
 let missiles = [];
 let beams    = [];
+let items    = [];
+let itemSpawnTimer = 0;
 let resultText = "";
 
 // ===== 入力 =====
@@ -313,6 +324,10 @@ function rectIntersect(a, b) {
   );
 }
 
+function randomItemSpawnTime() {
+  return ITEM_SPAWN_MIN + Math.random() * (ITEM_SPAWN_MAX - ITEM_SPAWN_MIN);
+}
+
 function resetGame() {
   // ステージ開始時に両者全回復・位置リセット
   player.x = 180;
@@ -332,11 +347,14 @@ function resetGame() {
 
   missiles = [];
   beams = [];
+  items = [];
   resultText = "";
   stageClearText = "";
 
   weaponCharge = 0;
   timeSinceAttack = 0;
+  attackBoostTime = 0;
+  itemSpawnTimer = randomItemSpawnTime();
 }
 
 function update(dt) {
@@ -344,6 +362,13 @@ function update(dt) {
 
   player.missileCooldown = Math.max(0, player.missileCooldown - dt);
   enemy.beamCooldown    = Math.max(0, enemy.beamCooldown - dt);
+
+  attackBoostTime = Math.max(0, attackBoostTime - dt);
+
+  itemSpawnTimer -= dt;
+  if (itemSpawnTimer <= 0) {
+    spawnItem();
+  }
 
   // 攻撃していない時間を計測してチャージ
   timeSinceAttack += dt;
@@ -353,6 +378,7 @@ function update(dt) {
   updateEnemy(dt);
   updateMissiles();
   updateBeams(dt);
+  updateItems(dt);
 
   player.facing = (enemy.x >= player.x) ? 1 : -1;
   enemy.facing  = (player.x >= enemy.x) ? -1 : 1;
@@ -396,6 +422,55 @@ function applyGravity(f) {
     f.vy = 0;
     f.onGround = true;
   }
+}
+
+function spawnItem() {
+  const type = Math.random() < 0.5 ? "heal" : "attack";
+  const size = 28;
+  const margin = size + 20;
+  const x = clamp(Math.random() * (canvas.width - margin * 2) + margin, margin, canvas.width - margin);
+  items.push({
+    x,
+    y: -size,
+    vy: 0,
+    size,
+    type,
+    life: ITEM_LIFETIME,
+    collected: false
+  });
+  itemSpawnTimer = randomItemSpawnTime();
+}
+
+function updateItems(dt) {
+  const landingY = GROUND_Y - 16;
+  items.forEach(item => {
+    item.vy += ITEM_FALL_ACCEL;
+    item.y += item.vy;
+    item.life -= dt;
+
+    if (item.y > landingY) {
+      item.y = landingY;
+      item.vy = 0;
+    }
+
+    const itemRect = {
+      x: item.x - item.size / 2,
+      y: item.y - item.size / 2,
+      w: item.size,
+      h: item.size
+    };
+
+    if (rectIntersect(player.rect(), itemRect)) {
+      if (item.type === "heal") {
+        player.hp = clamp(player.hp + 2, 0, player.maxHp);
+      } else {
+        attackBoostTime = ATTACK_BOOST_DURATION;
+      }
+      item.collected = true;
+    }
+  });
+
+  items = items.filter(item => item.life > 0 && !item.collected);
 }
 
 function updatePlayer() {
@@ -482,6 +557,7 @@ function maybeEnemyDodgeJump() {
 function shootMissile() {
   player.missileCooldown = 350;
   const special = weaponCharge >= 1;
+  const damageMultiplier = attackBoostTime > 0 ? ATTACK_BOOST_MULTIPLIER : 1;
   weaponCharge = 0;
   timeSinceAttack = 0;
   const dir = player.facing;
@@ -499,7 +575,7 @@ function shootMissile() {
         r: 16,
         vx: Math.cos(a) * speed * dir,
         vy: Math.sin(a) * speed,
-        damage: 2,
+        damage: 2 * damageMultiplier,
         isSpecial: true,
         alive: true
       });
@@ -511,7 +587,7 @@ function shootMissile() {
       r: 10,
       vx: dir * 7.5,
       vy: 0,
-      damage: 1,
+      damage: 1 * damageMultiplier,
       isSpecial: false,
       alive: true
     });
@@ -670,6 +746,26 @@ function drawSpriteCharacter(f, img) {
   ctx.restore();
 }
 
+function drawItems() {
+  items.forEach(item => {
+    ctx.save();
+    ctx.translate(item.x, item.y);
+    ctx.beginPath();
+    ctx.fillStyle = item.type === "heal" ? "#ffc1c1" : "#ffe082";
+    ctx.strokeStyle = "#333";
+    ctx.arc(0, 0, item.size / 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = "#333";
+    ctx.font = "bold 13px 'Yu Gothic'";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(item.type === "heal" ? "HP" : "ATK", 0, 1);
+    ctx.restore();
+  });
+}
+
 function drawMissiles() {
   missiles.forEach(m => {
     ctx.beginPath();
@@ -711,6 +807,18 @@ function drawWeaponCharge() {
   ctx.font = "12px 'Yu Gothic'";
   const label = weaponCharge >= 1 ? "SPECIAL READY" : "WEAPON CHARGE";
   ctx.fillText(label, x, y - 4);
+
+  if (attackBoostTime > 0) {
+    const boostRatio = attackBoostTime / ATTACK_BOOST_DURATION;
+    const by = y + h + 6;
+    const bh = 9;
+    ctx.fillStyle = "#ffb74d";
+    ctx.fillRect(x, by, w * boostRatio, bh);
+    ctx.strokeStyle = "#444";
+    ctx.strokeRect(x, by, w, bh);
+    ctx.fillStyle = "#444";
+    ctx.fillText("ATK UP", x, by + bh + 10);
+  }
 }
 
 function drawBeams() {
@@ -774,6 +882,7 @@ function drawGame() {
   drawSpriteCharacter(player, iboImg);
   drawSpriteCharacter(enemy,  kireImg);
 
+  drawItems();
   drawMissiles();
   drawBeams();
 
