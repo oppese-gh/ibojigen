@@ -74,7 +74,7 @@
 <canvas id="game" width="800" height="480"></canvas>
 <div id="info">
   いぼ次元ラッシュ v0.10a
-  ← →：移動　／　Space：ジャンプ　／　I：いぼミサイル　／　Enter：スタート／次へ
+  ← →：移動　／　Space：ジャンプ　／　I：いぼミサイル　／　↓：足場から降りる　／　Enter：スタート／次へ
 </div>
 
 <div id="enterControls">
@@ -95,6 +95,11 @@ ctx.imageSmoothingEnabled = false; // ドット感維持
 
 // 地面を画面のかなり下に
 const GROUND_Y = 400;
+const PLATFORMS = [
+  { x: 200, y: GROUND_Y - 90, w: 180, h: 12 },
+  { x: 600, y: GROUND_Y - 90, w: 180, h: 12 },
+  { x: 400, y: GROUND_Y - 170, w: 200, h: 12 }
+];
 
 // ゲーム状態
 const STATE_TITLE      = 0;
@@ -153,8 +158,8 @@ class Fighter {
   constructor(x, colorBase, isEnemy=false) {
     this.x = x;
     this.y = GROUND_Y;
-    this.w = 70;   // 当たり判定用
-    this.h = 150;
+    this.w = 60;   // 当たり判定用
+    this.h = 120;
     this.speed = 4;
     this.colorBase = colorBase;
     this.isEnemy = isEnemy;
@@ -167,6 +172,7 @@ class Fighter {
     this.beamCooldown = 0;
     this.aiMove = 0;
     this.aiBeam = false;
+    this.dropTimer = 0;
   }
   rect() {
     return {
@@ -315,6 +321,24 @@ function setupTouchControls() {
 function clamp(v, min, max) {
   return Math.max(min, Math.min(max, v));
 }
+
+function expandRect(rect, padding) {
+  return {
+    x: rect.x - padding,
+    y: rect.y - padding,
+    w: rect.w + padding * 2,
+    h: rect.h + padding * 2
+  };
+}
+
+function getSnappedDirection(fromX, fromY, toX, toY) {
+  const dx = toX - fromX;
+  const dy = toY - fromY;
+  let angle = Math.atan2(dy, dx);
+  const step = Math.PI / 4; // 45°刻み
+  angle = Math.round(angle / step) * step;
+  return { angle, dx: Math.cos(angle), dy: Math.sin(angle) };
+}
 function rectIntersect(a, b) {
   return (
     a.x < b.x + b.w &&
@@ -363,6 +387,8 @@ function update(dt) {
   player.missileCooldown = Math.max(0, player.missileCooldown - dt);
   enemy.beamCooldown    = Math.max(0, enemy.beamCooldown - dt);
 
+  player.dropTimer = Math.max(0, player.dropTimer - dt);
+
   attackBoostTime = Math.max(0, attackBoostTime - dt);
 
   itemSpawnTimer -= dt;
@@ -374,7 +400,7 @@ function update(dt) {
   timeSinceAttack += dt;
   weaponCharge = clamp(timeSinceAttack / WEAPON_CHARGE_TIME, 0, 1);
 
-  updatePlayer();
+  updatePlayer(dt);
   updateEnemy(dt);
   updateMissiles();
   updateBeams(dt);
@@ -412,13 +438,36 @@ function getStageClearMessage(stageNum) {
   return "";
 }
 
-function applyGravity(f) {
+function applyGravityAndPlatforms(f) {
+  f.prevY = f.y;
+  f.onGround = false;
+  f.vy += 0.6; // 重力
   f.y += f.vy;
-  if (!f.onGround) {
-    f.vy += 0.6; // 重力
-  }
-  if (f.y >= GROUND_Y) {
-    f.y = GROUND_Y;
+
+  let landingY = null;
+  const halfW = f.w / 2;
+
+  const considerSurface = (surfaceY, left, right) => {
+    const crossing = f.prevY <= surfaceY && f.y >= surfaceY && f.vy >= 0;
+    const withinX = f.x + halfW > left && f.x - halfW < right;
+    if (crossing && withinX) {
+      if (landingY === null || surfaceY < landingY) {
+        landingY = surfaceY;
+      }
+    }
+  };
+
+  PLATFORMS.forEach(p => {
+    if (f.dropTimer > 0) return;
+    const left = p.x - p.w / 2;
+    const right = p.x + p.w / 2;
+    considerSurface(p.y, left, right);
+  });
+
+  considerSurface(GROUND_Y, 0, canvas.width);
+
+  if (landingY !== null) {
+    f.y = landingY;
     f.vy = 0;
     f.onGround = true;
   }
@@ -473,11 +522,18 @@ function updateItems(dt) {
   items = items.filter(item => item.life > 0 && !item.collected);
 }
 
-function updatePlayer() {
+function updatePlayer(dt) {
   if (keys["ArrowLeft"])  player.x -= player.speed;
   if (keys["ArrowRight"]) player.x += player.speed;
   player.x = clamp(player.x, 70, canvas.width - 70);
-  applyGravity(player);
+
+  if (keys["ArrowDown"] && player.onGround && player.y < GROUND_Y - 4) {
+    player.dropTimer = 220;
+    player.onGround = false;
+    player.vy = Math.max(player.vy, 2);
+  }
+
+  applyGravityAndPlatforms(player);
 }
 
 let enemyThinkTime = 0;
@@ -493,7 +549,7 @@ function updateEnemy(dt) {
 
   maybeEnemyDodgeJump(); // 回避ジャンプ
 
-  applyGravity(enemy);
+  applyGravityAndPlatforms(enemy);
 
   if (enemy.aiBeam && enemy.beamCooldown === 0) {
     shootBeam();
@@ -560,37 +616,30 @@ function shootMissile() {
   const damageMultiplier = attackBoostTime > 0 ? ATTACK_BOOST_MULTIPLIER : 1;
   weaponCharge = 0;
   timeSinceAttack = 0;
-  const dir = player.facing;
   const r = player.rect();
-  const startX = player.x + dir * (player.w/2 + 8);
-  const startY = r.y + r.h * 0.45;
+  const startX = player.x;
+  const startY = r.y + r.h * 0.4;
+  const dirInfo = getSnappedDirection(startX, startY, enemy.x, enemy.y - enemy.h / 2);
 
-  if (special) {
-    const angles = [-0.32, 0, 0.32];
-    angles.forEach(a => {
-      const speed = 8.2;
-      missiles.push({
-        x: startX,
-        y: startY,
-        r: 16,
-        vx: Math.cos(a) * speed * dir,
-        vy: Math.sin(a) * speed,
-        damage: 2 * damageMultiplier,
-        isSpecial: true,
-        alive: true
-      });
-    });
-  } else {
+  const pushMissile = (angle, speed, size, damage, isSpecial) => {
     missiles.push({
       x: startX,
       y: startY,
-      r: 10,
-      vx: dir * 7.5,
-      vy: 0,
-      damage: 1 * damageMultiplier,
-      isSpecial: false,
+      r: size,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      damage,
+      isSpecial,
       alive: true
     });
+  };
+
+  if (special) {
+    const angles = [dirInfo.angle - Math.PI / 4, dirInfo.angle, dirInfo.angle + Math.PI / 4];
+    const speed = 8.2;
+    angles.forEach(a => pushMissile(a, speed, 16, 2 * damageMultiplier, true));
+  } else {
+    pushMissile(dirInfo.angle, 7.5, 10, 1 * damageMultiplier, false);
   }
 }
 
@@ -601,7 +650,8 @@ function updateMissiles() {
     if (m.x < -50 || m.x > canvas.width + 50) m.alive = false;
 
     const mr = { x: m.x - m.r, y: m.y - m.r, w: m.r*2, h: m.r*2 };
-    if (rectIntersect(mr, enemy.rect())) {
+    const paddedEnemy = expandRect(enemy.rect(), 12);
+    if (rectIntersect(mr, paddedEnemy)) {
       enemy.hp -= calcDamageAgainstEnemy(m);
       m.alive = false;
     }
@@ -645,21 +695,21 @@ function shootBeam() {
   const bandageX = enemy.x;
   const bandageY = r.y + r.h * 0.02;
 
-  const startX = bandageX - 4;
+  const startX = bandageX;
   const startY = bandageY - 4;
+  const playerCenterY = player.y - player.h / 2;
+  const dirInfo = params.bidirect
+    ? getSnappedDirection(startX, startY, player.x, playerCenterY)
+    : { angle: Math.PI, dx: -1, dy: 0 };
 
-  // 向き決定：Stage1 は左固定、Stage2以降はプレイヤー側へ
-  let dir = -1;
-  if (params.bidirect) {
-    dir = (player.x >= enemy.x) ? 1 : -1;
-  }
-
+  const size = 20;
   beams.push({
-    x: startX,
-    y: startY,
-    w: 36,
-    h: 8,
-    vx: dir * params.speed,
+    x: startX - size / 2,
+    y: startY - size / 2,
+    w: size,
+    h: size,
+    vx: dirInfo.dx * params.speed,
+    vy: dirInfo.dy * params.speed,
     life: params.life,
     alive: true
   });
@@ -668,8 +718,9 @@ function shootBeam() {
 function updateBeams(dt) {
   beams.forEach(b => {
     b.x += b.vx;
+    b.y += b.vy;
     b.life -= dt;
-    if (b.life <= 0 || b.x + b.w < 0 || b.x > canvas.width + 50) {
+    if (b.life <= 0 || b.x + b.w < 0 || b.x > canvas.width + 50 || b.y > canvas.height + 50 || b.y + b.h < -50) {
       b.alive = false;
     }
 
@@ -700,6 +751,13 @@ function drawBackground() {
     ctx.fill();
   }
 
+  ctx.fillStyle = "#c48a5a";
+  PLATFORMS.forEach(p => {
+    ctx.fillRect(p.x - p.w/2, p.y - p.h, p.w, p.h);
+    ctx.strokeStyle = "#8d5a2b";
+    ctx.strokeRect(p.x - p.w/2, p.y - p.h, p.w, p.h);
+  });
+
   const baseX = 600;
   const baseY = GROUND_Y - 22;
   ctx.strokeStyle = "#c48a5a";
@@ -729,7 +787,7 @@ function drawSpriteCharacter(f, img) {
   const srcW = img.width;
   const srcH = img.height;
 
-  const drawH = 210;
+  const drawH = 150;
   const drawW = drawH * (srcW / srcH);
   const dx = f.x - drawW / 2;
   const dy = f.y - drawH;  // 足元が f.y に来る
@@ -823,7 +881,14 @@ function drawWeaponCharge() {
 
 function drawBeams() {
   beams.forEach(b => {
-    const grad = ctx.createLinearGradient(b.x, b.y, b.x + b.w, b.y);
+    const len = Math.sqrt(b.vx * b.vx + (b.vy || 0) * (b.vy || 0)) || 1;
+    const dirX = b.vx / len;
+    const dirY = (b.vy || 0) / len;
+    const startX = b.x + b.w/2 - dirX * b.w;
+    const startY = b.y + b.h/2 - dirY * b.h;
+    const endX = b.x + b.w/2 + dirX * b.w;
+    const endY = b.y + b.h/2 + dirY * b.h;
+    const grad = ctx.createLinearGradient(startX, startY, endX, endY);
     grad.addColorStop(0,   "rgba(255,230,230,0.15)");
     grad.addColorStop(0.3, "rgba(255,120,120,0.9)");
     grad.addColorStop(1,   "rgba(120,0,0,0.9)");
