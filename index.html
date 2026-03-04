@@ -107,12 +107,25 @@
       player: "🧔",
       dog: "🐕",
       guard: "👮",
+      wolf: "🐺",
+      lion: "🦁",
+      dragon: "🐉",
       food: "🍖",
       potion: "🧪",
       map: "👁",
+      shield: "🛡️",
+      axe: "🪓",
       ladder: "🪜",
-      wall: "#",
+      wall: "🧱",
       floor: "."
+    };
+
+    const ENEMY_ARCHETYPES = {
+      dog: { char: SPRITES.dog, hp: 6, atk: 2, def: 0 },
+      guard: { char: SPRITES.guard, hp: 9, atk: 3, def: 1 },
+      wolf: { char: SPRITES.wolf, hp: 12, atk: 4, def: 1 },
+      lion: { char: SPRITES.lion, hp: 16, atk: 5, def: 2 },
+      dragon: { char: SPRITES.dragon, hp: 24, atk: 7, def: 3 }
     };
 
     const mapEl = document.getElementById("grid");
@@ -129,12 +142,14 @@
         hp: 20,
         maxHp: 20,
         atk: 3,
+        atkBuff: 0,
         def: 1,
         hunger: 1000,
         ibo: 0,
         iboMax: 5,
         exp: 0,
-        level: 1
+        level: 1,
+        walkCount: 0
       },
       enemies: [],
       items: [],
@@ -164,6 +179,14 @@
       state.logs.unshift(message);
       if (state.logs.length > MAX_LOG) state.logs.pop();
       logEl.innerHTML = state.logs.map((m) => `<div class="line">${m}</div>`).join("");
+    }
+
+    function expToNextLevel(level = state.player.level) {
+      return level * 3;
+    }
+
+    function playerAtkValue() {
+      return state.player.atk + state.player.atkBuff;
     }
 
     function createMap() {
@@ -223,6 +246,10 @@
     }
 
     function setupFloor() {
+      if (state.player.atkBuff > 0) {
+        state.player.atkBuff = 0;
+        addLog("🪓の効果が切れた。");
+      }
       const built = createMap();
       state.map = built.map;
       state.rooms = built.rooms;
@@ -287,32 +314,58 @@
 
     function placeEnemies() {
       const pool = randomFloorPos();
-      const count = randInt(2, 3) + Math.floor((state.floor - 1) * 0.9);
+      const count = randInt(2, 3) + Math.floor((state.floor - 1) * 0.55);
+      const options = enemyTypesForFloor();
       let placed = 0;
       for (const p of pool) {
         if (placed >= count) break;
         if (Math.abs(p.x - state.player.x) + Math.abs(p.y - state.player.y) < 4) continue;
         if (p.x === state.ladder.x && p.y === state.ladder.y) continue;
-
-        const isGuard = Math.random() < 0.42;
-        state.enemies.push(
-          isGuard
-            ? { x: p.x, y: p.y, type: "guard", hp: 10, atk: 3, def: 1, char: SPRITES.guard }
-            : { x: p.x, y: p.y, type: "dog", hp: 6, atk: 2, def: 0, char: SPRITES.dog }
-        );
+        const type = options[randInt(0, options.length - 1)];
+        state.enemies.push(spawnEnemy(type, p.x, p.y));
         placed++;
       }
     }
 
+    function enemyTypesForFloor() {
+      if (state.floor <= 3) return ["dog", "guard"];
+      if (state.floor <= 6) return ["dog", "wolf"];
+      if (state.floor <= 9) return ["wolf", "lion"];
+      return ["wolf", "lion", "dragon"];
+    }
+
+    function floorPowerTier() {
+      if (state.floor <= 2) return 0;
+      if (state.floor <= 4) return 1;
+      if (state.floor <= 6) return 2;
+      if (state.floor <= 8) return 3;
+      if (state.floor <= 10) return 4;
+      return 5 + Math.floor((state.floor - 10) / 2);
+    }
+
+    function spawnEnemy(type, x, y) {
+      const base = ENEMY_ARCHETYPES[type];
+      const tier = floorPowerTier();
+      return {
+        x,
+        y,
+        type,
+        char: base.char,
+        hp: base.hp + tier * 2 + Math.floor(Math.max(0, state.floor - 6) / 3),
+        atk: base.atk + Math.floor((tier + 1) / 2),
+        def: base.def + Math.floor(tier / 3)
+      };
+    }
+
     function placeItems() {
       const pool = randomFloorPos();
-      const itemCount = randInt(2, 4);
+      const itemCount = randInt(2, 3);
       let placed = 0;
       for (const p of pool) {
         if (placed >= itemCount) break;
         if (!positionFree(p.x, p.y)) continue;
         const roll = Math.random();
-        const type = roll < 0.4 ? "food" : roll < 0.8 ? "potion" : "map";
+        const type = roll < 0.22 ? "food" : roll < 0.72 ? "potion" : "map";
         const char = type === "food" ? SPRITES.food : type === "potion" ? SPRITES.potion : SPRITES.map;
         state.items.push({ x: p.x, y: p.y, type, char });
         placed++;
@@ -347,7 +400,8 @@
       statusEl.textContent = [
         `HP ${state.player.hp}/${state.player.maxHp}`,
         `空腹 ${state.player.hunger}${state.starving ? " (ピンチ)" : ""}`,
-        `ATK ${state.player.atk} DEF ${state.player.def}`,
+        `ATK ${playerAtkValue()}${state.player.atkBuff > 0 ? ` (+${state.player.atkBuff})` : ""} DEF ${state.player.def}`,
+        `Lv ${state.player.level} EXP ${state.player.exp}/${expToNextLevel()}`,
         `イボ ${state.player.ibo}/${state.player.iboMax}`,
         `階 ${state.floor}`
       ].join("\n");
@@ -377,7 +431,7 @@
     }
 
     function playerAttack(enemy) {
-      const damage = Math.max(1, state.player.atk - enemy.def);
+      const damage = Math.max(1, playerAtkValue() - enemy.def);
       applyDamage(enemy, damage, enemy.char);
       if (enemy.hp <= 0) {
         killEnemy(enemy);
@@ -388,7 +442,7 @@
       state.enemies = state.enemies.filter((e) => e !== enemy);
       addLog(`${enemy.char}をたおした！`);
       state.player.exp += 1;
-      if (Math.random() < 0.2) {
+      if (Math.random() < 0.16) {
         dropItem(enemy.x, enemy.y);
       }
       maybeLevelUp();
@@ -397,16 +451,24 @@
     function dropItem(x, y) {
       if (itemAt(x, y)) return;
       const roll = Math.random();
-      const type = roll < 0.5 ? "food" : roll < 0.85 ? "potion" : "map";
-      const char = type === "food" ? SPRITES.food : type === "potion" ? SPRITES.potion : SPRITES.map;
+      const type = roll < 0.3 ? "food" : roll < 0.58 ? "potion" : roll < 0.73 ? "map" : roll < 0.88 ? "shield" : "axe";
+      const char =
+        type === "food"
+          ? SPRITES.food
+          : type === "potion"
+            ? SPRITES.potion
+            : type === "map"
+              ? SPRITES.map
+              : type === "shield"
+                ? SPRITES.shield
+                : SPRITES.axe;
       state.items.push({ x, y, type, char });
       addLog(`${char}が落ちた。`);
     }
 
     function maybeLevelUp() {
-      const need = state.player.level * 3;
-      if (state.player.exp >= need) {
-        state.player.exp = 0;
+      while (state.player.exp >= expToNextLevel()) {
+        state.player.exp -= expToNextLevel();
         state.player.level++;
         state.player.atk += 1;
         state.player.maxHp += 2;
@@ -430,15 +492,30 @@
       if (!it) return;
       state.items = state.items.filter((i) => i !== it);
       if (it.type === "food") {
-        state.player.hunger = Math.min(1000, state.player.hunger + 300);
-        addLog("🍖を食べた！ 空腹+300");
+        state.player.hunger = Math.min(1000, state.player.hunger + 200);
+        addLog("🍖を食べた！ 空腹+200");
       } else if (it.type === "potion") {
         state.player.hp = Math.min(state.player.maxHp, state.player.hp + 10);
         addLog("🧪を使った！ HP+10");
-      } else {
+      } else if (it.type === "map") {
         state.revealed = true;
         addLog("👁 地図を見通した！");
+      } else if (it.type === "shield") {
+        state.player.def += 1;
+        addLog("🛡️を装備！ DEF+1");
+      } else if (it.type === "axe") {
+        state.player.atkBuff = 2;
+        addLog("🪓を拾った！ この階はATK+2");
       }
+    }
+
+    function walkRegen() {
+      state.player.walkCount += 1;
+      if (state.player.walkCount % 12 !== 0) return;
+      if (state.starving) return;
+      if (state.player.hp >= state.player.maxHp) return;
+      state.player.hp = Math.min(state.player.maxHp, state.player.hp + 1);
+      addLog("歩いて体勢を立て直した。HP+1");
     }
 
     function movePlayer(dx, dy) {
@@ -455,6 +532,7 @@
 
       state.player.x = nx;
       state.player.y = ny;
+      walkRegen();
       pickupItem();
 
       if (nx === state.ladder.x && ny === state.ladder.y) {
@@ -506,7 +584,7 @@
           const en = enemyAt(x, y);
           if (en && !hitSet.has(en)) {
             hitSet.add(en);
-            const damage = Math.max(1, state.player.atk - en.def);
+            const damage = Math.max(1, playerAtkValue() - en.def);
             applyDamage(en, damage, en.char);
           }
           x += dx;
@@ -597,16 +675,12 @@
             break;
           }
         }
-
-        if (Math.abs(en.x - state.player.x) + Math.abs(en.y - state.player.y) === 1) {
-          enemyAttack(en);
-          if (state.gameOver) return;
-        }
       }
     }
 
     function hungerTurn() {
-      state.player.hunger = Math.max(0, state.player.hunger - 1);
+      const extra = Math.random() < Math.min(0.35, Math.max(0, state.floor - 3) * 0.03) ? 1 : 0;
+      state.player.hunger = Math.max(0, state.player.hunger - 1 - extra);
       state.starving = state.player.hunger === 0;
       if (state.starving) {
         state.player.hp -= 1;
@@ -645,11 +719,13 @@
       state.player.hp = 20;
       state.player.maxHp = 20;
       state.player.atk = 3;
+      state.player.atkBuff = 0;
       state.player.def = 1;
       state.player.hunger = 1000;
       state.player.ibo = 0;
       state.player.exp = 0;
       state.player.level = 1;
+      state.player.walkCount = 0;
       state.logs = [];
       state.gameOver = false;
       state.starving = false;
