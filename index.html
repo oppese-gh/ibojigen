@@ -21,7 +21,7 @@
       place-items: center;
       background: var(--bg);
       color: var(--text);
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Noto Sans Mono CJK JP", monospace;
+      font-family: system-ui, "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif;
       padding: 12px;
     }
     .wrap {
@@ -37,18 +37,25 @@
       color: var(--accent);
       font-size: 20px;
     }
-    #map {
+    #grid {
       margin: 0;
-      line-height: 1;
-      font-size: 20px;
-      letter-spacing: 0;
-      white-space: pre;
+      display: grid;
+      grid-template-columns: repeat(40, 24px);
+      grid-auto-rows: 24px;
+      width: fit-content;
       background: #0d0d0d;
       border: 1px solid #444;
       padding: 8px;
       overflow: auto;
       user-select: none;
-      min-height: calc(25 * 1em + 16px);
+      min-height: calc(25 * 24px + 16px);
+    }
+    .cell {
+      width: 24px;
+      height: 24px;
+      line-height: 24px;
+      text-align: center;
+      font-size: 20px;
     }
     #status {
       margin-top: 8px;
@@ -80,7 +87,7 @@
 <body>
   <main class="wrap">
     <h1>ぼじろーぐ</h1>
-    <pre id="map" aria-label="game map"></pre>
+    <div id="grid" aria-label="game map" role="img"></div>
     <div id="status"></div>
     <div id="log"></div>
     <div id="help">操作: ↑↓←→移動 / Space 待機 / A いぼビーム / B イボをたべる</div>
@@ -108,7 +115,7 @@
       floor: "."
     };
 
-    const mapEl = document.getElementById("map");
+    const mapEl = document.getElementById("grid");
     const statusEl = document.getElementById("status");
     const logEl = document.getElementById("log");
 
@@ -314,16 +321,16 @@
 
     function render() {
       updateSeen();
-      const rows = [];
+      const cells = [];
       for (let y = 0; y < HEIGHT; y++) {
-        let row = "";
         for (let x = 0; x < WIDTH; x++) {
           const visible = state.revealed || state.seen[y][x];
+          let ch = " ";
           if (!visible) {
-            row += " ";
+            cells.push(`<div class="cell">${ch}</div>`);
             continue;
           }
-          let ch = state.map[y][x] === TILE_WALL ? SPRITES.wall : SPRITES.floor;
+          ch = state.map[y][x] === TILE_WALL ? SPRITES.wall : SPRITES.floor;
 
           if (state.ladder.x === x && state.ladder.y === y) ch = SPRITES.ladder;
           const it = itemAt(x, y);
@@ -332,11 +339,10 @@
           if (en) ch = en.char;
           if (state.player.x === x && state.player.y === y) ch = SPRITES.player;
 
-          row += ch;
+          cells.push(`<div class="cell">${ch}</div>`);
         }
-        rows.push(row);
       }
-      mapEl.textContent = rows.join("\n");
+      mapEl.innerHTML = cells.join("");
 
       statusEl.textContent = [
         `HP ${state.player.hp}/${state.player.maxHp}`,
