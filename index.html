@@ -121,12 +121,31 @@
     };
 
     const ENEMY_ARCHETYPES = {
-      dog: { char: SPRITES.dog, hp: 6, atk: 2, def: 0 },
-      guard: { char: SPRITES.guard, hp: 9, atk: 3, def: 1 },
-      wolf: { char: SPRITES.wolf, hp: 12, atk: 4, def: 1 },
-      lion: { char: SPRITES.lion, hp: 16, atk: 5, def: 2 },
-      dragon: { char: SPRITES.dragon, hp: 24, atk: 7, def: 3 }
+      dog: { char: SPRITES.dog, hp: 6, atk: 2, def: 0, exp: 1 },
+      guard: { char: SPRITES.guard, hp: 9, atk: 3, def: 1, exp: 2 },
+      wolf: { char: SPRITES.wolf, hp: 12, atk: 4, def: 1, exp: 3 },
+      lion: { char: SPRITES.lion, hp: 16, atk: 5, def: 2, exp: 5 },
+      dragon: { char: SPRITES.dragon, hp: 24, atk: 7, def: 3, exp: 8 }
     };
+
+    // テーブル駆動で確率を管理することで、しきい値漏れのバグを防ぐ。
+    // floor item配置比率: 🍖18%, 🧪52%, 👁20%, 🛡️5%, 🪓5%
+    const FLOOR_ITEM_TABLE = [
+      { type: "food", rate: 0.18 },
+      { type: "potion", rate: 0.52 },
+      { type: "map", rate: 0.2 },
+      { type: "shield", rate: 0.05 },
+      { type: "axe", rate: 0.05 }
+    ];
+    // enemy drop: 18%で何か落ちる。内訳は🍖30%, 🧪35%, 👁15%, 🛡️10%, 🪓10%
+    const ENEMY_DROP_CHANCE = 0.18;
+    const ENEMY_DROP_TABLE = [
+      { type: "food", rate: 0.3 },
+      { type: "potion", rate: 0.35 },
+      { type: "map", rate: 0.15 },
+      { type: "shield", rate: 0.1 },
+      { type: "axe", rate: 0.1 }
+    ];
 
     const mapEl = document.getElementById("grid");
     const statusEl = document.getElementById("status");
@@ -160,7 +179,8 @@
       iboCooldown: 0,
       gameOver: false,
       cleared: false,
-      starving: false
+      starving: false,
+      floorGearSpawned: 0
     };
 
     function randInt(min, max) {
@@ -258,6 +278,7 @@
       state.revealed = false;
       state.seen = Array.from({ length: HEIGHT }, () => Array(WIDTH).fill(false));
       state.iboCooldown = 0;
+      state.floorGearSpawned = 0;
 
       const startRoom = state.rooms[0];
       state.player.x = startRoom.cx;
@@ -312,6 +333,35 @@
       return cells;
     }
 
+    function rollFromTable(table) {
+      const roll = Math.random();
+      let acc = 0;
+      for (const row of table) {
+        acc += row.rate;
+        if (roll < acc) return row.type;
+      }
+      return table[table.length - 1].type;
+    }
+
+    function spriteForType(type) {
+      return type === "food"
+        ? SPRITES.food
+        : type === "potion"
+          ? SPRITES.potion
+          : type === "map"
+            ? SPRITES.map
+            : type === "shield"
+              ? SPRITES.shield
+              : SPRITES.axe;
+    }
+
+    function placeItemAt(type, x, y) {
+      if (!positionFree(x, y)) return false;
+      state.items.push({ x, y, type, char: spriteForType(type) });
+      if (type === "shield" || type === "axe") state.floorGearSpawned += 1;
+      return true;
+    }
+
     function placeEnemies() {
       const pool = randomFloorPos();
       const count = randInt(2, 3) + Math.floor((state.floor - 1) * 0.55);
@@ -363,12 +413,20 @@
       let placed = 0;
       for (const p of pool) {
         if (placed >= itemCount) break;
-        if (!positionFree(p.x, p.y)) continue;
-        const roll = Math.random();
-        const type = roll < 0.22 ? "food" : roll < 0.72 ? "potion" : "map";
-        const char = type === "food" ? SPRITES.food : type === "potion" ? SPRITES.potion : SPRITES.map;
-        state.items.push({ x: p.x, y: p.y, type, char });
+        const type = rollFromTable(FLOOR_ITEM_TABLE);
+        if (!placeItemAt(type, p.x, p.y)) continue;
         placed++;
+      }
+
+      // 各フロアで🛡️/🪓を最低1回は体感できるように最低保証する。
+      if (state.floorGearSpawned === 0) {
+        const guaranteedType = Math.random() < 0.5 ? "shield" : "axe";
+        for (const p of pool) {
+          if (placeItemAt(guaranteedType, p.x, p.y)) {
+            addLog(`${spriteForType(guaranteedType)}がこの階に配置された。`);
+            break;
+          }
+        }
       }
     }
 
@@ -441,8 +499,8 @@
     function killEnemy(enemy) {
       state.enemies = state.enemies.filter((e) => e !== enemy);
       addLog(`${enemy.char}をたおした！`);
-      state.player.exp += 1;
-      if (Math.random() < 0.16) {
+      state.player.exp += ENEMY_ARCHETYPES[enemy.type].exp;
+      if (Math.random() < ENEMY_DROP_CHANCE) {
         dropItem(enemy.x, enemy.y);
       }
       maybeLevelUp();
@@ -450,20 +508,18 @@
 
     function dropItem(x, y) {
       if (itemAt(x, y)) return;
-      const roll = Math.random();
-      const type = roll < 0.3 ? "food" : roll < 0.58 ? "potion" : roll < 0.73 ? "map" : roll < 0.88 ? "shield" : "axe";
-      const char =
-        type === "food"
-          ? SPRITES.food
-          : type === "potion"
-            ? SPRITES.potion
-            : type === "map"
-              ? SPRITES.map
-              : type === "shield"
-                ? SPRITES.shield
-                : SPRITES.axe;
-      state.items.push({ x, y, type, char });
-      addLog(`${char}が落ちた。`);
+      const hasFloorGear = state.floorGearSpawned > 0 || state.items.some((it) => it.type === "shield" || it.type === "axe");
+      let type = rollFromTable(ENEMY_DROP_TABLE);
+
+      // 最低保証が未達なら序盤の撃破で🛡️/🪓を優先。出すぎ防止で1階あたり最大2個まで。
+      if (!hasFloorGear) {
+        type = Math.random() < 0.5 ? "shield" : "axe";
+      } else if ((type === "shield" || type === "axe") && state.floorGearSpawned >= 2) {
+        type = Math.random() < 0.5 ? "food" : "potion";
+      }
+
+      if (!placeItemAt(type, x, y)) return;
+      addLog(`${spriteForType(type)}が落ちた。`);
     }
 
     function maybeLevelUp() {
@@ -492,8 +548,8 @@
       if (!it) return;
       state.items = state.items.filter((i) => i !== it);
       if (it.type === "food") {
-        state.player.hunger = Math.min(1000, state.player.hunger + 200);
-        addLog("🍖を食べた！ 空腹+200");
+        state.player.hunger = Math.min(1000, state.player.hunger + 100);
+        addLog("🍖を食べた！ 空腹+100");
       } else if (it.type === "potion") {
         state.player.hp = Math.min(state.player.maxHp, state.player.hp + 10);
         addLog("🧪を使った！ HP+10");
@@ -502,10 +558,10 @@
         addLog("👁 地図を見通した！");
       } else if (it.type === "shield") {
         state.player.def += 1;
-        addLog("🛡️を装備！ DEF+1");
+        addLog("🛡️ DEF+1（恒久）");
       } else if (it.type === "axe") {
         state.player.atkBuff = 2;
-        addLog("🪓を拾った！ この階はATK+2");
+        addLog("🪓 ATK+2（このフロアのみ）");
       }
     }
 
