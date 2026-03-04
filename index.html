@@ -79,38 +79,43 @@
       background: #141414;
       font-size: 16px;
       line-height: 1.5;
+      white-space: normal;
     }
-    .status-row {
+    .row {
       display: flex;
       gap: 14px;
       align-items: center;
       flex-wrap: wrap;
     }
-    .gauge {
-      display: inline-flex;
+    .stat {
+      display: flex;
       align-items: center;
       gap: 6px;
     }
+    .label { min-width: 2.2em; }
     .meter {
-      width: 120px;
+      width: 180px;
       height: 12px;
       border: 1px solid #666;
       background: #242424;
       border-radius: 3px;
       overflow: hidden;
     }
-    .meter-fill {
+    .fill {
+      display: block;
       height: 100%;
       width: 0;
       background: #f1c40f;
+      border-radius: inherit;
     }
-    .status-normal .meter-fill { background: #f1c40f; }
-    .status-low .meter-fill { background: #ff9800; }
-    .status-zero .meter-fill { background: #b53b2f; }
-    .status-normal .value { color: #f1c40f; }
-    .status-low .value { color: #ff9800; }
-    .status-zero .value { color: #e74c3c; }
-    .status-zero .meter { border-color: #e74c3c; }
+    .tone-yellow .fill { background: #f1c40f; }
+    .tone-orange .fill { background: #ff9800; }
+    .tone-red .fill { background: #b53b2f; }
+    .tone-yellow .num { color: #f1c40f; }
+    .tone-orange .num { color: #ff9800; }
+    .tone-red .num { color: #e74c3c; }
+    .meter.tone-red { border-color: #e74c3c; }
+    .meta { margin-top: 6px; }
     #log {
       margin-top: 8px;
       border: 1px solid #3b3b3b;
@@ -267,16 +272,21 @@
       return state.player.atk + state.player.atkBuff;
     }
 
-    function statusTone(value, max) {
-      if (value <= 0) return "status-zero";
-      if (value / max < 0.25) return "status-low";
-      return "status-normal";
+    function meterPercent(value, max) {
+      if (max <= 0) return 0;
+      return Math.max(0, Math.min(100, Math.round((value / max) * 100)));
     }
 
-    function gaugeHtml(label, value, max) {
-      const tone = statusTone(value, max);
-      const ratio = max > 0 ? Math.max(0, Math.min(1, value / max)) : 0;
-      return `<span class="gauge ${tone}">${label} <span class="meter"><span class="meter-fill" style="width:${Math.round(ratio * 100)}%"></span></span> <span class="value">${value}/${max}</span></span>`;
+    function statusTone(value, pct) {
+      if (value <= 0) return "tone-red";
+      if (pct < 25) return "tone-orange";
+      return "tone-yellow";
+    }
+
+    function gaugeHtml(label, value, max, meterType = "") {
+      const pct = meterPercent(value, max);
+      const tone = statusTone(value, pct);
+      return `<div class="stat ${tone}"><span class="label">${label}</span><div class="meter ${meterType} ${value <= 0 ? "tone-red" : ""}"><div class="fill" style="width:${pct}%"></div></div><span class="num">${value}/${max}</span></div>`;
     }
 
     function createMap() {
@@ -549,16 +559,17 @@
 
       // ステータスを2行固定にして、HP/空腹の見やすさを優先する。
       statusEl.innerHTML = `
-        <div class="status-row">
-          ${gaugeHtml("HP", state.player.hp, state.player.maxHp)}
-          ${gaugeHtml("空腹", state.player.hunger, 1000)}
+        <div class="row">
+          ${gaugeHtml("HP", state.player.hp, state.player.maxHp, "hp")}
+          ${gaugeHtml("空腹", state.player.hunger, 1000, "hunger")}
         </div>
-        <div class="status-row">
+        <div class="row meta">
           階 ${state.floor}
           Lv ${state.player.level}
           EXP ${state.player.exp}/${expToNextLevel()}
           ATK ${playerAtkValue()}${state.player.atkBuff > 0 ? ` (+${state.player.atkBuff})` : ""}
           DEF ${state.player.def}
+          イボ ${state.player.ibo}/${state.player.iboMax}
         </div>`;
     }
 
