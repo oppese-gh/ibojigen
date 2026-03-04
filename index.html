@@ -1,1028 +1,674 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>いぼ次元ラッシュ v0.10a</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ぼじろーぐ</title>
   <style>
+    :root {
+      --bg: #111;
+      --panel: #1b1b1b;
+      --text: #f2f2f2;
+      --accent: #7ad1ff;
+      --wall: #7f8c8d;
+      --floor: #2c3e50;
+    }
+    * { box-sizing: border-box; }
     body {
       margin: 0;
-      background: #f7e4c9;
-      font-family: "Yu Gothic", sans-serif;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background: var(--bg);
+      color: var(--text);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Noto Sans Mono CJK JP", monospace;
+      padding: 12px;
+    }
+    .wrap {
+      width: min(100%, 980px);
+      background: var(--panel);
+      border: 1px solid #333;
+      border-radius: 10px;
+      padding: 12px;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+    }
+    h1 {
+      margin: 0 0 8px;
+      color: var(--accent);
+      font-size: 20px;
+    }
+    #map {
+      margin: 0;
+      line-height: 1;
+      font-size: 20px;
+      letter-spacing: 0;
+      white-space: pre;
+      background: #0d0d0d;
+      border: 1px solid #444;
+      padding: 8px;
+      overflow: auto;
       user-select: none;
-      padding-bottom: 90px;
+      min-height: calc(25 * 1em + 16px);
     }
-    canvas {
-      display: block;
-      margin: 20px auto;
-      background: #fbe9d0;
-      border: 4px solid #c96;
-      border-radius: 8px;
-      width: 100%;
-      height: auto;
+    #status {
+      margin-top: 8px;
+      padding: 8px;
+      border: 1px solid #3b3b3b;
+      background: #141414;
+      font-size: 16px;
+      line-height: 1.5;
     }
-    #info {
-      text-align: center;
+    #log {
+      margin-top: 8px;
+      border: 1px solid #3b3b3b;
+      background: #101010;
+      min-height: 96px;
+      max-height: 160px;
+      overflow-y: auto;
+      padding: 8px;
       font-size: 14px;
-      color: #444;
+      line-height: 1.35;
     }
-    #controls {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      width: 100%;
-      display: flex;
-      gap: 8px;
-      padding: 10px;
-      box-sizing: border-box;
-      background: rgba(255, 255, 255, 0.9);
-      backdrop-filter: blur(4px);
+    #help {
+      margin-top: 8px;
+      color: #ccc;
+      font-size: 13px;
     }
-    #controls button {
-      flex: 1;
-      font-size: 16px;
-      padding: 12px 0;
-      border: 2px solid #c96;
-      border-radius: 6px;
-      background: #fff4e6;
-      color: #333;
-    }
-
-    #enterControls {
-      position: fixed;
-      bottom: 74px;
-      left: 0;
-      width: 100%;
-      display: flex;
-      justify-content: center;
-      padding: 0 14px;
-      box-sizing: border-box;
-    }
-    #enterControls button {
-      width: 100%;
-      max-width: 360px;
-      font-size: 16px;
-      padding: 10px 0;
-      border: 2px solid #c96;
-      border-radius: 6px;
-      background: #ffe9d3;
-      color: #333;
-    }
+    .line { margin-bottom: 3px; }
   </style>
 </head>
 <body>
-<canvas id="game" width="800" height="480"></canvas>
-<div id="info">
-  いぼ次元ラッシュ v0.10a
-  ← →：移動　／　Space：ジャンプ　／　I：いぼミサイル　／　↓：足場から降りる　／　Enter：スタート／次へ
-</div>
+  <main class="wrap">
+    <h1>ぼじろーぐ</h1>
+    <pre id="map" aria-label="game map"></pre>
+    <div id="status"></div>
+    <div id="log"></div>
+    <div id="help">操作: ↑↓←→移動 / Space 待機 / A いぼビーム / B イボをたべる</div>
+  </main>
 
-<div id="enterControls">
-  <button id="btnEnter">Enter (スタート/タイトル)</button>
-</div>
-<div id="controls">
-  <button id="btnLeft">←</button>
-  <button id="btnRight">→</button>
-  <button id="btnJump">ジャンプ</button>
-  <button id="btnMissile">ミサイル</button>
-</div>
+  <script>
+    "use strict";
 
-<script>
-// ==== IboJigen Rush v0.10a =======================================
-const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
-ctx.imageSmoothingEnabled = false; // ドット感維持
+    const WIDTH = 40;
+    const HEIGHT = 25;
+    const MAX_LOG = 8;
 
-// 地面を画面のかなり下に
-const GROUND_Y = 400;
-const PLATFORMS = [
-  { x: 200, y: GROUND_Y - 90, w: 180, h: 12 },
-  { x: 600, y: GROUND_Y - 90, w: 180, h: 12 },
-  { x: 400, y: GROUND_Y - 170, w: 200, h: 12 }
-];
+    const TILE_WALL = "#";
+    const TILE_FLOOR = ".";
 
-// ゲーム状態
-const STATE_TITLE      = 0;
-const STATE_PLAYING    = 1;
-const STATE_GAMEOVER   = 2;
-const STATE_STAGE_CLEAR = 3;
-
-// ジャンプ力（マイナスが上向き）
-const PLAYER_JUMP_POWER = -16; // イボジッチ
-const ENEMY_JUMP_POWER  = -13; // キレジッチ
-
-// ビームの基準値
-const BEAM_BASE_SPEED    = 9;     // px/フレーム
-const BEAM_BASE_LIFE     = 1500;  // ms
-const BEAM_BASE_COOLDOWN = 900;   // ms
-
-// 武器チャージ
-const WEAPON_CHARGE_TIME = 3000; // ms
-
-// アイテム
-const ITEM_SPAWN_MIN = 4000; // ms
-const ITEM_SPAWN_MAX = 9000; // ms
-const ITEM_FALL_ACCEL = 0.18;
-const ITEM_LIFETIME = 12000; // ms
-const ATTACK_BOOST_DURATION = 7000; // ms
-const ATTACK_BOOST_MULTIPLIER = 1.5;
-
-// ===== スプライト（256x256想定） =====
-const iboImg  = new Image();
-const kireImg = new Image();
-iboImg.src  = "ibojitch.png";
-kireImg.src = "kirejitch.png";
-
-let assetsLoaded = 0;
-[iboImg, kireImg].forEach(img => {
-  img.onload = () => {
-    assetsLoaded++;
-    if (assetsLoaded === 2) startGame();
-  };
-});
-
-let state = STATE_TITLE;
-let keys = {};
-let lastTime = 0;
-
-// ステージ 1〜5
-let stage = 1;
-const MAX_STAGE = 5;
-let stageClearText = "";
-
-let weaponCharge = 0; // 0.0〜1.0
-let timeSinceAttack = 0;
-let attackBoostTime = 0;
-
-class Fighter {
-  constructor(x, colorBase, isEnemy=false) {
-    this.x = x;
-    this.y = GROUND_Y;
-    this.w = 60;   // 当たり判定用
-    this.h = 120;
-    this.speed = 4;
-    this.colorBase = colorBase;
-    this.isEnemy = isEnemy;
-    this.hp = 6;
-    this.maxHp = 6;
-    this.vy = 0;
-    this.onGround = true;
-    this.facing = isEnemy ? -1 : 1;
-    this.missileCooldown = 0;
-    this.beamCooldown = 0;
-    this.aiMove = 0;
-    this.aiBeam = false;
-    this.dropTimer = 0;
-  }
-  rect() {
-    return {
-      x: this.x - this.w / 2,
-      y: this.y - this.h,
-      w: this.w,
-      h: this.h
+    const SPRITES = {
+      player: "🧔",
+      dog: "🐕",
+      guard: "👮",
+      food: "🍖",
+      potion: "🧪",
+      map: "👁",
+      ladder: "🪜",
+      wall: "#",
+      floor: "."
     };
-  }
-}
 
-const player = new Fighter(180, "#b673ff", false);
-const enemy  = new Fighter(620, "#f5d3a5", true);
+    const mapEl = document.getElementById("map");
+    const statusEl = document.getElementById("status");
+    const logEl = document.getElementById("log");
 
-const btnLeft = document.getElementById("btnLeft");
-const btnRight = document.getElementById("btnRight");
-const btnJump = document.getElementById("btnJump");
-const btnMissile = document.getElementById("btnMissile");
-const btnEnter = document.getElementById("btnEnter");
+    const state = {
+      floor: 1,
+      map: [],
+      rooms: [],
+      player: {
+        x: 1,
+        y: 1,
+        hp: 20,
+        maxHp: 20,
+        atk: 3,
+        def: 1,
+        hunger: 1000,
+        ibo: 0,
+        iboMax: 5,
+        exp: 0,
+        level: 1
+      },
+      enemies: [],
+      items: [],
+      ladder: { x: 0, y: 0 },
+      logs: [],
+      revealed: false,
+      seen: [],
+      iboCooldown: 0,
+      gameOver: false,
+      cleared: false,
+      starving: false
+    };
 
-let missiles = [];
-let beams    = [];
-let items    = [];
-let itemSpawnTimer = 0;
-let resultText = "";
-
-// ===== 入力 =====
-function attemptJump() {
-  if (state === STATE_PLAYING && player.onGround) {
-    player.vy = PLAYER_JUMP_POWER;
-    player.onGround = false;
-  }
-}
-
-function attemptMissile() {
-  if (state === STATE_PLAYING && player.missileCooldown === 0) {
-    shootMissile();
-  }
-}
-
-function handleEnterAction() {
-  if (state === STATE_TITLE) {
-    stage = 1;
-    resetGame();
-    state = STATE_PLAYING;
-    return;
-  }
-
-  if (state === STATE_GAMEOVER) {
-    stage = 1;
-    state = STATE_TITLE;
-    return;
-  }
-
-  if (state === STATE_STAGE_CLEAR) {
-    stage++;
-    if (stage > MAX_STAGE) stage = MAX_STAGE;
-    resetGame();
-    state = STATE_PLAYING;
-  }
-}
-
-document.addEventListener("keydown", e => {
-  keys[e.key] = true;
-
-  if (["ArrowLeft","ArrowRight"," ","Spacebar","i","I"].includes(e.key)) {
-    e.preventDefault();
-  }
-
-  if (state === STATE_TITLE && e.key === "Enter") {
-    handleEnterAction();
-  }
-
-  if (state === STATE_GAMEOVER && e.key === "Enter") {
-    // タイトルに戻す
-    handleEnterAction();
-  }
-
-  if (state === STATE_STAGE_CLEAR && e.key === "Enter") {
-    // 次ステージへ
-    handleEnterAction();
-  }
-
-  if (state === STATE_PLAYING) {
-    if (e.key === " " || e.key === "Spacebar") {
-      attemptJump();
+    function randInt(min, max) {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
     }
-    if (e.key === "i" || e.key === "I") {
-      attemptMissile();
-    }
-  }
-});
 
-document.addEventListener("keyup", e => {
-  keys[e.key] = false;
-});
-
-function setupTouchControls() {
-  const touchOptions = { passive: false };
-  const handleStart = key => e => {
-    e.preventDefault();
-    keys[key] = true;
-  };
-  const handleEnd = key => e => {
-    e.preventDefault();
-    keys[key] = false;
-  };
-
-  btnLeft.addEventListener("touchstart", handleStart("ArrowLeft"), touchOptions);
-  btnLeft.addEventListener("touchend", handleEnd("ArrowLeft"), touchOptions);
-
-  btnRight.addEventListener("touchstart", handleStart("ArrowRight"), touchOptions);
-  btnRight.addEventListener("touchend", handleEnd("ArrowRight"), touchOptions);
-
-  btnJump.addEventListener("touchstart", e => {
-    e.preventDefault();
-    keys[" "] = true;
-    attemptJump();
-  }, touchOptions);
-  btnJump.addEventListener("touchend", e => {
-    e.preventDefault();
-    keys[" "] = false;
-  }, touchOptions);
-
-  btnMissile.addEventListener("touchstart", e => {
-    e.preventDefault();
-    keys["I"] = true;
-    attemptMissile();
-  }, touchOptions);
-  btnMissile.addEventListener("touchend", e => {
-    e.preventDefault();
-    keys["I"] = false;
-  }, touchOptions);
-
-  btnEnter.addEventListener("touchstart", e => {
-    e.preventDefault();
-    handleEnterAction();
-  }, touchOptions);
-  btnEnter.addEventListener("click", e => {
-    e.preventDefault();
-    handleEnterAction();
-  });
-}
-
-// ===== Utility =====
-function clamp(v, min, max) {
-  return Math.max(min, Math.min(max, v));
-}
-
-function expandRect(rect, padding) {
-  return {
-    x: rect.x - padding,
-    y: rect.y - padding,
-    w: rect.w + padding * 2,
-    h: rect.h + padding * 2
-  };
-}
-
-function getSnappedDirection(fromX, fromY, toX, toY) {
-  const dx = toX - fromX;
-  const dy = toY - fromY;
-  let angle = Math.atan2(dy, dx);
-  const step = Math.PI / 4; // 45°刻み
-  angle = Math.round(angle / step) * step;
-  return { angle, dx: Math.cos(angle), dy: Math.sin(angle) };
-}
-function rectIntersect(a, b) {
-  return (
-    a.x < b.x + b.w &&
-    a.x + a.w > b.x &&
-    a.y < b.y + b.h &&
-    a.y + a.h > b.y
-  );
-}
-
-function randomItemSpawnTime() {
-  return ITEM_SPAWN_MIN + Math.random() * (ITEM_SPAWN_MAX - ITEM_SPAWN_MIN);
-}
-
-function resetGame() {
-  // ステージ開始時に両者全回復・位置リセット
-  player.x = 180;
-  player.y = GROUND_Y;
-  player.vy = 0;
-  player.onGround = true;
-  player.hp = player.maxHp;
-  player.missileCooldown = 0;
-
-  enemy.x = 620;
-  enemy.y = GROUND_Y;
-  enemy.vy = 0;
-  enemy.onGround = true;
-  enemy.maxHp = stage >= 5 ? 12 : 6;
-  enemy.hp = enemy.maxHp;
-  enemy.beamCooldown = 0;
-
-  missiles = [];
-  beams = [];
-  items = [];
-  resultText = "";
-  stageClearText = "";
-
-  weaponCharge = 0;
-  timeSinceAttack = 0;
-  attackBoostTime = 0;
-  itemSpawnTimer = randomItemSpawnTime();
-}
-
-function update(dt) {
-  if (state !== STATE_PLAYING) return;
-
-  player.missileCooldown = Math.max(0, player.missileCooldown - dt);
-  enemy.beamCooldown    = Math.max(0, enemy.beamCooldown - dt);
-
-  player.dropTimer = Math.max(0, player.dropTimer - dt);
-
-  attackBoostTime = Math.max(0, attackBoostTime - dt);
-
-  itemSpawnTimer -= dt;
-  if (itemSpawnTimer <= 0) {
-    spawnItem();
-  }
-
-  // 攻撃していない時間を計測してチャージ
-  timeSinceAttack += dt;
-  weaponCharge = clamp(timeSinceAttack / WEAPON_CHARGE_TIME, 0, 1);
-
-  updatePlayer(dt);
-  updateEnemy(dt);
-  updateMissiles();
-  updateBeams(dt);
-  updateItems(dt);
-
-  player.facing = (enemy.x >= player.x) ? 1 : -1;
-  enemy.facing  = (player.x >= enemy.x) ? -1 : 1;
-
-  if (player.hp <= 0) {
-    state = STATE_GAMEOVER;
-    resultText = "イボジッチ敗北…";
-  } else if (enemy.hp <= 0) {
-    if (stage < MAX_STAGE) {
-      // ステージクリア → 次ステージへ
-      state = STATE_STAGE_CLEAR;
-      stageClearText = getStageClearMessage(stage);
-    } else {
-      // 最終ステージ撃破 → 完全勝利
-      state = STATE_GAMEOVER;
-      resultText = "勝利！いぼ次元制圧！";
-    }
-  }
-}
-
-function getStageClearMessage(stageNum) {
-  if (stageNum === 1) {
-    return "キレジッチ「今のは俺の本気ではない」";
-  } else if (stageNum === 2) {
-    return "キレジッチ「！…まだだ、まだこれからだ」";
-  } else if (stageNum === 3) {
-    return "キレジッチ「フッ…少しはやるようになったな」";
-  } else if (stageNum === 4) {
-    return "キレジッチ「これで終わりだと思うなよ…！」";
-  }
-  return "";
-}
-
-function applyGravityAndPlatforms(f) {
-  f.prevY = f.y;
-  f.onGround = false;
-  f.vy += 0.6; // 重力
-  f.y += f.vy;
-
-  let landingY = null;
-  const halfW = f.w / 2;
-
-  const considerSurface = (surfaceY, left, right) => {
-    const crossing = f.prevY <= surfaceY && f.y >= surfaceY && f.vy >= 0;
-    const withinX = f.x + halfW > left && f.x - halfW < right;
-    if (crossing && withinX) {
-      if (landingY === null || surfaceY < landingY) {
-        landingY = surfaceY;
+    function shuffle(arr) {
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
       }
-    }
-  };
-
-  PLATFORMS.forEach(p => {
-    if (f.dropTimer > 0) return;
-    const left = p.x - p.w / 2;
-    const right = p.x + p.w / 2;
-    considerSurface(p.y, left, right);
-  });
-
-  considerSurface(GROUND_Y, 0, canvas.width);
-
-  if (landingY !== null) {
-    f.y = landingY;
-    f.vy = 0;
-    f.onGround = true;
-  }
-}
-
-function spawnItem() {
-  const type = Math.random() < 0.5 ? "heal" : "attack";
-  const size = 28;
-  const margin = size + 20;
-  const x = clamp(Math.random() * (canvas.width - margin * 2) + margin, margin, canvas.width - margin);
-  items.push({
-    x,
-    y: -size,
-    vy: 0,
-    size,
-    type,
-    life: ITEM_LIFETIME,
-    collected: false
-  });
-  itemSpawnTimer = randomItemSpawnTime();
-}
-
-function updateItems(dt) {
-  const landingY = GROUND_Y - 16;
-  items.forEach(item => {
-    item.vy += ITEM_FALL_ACCEL;
-    item.y += item.vy;
-    item.life -= dt;
-
-    if (item.y > landingY) {
-      item.y = landingY;
-      item.vy = 0;
+      return arr;
     }
 
-    const itemRect = {
-      x: item.x - item.size / 2,
-      y: item.y - item.size / 2,
-      w: item.size,
-      h: item.size
-    };
+    function addLog(message) {
+      state.logs.unshift(message);
+      if (state.logs.length > MAX_LOG) state.logs.pop();
+      logEl.innerHTML = state.logs.map((m) => `<div class="line">${m}</div>`).join("");
+    }
 
-    if (rectIntersect(player.rect(), itemRect)) {
-      if (item.type === "heal") {
-        player.hp = clamp(player.hp + 2, 0, player.maxHp);
+    function createMap() {
+      const map = Array.from({ length: HEIGHT }, () => Array(WIDTH).fill(TILE_WALL));
+      const rooms = [];
+      const roomCount = randInt(6, 10);
+      let attempts = 0;
+      while (rooms.length < roomCount && attempts < 120) {
+        attempts++;
+        const w = randInt(4, 8);
+        const h = randInt(3, 6);
+        const x = randInt(1, WIDTH - w - 2);
+        const y = randInt(1, HEIGHT - h - 2);
+        const room = { x, y, w, h, cx: x + Math.floor(w / 2), cy: y + Math.floor(h / 2) };
+
+        const overlap = rooms.some((r) => {
+          return x - 1 <= r.x + r.w && x + w + 1 >= r.x && y - 1 <= r.y + r.h && y + h + 1 >= r.y;
+        });
+        if (overlap) continue;
+
+        for (let yy = y; yy < y + h; yy++) {
+          for (let xx = x; xx < x + w; xx++) map[yy][xx] = TILE_FLOOR;
+        }
+
+        if (rooms.length > 0) {
+          const prev = rooms[rooms.length - 1];
+          carveCorridor(map, prev.cx, prev.cy, room.cx, room.cy);
+        }
+        rooms.push(room);
+      }
+      return { map, rooms };
+    }
+
+    function carveCorridor(map, x1, y1, x2, y2) {
+      let x = x1;
+      let y = y1;
+      if (Math.random() < 0.5) {
+        while (x !== x2) {
+          map[y][x] = TILE_FLOOR;
+          x += x < x2 ? 1 : -1;
+        }
+        while (y !== y2) {
+          map[y][x] = TILE_FLOOR;
+          y += y < y2 ? 1 : -1;
+        }
       } else {
-        attackBoostTime = ATTACK_BOOST_DURATION;
+        while (y !== y2) {
+          map[y][x] = TILE_FLOOR;
+          y += y < y2 ? 1 : -1;
+        }
+        while (x !== x2) {
+          map[y][x] = TILE_FLOOR;
+          x += x < x2 ? 1 : -1;
+        }
       }
-      item.collected = true;
+      map[y2][x2] = TILE_FLOOR;
     }
-  });
 
-  items = items.filter(item => item.life > 0 && !item.collected);
-}
+    function setupFloor() {
+      const built = createMap();
+      state.map = built.map;
+      state.rooms = built.rooms;
+      state.items = [];
+      state.enemies = [];
+      state.revealed = false;
+      state.seen = Array.from({ length: HEIGHT }, () => Array(WIDTH).fill(false));
+      state.iboCooldown = 0;
 
-function updatePlayer(dt) {
-  if (keys["ArrowLeft"])  player.x -= player.speed;
-  if (keys["ArrowRight"]) player.x += player.speed;
-  player.x = clamp(player.x, 70, canvas.width - 70);
+      const startRoom = state.rooms[0];
+      state.player.x = startRoom.cx;
+      state.player.y = startRoom.cy;
 
-  if (keys["ArrowDown"] && player.onGround && player.y < GROUND_Y - 4) {
-    player.dropTimer = 220;
-    player.onGround = false;
-    player.vy = Math.max(player.vy, 2);
-  }
+      let far = state.rooms[0];
+      let best = -1;
+      for (const r of state.rooms) {
+        const d = Math.abs(r.cx - startRoom.cx) + Math.abs(r.cy - startRoom.cy);
+        if (d > best) {
+          best = d;
+          far = r;
+        }
+      }
+      state.ladder = { x: far.cx, y: far.cy };
 
-  applyGravityAndPlatforms(player);
-}
-
-let enemyThinkTime = 0;
-function updateEnemy(dt) {
-  enemyThinkTime -= dt;
-  if (enemyThinkTime <= 0) {
-    enemyThinkTime = 400;
-    enemyAiDecision();
-  }
-
-  enemy.x += enemy.aiMove * enemy.speed * 0.6;
-  enemy.x = clamp(enemy.x, 70, canvas.width - 70);
-
-  maybeEnemyDodgeJump(); // 回避ジャンプ
-
-  applyGravityAndPlatforms(enemy);
-
-  if (enemy.aiBeam && enemy.beamCooldown === 0) {
-    shootBeam();
-  }
-}
-
-// ===== キレジッチAI =====
-function enemyAiDecision() {
-  const dist = player.x - enemy.x;
-  const absDist = Math.abs(dist);
-
-  enemy.aiMove = 0;
-  enemy.aiBeam = false;
-
-  if (absDist > 260) {
-    enemy.aiMove = dist > 0 ? 1 : -1;
-  } else if (absDist > 160) {
-    enemy.aiBeam = Math.random() < 0.7;
-    enemy.aiMove = dist > 0 ? 0.2 : -0.2;
-  } else {
-    enemy.aiMove = dist > 0 ? -0.6 : 0.6;
-    enemy.aiBeam = Math.random() < 0.5;
-  }
-}
-
-// ★ キレジッチ回避ジャンプ
-function maybeEnemyDodgeJump() {
-  if (!enemy.onGround) return;
-  if (missiles.length === 0) return;
-
-  let closest = null;
-  let minDist = Infinity;
-  missiles.forEach(m => {
-    const d = Math.abs(m.x - enemy.x);
-    if (d < minDist) {
-      minDist = d;
-      closest = m;
+      placeEnemies();
+      placeItems();
+      addLog(`第${state.floor}階に降りた。`);
+      render();
     }
-  });
-  if (!closest) return;
 
-  const towardEnemy =
-    (closest.vx > 0 && closest.x < enemy.x) ||
-    (closest.vx < 0 && closest.x > enemy.x);
-
-  if (!towardEnemy) return;
-
-  const horizontalOk = Math.abs(closest.x - enemy.x) < 240;
-  const dy = Math.abs(closest.y - (enemy.y - enemy.h * 0.5));
-  const verticalOk = dy < 90;
-
-  if (horizontalOk && verticalOk) {
-    if (Math.random() < 0.6) {
-      enemy.vy = ENEMY_JUMP_POWER;
-      enemy.onGround = false;
+    function isWalkable(x, y) {
+      return x >= 0 && x < WIDTH && y >= 0 && y < HEIGHT && state.map[y][x] === TILE_FLOOR;
     }
-  }
-}
 
-// ===== イボミサイル =====
-function shootMissile() {
-  player.missileCooldown = 350;
-  const special = weaponCharge >= 1;
-  const damageMultiplier = attackBoostTime > 0 ? ATTACK_BOOST_MULTIPLIER : 1;
-  weaponCharge = 0;
-  timeSinceAttack = 0;
-  const r = player.rect();
-  const startX = player.x;
-  const startY = r.y + r.h * 0.4;
-  const dirInfo = getSnappedDirection(startX, startY, enemy.x, enemy.y - enemy.h / 2);
+    function enemyAt(x, y) {
+      return state.enemies.find((e) => e.x === x && e.y === y);
+    }
 
-  const pushMissile = (angle, speed, size, damage, isSpecial) => {
-    missiles.push({
-      x: startX,
-      y: startY,
-      r: size,
-      vx: Math.cos(angle) * speed,
-      vy: Math.sin(angle) * speed,
-      damage,
-      isSpecial,
-      alive: true
+    function itemAt(x, y) {
+      return state.items.find((it) => it.x === x && it.y === y);
+    }
+
+    function positionFree(x, y) {
+      if (!isWalkable(x, y)) return false;
+      if (state.player.x === x && state.player.y === y) return false;
+      if (enemyAt(x, y)) return false;
+      if (itemAt(x, y)) return false;
+      if (state.ladder.x === x && state.ladder.y === y) return false;
+      return true;
+    }
+
+    function randomFloorPos() {
+      const cells = [];
+      for (let y = 1; y < HEIGHT - 1; y++) {
+        for (let x = 1; x < WIDTH - 1; x++) {
+          if (state.map[y][x] === TILE_FLOOR) cells.push({ x, y });
+        }
+      }
+      shuffle(cells);
+      return cells;
+    }
+
+    function placeEnemies() {
+      const pool = randomFloorPos();
+      const count = randInt(2, 3) + Math.floor((state.floor - 1) * 0.9);
+      let placed = 0;
+      for (const p of pool) {
+        if (placed >= count) break;
+        if (Math.abs(p.x - state.player.x) + Math.abs(p.y - state.player.y) < 4) continue;
+        if (p.x === state.ladder.x && p.y === state.ladder.y) continue;
+
+        const isGuard = Math.random() < 0.42;
+        state.enemies.push(
+          isGuard
+            ? { x: p.x, y: p.y, type: "guard", hp: 10, atk: 3, def: 1, char: SPRITES.guard }
+            : { x: p.x, y: p.y, type: "dog", hp: 6, atk: 2, def: 0, char: SPRITES.dog }
+        );
+        placed++;
+      }
+    }
+
+    function placeItems() {
+      const pool = randomFloorPos();
+      const itemCount = randInt(2, 4);
+      let placed = 0;
+      for (const p of pool) {
+        if (placed >= itemCount) break;
+        if (!positionFree(p.x, p.y)) continue;
+        const roll = Math.random();
+        const type = roll < 0.4 ? "food" : roll < 0.8 ? "potion" : "map";
+        const char = type === "food" ? SPRITES.food : type === "potion" ? SPRITES.potion : SPRITES.map;
+        state.items.push({ x: p.x, y: p.y, type, char });
+        placed++;
+      }
+    }
+
+    function render() {
+      updateSeen();
+      const rows = [];
+      for (let y = 0; y < HEIGHT; y++) {
+        let row = "";
+        for (let x = 0; x < WIDTH; x++) {
+          const visible = state.revealed || state.seen[y][x];
+          if (!visible) {
+            row += " ";
+            continue;
+          }
+          let ch = state.map[y][x] === TILE_WALL ? SPRITES.wall : SPRITES.floor;
+
+          if (state.ladder.x === x && state.ladder.y === y) ch = SPRITES.ladder;
+          const it = itemAt(x, y);
+          if (it) ch = it.char;
+          const en = enemyAt(x, y);
+          if (en) ch = en.char;
+          if (state.player.x === x && state.player.y === y) ch = SPRITES.player;
+
+          row += ch;
+        }
+        rows.push(row);
+      }
+      mapEl.textContent = rows.join("\n");
+
+      statusEl.textContent = [
+        `HP ${state.player.hp}/${state.player.maxHp}`,
+        `空腹 ${state.player.hunger}${state.starving ? " (ピンチ)" : ""}`,
+        `ATK ${state.player.atk} DEF ${state.player.def}`,
+        `イボ ${state.player.ibo}/${state.player.iboMax}`,
+        `階 ${state.floor}`
+      ].join("\n");
+    }
+
+    function updateSeen() {
+      if (state.revealed) {
+        for (let y = 0; y < HEIGHT; y++) {
+          for (let x = 0; x < WIDTH; x++) state.seen[y][x] = true;
+        }
+        return;
+      }
+      const radius = 8;
+      for (let y = state.player.y - radius; y <= state.player.y + radius; y++) {
+        for (let x = state.player.x - radius; x <= state.player.x + radius; x++) {
+          if (x < 0 || y < 0 || x >= WIDTH || y >= HEIGHT) continue;
+          if (Math.abs(x - state.player.x) + Math.abs(y - state.player.y) <= radius + 2) {
+            state.seen[y][x] = true;
+          }
+        }
+      }
+    }
+
+    function applyDamage(target, amount, name = "") {
+      target.hp -= amount;
+      if (name) addLog(`${name}に${amount}ダメージ！`);
+    }
+
+    function playerAttack(enemy) {
+      const damage = Math.max(1, state.player.atk - enemy.def);
+      applyDamage(enemy, damage, enemy.char);
+      if (enemy.hp <= 0) {
+        killEnemy(enemy);
+      }
+    }
+
+    function killEnemy(enemy) {
+      state.enemies = state.enemies.filter((e) => e !== enemy);
+      addLog(`${enemy.char}をたおした！`);
+      state.player.exp += 1;
+      if (Math.random() < 0.2) {
+        dropItem(enemy.x, enemy.y);
+      }
+      maybeLevelUp();
+    }
+
+    function dropItem(x, y) {
+      if (itemAt(x, y)) return;
+      const roll = Math.random();
+      const type = roll < 0.5 ? "food" : roll < 0.85 ? "potion" : "map";
+      const char = type === "food" ? SPRITES.food : type === "potion" ? SPRITES.potion : SPRITES.map;
+      state.items.push({ x, y, type, char });
+      addLog(`${char}が落ちた。`);
+    }
+
+    function maybeLevelUp() {
+      const need = state.player.level * 3;
+      if (state.player.exp >= need) {
+        state.player.exp = 0;
+        state.player.level++;
+        state.player.atk += 1;
+        state.player.maxHp += 2;
+        state.player.hp = state.player.maxHp;
+        addLog(`レベルアップ！ ATK+1 MAX_HP+2`);
+      }
+    }
+
+    function enemyAttack(enemy) {
+      const damage = Math.max(1, enemy.atk - state.player.def);
+      applyDamage(state.player, damage, "プレイヤー");
+      if (state.player.hp <= 0) {
+        state.player.hp = 0;
+        state.gameOver = true;
+        addLog("あなたは力尽きた… Rで再開");
+      }
+    }
+
+    function pickupItem() {
+      const it = itemAt(state.player.x, state.player.y);
+      if (!it) return;
+      state.items = state.items.filter((i) => i !== it);
+      if (it.type === "food") {
+        state.player.hunger = Math.min(1000, state.player.hunger + 300);
+        addLog("🍖を食べた！ 空腹+300");
+      } else if (it.type === "potion") {
+        state.player.hp = Math.min(state.player.maxHp, state.player.hp + 10);
+        addLog("🧪を使った！ HP+10");
+      } else {
+        state.revealed = true;
+        addLog("👁 地図を見通した！");
+      }
+    }
+
+    function movePlayer(dx, dy) {
+      if (state.gameOver) return;
+      const nx = state.player.x + dx;
+      const ny = state.player.y + dy;
+      if (!isWalkable(nx, ny)) return endTurn();
+
+      const foe = enemyAt(nx, ny);
+      if (foe) {
+        playerAttack(foe);
+        return endTurn();
+      }
+
+      state.player.x = nx;
+      state.player.y = ny;
+      pickupItem();
+
+      if (nx === state.ladder.x && ny === state.ladder.y) {
+        state.floor += 1;
+        addLog("🪜 次の階へ進む！");
+        setupFloor();
+        return;
+      }
+      endTurn();
+    }
+
+    function waitTurn() {
+      if (state.gameOver) return;
+      addLog("その場で待機した。");
+      endTurn();
+    }
+
+    function eatIbo() {
+      if (state.gameOver) return;
+      if (state.player.ibo < 1) {
+        addLog("イボがない！");
+        return;
+      }
+      state.player.ibo -= 1;
+      state.player.hunger = Math.min(1000, state.player.hunger + 60);
+      addLog("イボをたべた！ 空腹+60");
+      endTurn();
+    }
+
+    function iboBeam() {
+      if (state.gameOver) return;
+      if (state.player.ibo < 1) {
+        addLog("イボがない！");
+        return;
+      }
+      state.player.ibo -= 1;
+      addLog("いぼビーム！");
+      const dirs = [
+        [0, -1],
+        [0, 1],
+        [-1, 0],
+        [1, 0]
+      ];
+      const hitSet = new Set();
+      for (const [dx, dy] of dirs) {
+        let x = state.player.x + dx;
+        let y = state.player.y + dy;
+        while (isWalkable(x, y)) {
+          const en = enemyAt(x, y);
+          if (en && !hitSet.has(en)) {
+            hitSet.add(en);
+            const damage = Math.max(1, state.player.atk - en.def);
+            applyDamage(en, damage, en.char);
+          }
+          x += dx;
+          y += dy;
+        }
+      }
+      for (const en of [...state.enemies]) {
+        if (en.hp <= 0) killEnemy(en);
+      }
+      endTurn();
+    }
+
+    function canSeePlayer(ex, ey) {
+      return Math.abs(ex - state.player.x) + Math.abs(ey - state.player.y) <= 12;
+    }
+
+    function bfsStep(startX, startY, goalX, goalY) {
+      const queue = [{ x: startX, y: startY }];
+      const came = new Map();
+      const key = (x, y) => `${x},${y}`;
+      came.set(key(startX, startY), null);
+      let found = false;
+
+      while (queue.length > 0) {
+        const cur = queue.shift();
+        if (cur.x === goalX && cur.y === goalY) {
+          found = true;
+          break;
+        }
+        const dirs = [
+          [1, 0],
+          [-1, 0],
+          [0, 1],
+          [0, -1]
+        ];
+        for (const [dx, dy] of dirs) {
+          const nx = cur.x + dx;
+          const ny = cur.y + dy;
+          const k = key(nx, ny);
+          if (!isWalkable(nx, ny) || came.has(k)) continue;
+          if (enemyAt(nx, ny) && !(nx === goalX && ny === goalY)) continue;
+          came.set(k, cur);
+          queue.push({ x: nx, y: ny });
+        }
+      }
+
+      if (!found) return null;
+      let node = { x: goalX, y: goalY };
+      let prev = came.get(key(node.x, node.y));
+      while (prev && !(prev.x === startX && prev.y === startY)) {
+        node = prev;
+        prev = came.get(key(node.x, node.y));
+      }
+      return node;
+    }
+
+    function enemyTurn() {
+      for (const en of state.enemies) {
+        if (Math.abs(en.x - state.player.x) + Math.abs(en.y - state.player.y) === 1) {
+          enemyAttack(en);
+          if (state.gameOver) return;
+          continue;
+        }
+        let moved = false;
+        if (canSeePlayer(en.x, en.y)) {
+          const step = bfsStep(en.x, en.y, state.player.x, state.player.y);
+          if (step && !(step.x === state.player.x && step.y === state.player.y) && !enemyAt(step.x, step.y)) {
+            en.x = step.x;
+            en.y = step.y;
+            moved = true;
+          }
+        }
+        if (!moved) {
+          const dirs = shuffle([
+            [1, 0],
+            [-1, 0],
+            [0, 1],
+            [0, -1]
+          ]);
+          for (const [dx, dy] of dirs) {
+            const nx = en.x + dx;
+            const ny = en.y + dy;
+            if (!isWalkable(nx, ny)) continue;
+            if (enemyAt(nx, ny)) continue;
+            if (nx === state.player.x && ny === state.player.y) continue;
+            en.x = nx;
+            en.y = ny;
+            break;
+          }
+        }
+
+        if (Math.abs(en.x - state.player.x) + Math.abs(en.y - state.player.y) === 1) {
+          enemyAttack(en);
+          if (state.gameOver) return;
+        }
+      }
+    }
+
+    function hungerTurn() {
+      state.player.hunger = Math.max(0, state.player.hunger - 1);
+      state.starving = state.player.hunger === 0;
+      if (state.starving) {
+        state.player.hp -= 1;
+        addLog("ピンチ！ 空腹ダメージ1");
+        if (state.player.hp <= 0) {
+          state.player.hp = 0;
+          state.gameOver = true;
+          addLog("空腹で倒れた… Rで再開");
+        }
+      }
+    }
+
+    function iboTurn() {
+      if (state.iboCooldown > 0) state.iboCooldown -= 1;
+      if (state.player.hunger <= 0) return;
+      if (state.player.ibo >= state.player.iboMax) return;
+      if (state.iboCooldown !== 0) return;
+      if (Math.random() < 0.01) {
+        state.player.ibo += 1;
+        state.iboCooldown = 10;
+        addLog("イボがはえた！");
+      }
+    }
+
+    function endTurn() {
+      enemyTurn();
+      if (state.gameOver) return render();
+      hungerTurn();
+      if (state.gameOver) return render();
+      iboTurn();
+      render();
+    }
+
+    function restartGame() {
+      state.floor = 1;
+      state.player.hp = 20;
+      state.player.maxHp = 20;
+      state.player.atk = 3;
+      state.player.def = 1;
+      state.player.hunger = 1000;
+      state.player.ibo = 0;
+      state.player.exp = 0;
+      state.player.level = 1;
+      state.logs = [];
+      state.gameOver = false;
+      state.starving = false;
+      addLog("ぼじろーぐ開始！");
+      setupFloor();
+    }
+
+    window.addEventListener("keydown", (e) => {
+      const key = e.key;
+      if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", " ", "a", "A", "b", "B", "r", "R"].includes(key)) {
+        e.preventDefault();
+      }
+      if (key === "R" || key === "r") return restartGame();
+      if (state.gameOver) return;
+
+      if (key === "ArrowUp") movePlayer(0, -1);
+      else if (key === "ArrowDown") movePlayer(0, 1);
+      else if (key === "ArrowLeft") movePlayer(-1, 0);
+      else if (key === "ArrowRight") movePlayer(1, 0);
+      else if (key === " ") waitTurn();
+      else if (key === "A" || key === "a") iboBeam();
+      else if (key === "B" || key === "b") eatIbo();
     });
-  };
 
-  if (special) {
-    const angles = [dirInfo.angle - Math.PI / 4, dirInfo.angle, dirInfo.angle + Math.PI / 4];
-    const speed = 8.2;
-    angles.forEach(a => pushMissile(a, speed, 16, 2 * damageMultiplier, true));
-  } else {
-    pushMissile(dirInfo.angle, 7.5, 10, 1 * damageMultiplier, false);
-  }
-}
-
-function updateMissiles() {
-  missiles.forEach(m => {
-    m.x += m.vx;
-    m.y += m.vy;
-    if (m.x < -50 || m.x > canvas.width + 50) m.alive = false;
-
-    const mr = { x: m.x - m.r, y: m.y - m.r, w: m.r*2, h: m.r*2 };
-    const paddedEnemy = expandRect(enemy.rect(), 12);
-    if (rectIntersect(mr, paddedEnemy)) {
-      enemy.hp -= calcDamageAgainstEnemy(m);
-      m.alive = false;
-    }
-  });
-  missiles = missiles.filter(m => m.alive);
-}
-
-function calcDamageAgainstEnemy(missile) {
-  const baseDamage = missile.damage ?? 1;
-  if (stage >= 5 && !missile.isSpecial) {
-    return 0;
-  }
-  if (stage >= 4 && !missile.isSpecial) {
-    return baseDamage * 0.25;
-  }
-  return baseDamage;
-}
-
-// ===== ビーム（ステージ性能反映） =====
-function getBeamParamsForStage() {
-  let speed     = BEAM_BASE_SPEED;
-  let life      = BEAM_BASE_LIFE;
-  let cooldown  = BEAM_BASE_COOLDOWN;
-  let bidirect  = false;
-
-  if (stage >= 2) {
-    life *= 1.2;       // 射程1.2倍
-    bidirect = true;   // 左右どちらにも撃てる
-  }
-  if (stage >= 3) {
-    cooldown *= 0.8;   // 発射間隔 0.8倍（速くなる）
-  }
-  return { speed, life, cooldown, bidirect };
-}
-
-function shootBeam() {
-  const params = getBeamParamsForStage();
-  enemy.beamCooldown = params.cooldown;
-
-  const r = enemy.rect();
-  const bandageX = enemy.x;
-  const bandageY = r.y + r.h * 0.02;
-
-  const startX = bandageX;
-  const startY = bandageY - 4;
-  const playerCenterY = player.y - player.h / 2;
-  const dirInfo = params.bidirect
-    ? getSnappedDirection(startX, startY, player.x, playerCenterY)
-    : { angle: Math.PI, dx: -1, dy: 0 };
-
-  const size = 20;
-  beams.push({
-    x: startX - size / 2,
-    y: startY - size / 2,
-    w: size,
-    h: size,
-    vx: dirInfo.dx * params.speed,
-    vy: dirInfo.dy * params.speed,
-    life: params.life,
-    alive: true
-  });
-}
-
-function updateBeams(dt) {
-  beams.forEach(b => {
-    b.x += b.vx;
-    b.y += b.vy;
-    b.life -= dt;
-    if (b.life <= 0 || b.x + b.w < 0 || b.x > canvas.width + 50 || b.y > canvas.height + 50 || b.y + b.h < -50) {
-      b.alive = false;
-    }
-
-    if (rectIntersect(b, player.rect())) {
-      player.hp -= 1;
-      b.alive = false;
-    }
-  });
-  beams = beams.filter(b => b.alive);
-}
-
-// ===== 描画 =====
-function drawBackground() {
-  ctx.fillStyle = "#fbe9d0";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-  ctx.fillStyle = "#e0b47a";
-  ctx.fillRect(0, GROUND_Y, canvas.width, canvas.height - GROUND_Y);
-
-  ctx.fillStyle = "#d7a96b";
-  ctx.fillRect(0, GROUND_Y - 22, canvas.width, 22);
-
-  ctx.fillStyle = "#9ccc65";
-  for (let i = 0; i < 6; i++) {
-    const x = 60 + i * 130;
-    ctx.beginPath();
-    ctx.arc(x, GROUND_Y - 60, 30, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  ctx.fillStyle = "#c48a5a";
-  PLATFORMS.forEach(p => {
-    ctx.fillRect(p.x - p.w/2, p.y - p.h, p.w, p.h);
-    ctx.strokeStyle = "#8d5a2b";
-    ctx.strokeRect(p.x - p.w/2, p.y - p.h, p.w, p.h);
-  });
-
-  const baseX = 600;
-  const baseY = GROUND_Y - 22;
-  ctx.strokeStyle = "#c48a5a";
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  ctx.moveTo(baseX - 40, baseY);
-  ctx.lineTo(baseX, baseY - 150);
-  ctx.lineTo(baseX + 40, baseY);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(baseX - 30, baseY - 50);
-  ctx.lineTo(baseX + 30, baseY - 50);
-  ctx.moveTo(baseX - 20, baseY - 90);
-  ctx.lineTo(baseX + 20, baseY - 90);
-  ctx.stroke();
-}
-
-function drawShadow(f) {
-  ctx.fillStyle = "rgba(0,0,0,0.15)";
-  const scale = f.onGround ? 1 : 0.8;
-  ctx.beginPath();
-  ctx.ellipse(f.x, GROUND_Y + 4, 28 * scale, 10 * scale, 0, 0, Math.PI * 2);
-  ctx.fill();
-}
-
-function drawSpriteCharacter(f, img) {
-  const srcW = img.width;
-  const srcH = img.height;
-
-  const drawH = 150;
-  const drawW = drawH * (srcW / srcH);
-  const dx = f.x - drawW / 2;
-  const dy = f.y - drawH;  // 足元が f.y に来る
-
-  drawShadow(f);
-  ctx.save();
-  if (!f.isEnemy && f.facing === -1) {
-    ctx.translate(f.x, 0);
-    ctx.scale(-1, 1);
-    ctx.drawImage(img, -drawW / 2, dy, drawW, drawH);
-  } else {
-    ctx.drawImage(img, dx, dy, drawW, drawH);
-  }
-  ctx.restore();
-}
-
-function drawItems() {
-  items.forEach(item => {
-    ctx.save();
-    ctx.translate(item.x, item.y);
-    ctx.beginPath();
-    ctx.fillStyle = item.type === "heal" ? "#ffc1c1" : "#ffe082";
-    ctx.strokeStyle = "#333";
-    ctx.arc(0, 0, item.size / 2, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
-
-    ctx.fillStyle = "#333";
-    ctx.font = "bold 13px 'Yu Gothic'";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText(item.type === "heal" ? "HP" : "ATK", 0, 1);
-    ctx.restore();
-  });
-}
-
-function drawMissiles() {
-  missiles.forEach(m => {
-    ctx.beginPath();
-    ctx.fillStyle = m.isSpecial ? "#b36aff" : "#7e3cff";
-    ctx.arc(m.x, m.y, m.r, 0, Math.PI*2);
-    ctx.fill();
-
-    ctx.strokeStyle = m.isSpecial ? "#5a2599" : "#4b1d99";
-    const spikes = m.isSpecial ? 10 : 6;
-    const spikeLen = m.isSpecial ? 9 : 6;
-    for (let i = 0; i < spikes; i++) {
-      const a = (Math.PI * 2 / spikes) * i;
-      const x1 = m.x + Math.cos(a)*m.r;
-      const y1 = m.y + Math.sin(a)*m.r;
-      const x2 = m.x + Math.cos(a)*(m.r+spikeLen);
-      const y2 = m.y + Math.sin(a)*(m.r+spikeLen);
-      ctx.beginPath();
-      ctx.moveTo(x1, y1);
-      ctx.lineTo(x2, y2);
-      ctx.stroke();
-    }
-  });
-}
-
-function drawWeaponCharge() {
-  const x = 40;
-  const y = 70;
-  const w = 180;
-  const h = 14;
-  ctx.fillStyle = "#eee";
-  ctx.fillRect(x, y, w, h);
-  const filled = w * weaponCharge;
-  ctx.fillStyle = weaponCharge >= 1 ? "#ff8a65" : "#8c6cff";
-  ctx.fillRect(x, y, filled, h);
-  ctx.strokeStyle = "#333";
-  ctx.strokeRect(x, y, w, h);
-
-  ctx.fillStyle = "#444";
-  ctx.font = "12px 'Yu Gothic'";
-  const label = weaponCharge >= 1 ? "SPECIAL READY" : "WEAPON CHARGE";
-  ctx.fillText(label, x, y - 4);
-
-  if (attackBoostTime > 0) {
-    const boostRatio = attackBoostTime / ATTACK_BOOST_DURATION;
-    const by = y + h + 6;
-    const bh = 9;
-    ctx.fillStyle = "#ffb74d";
-    ctx.fillRect(x, by, w * boostRatio, bh);
-    ctx.strokeStyle = "#444";
-    ctx.strokeRect(x, by, w, bh);
-    ctx.fillStyle = "#444";
-    ctx.fillText("ATK UP", x, by + bh + 10);
-  }
-}
-
-function drawBeams() {
-  beams.forEach(b => {
-    const len = Math.sqrt(b.vx * b.vx + (b.vy || 0) * (b.vy || 0)) || 1;
-    const dirX = b.vx / len;
-    const dirY = (b.vy || 0) / len;
-    const startX = b.x + b.w/2 - dirX * b.w;
-    const startY = b.y + b.h/2 - dirY * b.h;
-    const endX = b.x + b.w/2 + dirX * b.w;
-    const endY = b.y + b.h/2 + dirY * b.h;
-    const grad = ctx.createLinearGradient(startX, startY, endX, endY);
-    grad.addColorStop(0,   "rgba(255,230,230,0.15)");
-    grad.addColorStop(0.3, "rgba(255,120,120,0.9)");
-    grad.addColorStop(1,   "rgba(120,0,0,0.9)");
-    ctx.fillStyle = grad;
-    ctx.fillRect(b.x, b.y, b.w, b.h);
-
-    ctx.fillStyle = "rgba(255,0,0,0.25)";
-    ctx.fillRect(b.x, b.y - 4, b.w, b.h + 8);
-  });
-}
-
-function drawHpBar(f, x, y) {
-  const w = 180;
-  const h = 16;
-  ctx.fillStyle = "#ddd";
-  ctx.fillRect(x, y, w, h);
-  const ratio = f.hp / f.maxHp;
-  ctx.fillStyle = f === player ? "#a040ff" : "#ff5f5f";
-  ctx.fillRect(x, y, w * ratio, h);
-  ctx.strokeStyle = "#333";
-  ctx.strokeRect(x, y, w, h);
-}
-
-function drawStageLabel() {
-  ctx.fillStyle = "#333";
-  ctx.font = "18px 'Yu Gothic'";
-  ctx.fillText("STAGE " + stage, canvas.width/2 - 40, 26);
-}
-
-function drawTitle() {
-  drawBackground();
-
-  ctx.fillStyle = "#d84315";
-  ctx.strokeStyle = "#fff";
-  ctx.lineWidth = 6;
-  ctx.font = "bold 64px 'Yu Gothic'";
-  const title = "いぼ次元ラッシュ";
-  const tw = ctx.measureText(title).width;
-  ctx.strokeText(title, (canvas.width - tw)/2, 140);
-  ctx.fillText(title, (canvas.width - tw)/2, 140);
-
-  ctx.font = "24px 'Yu Gothic'";
-  ctx.fillStyle = "#444";
-  ctx.fillText("Enterキーでスタート", canvas.width/2 - 110, 200);
-
-  ctx.font = "16px 'Yu Gothic'";
-  ctx.fillText("← →：移動　Space：ジャンプ　I：いぼミサイル", canvas.width/2 - 170, 230);
-
-  drawStageLabel();
-  drawSpriteCharacter(player, iboImg);
-  drawSpriteCharacter(enemy,  kireImg);
-}
-
-function drawGame() {
-  drawBackground();
-  drawSpriteCharacter(player, iboImg);
-  drawSpriteCharacter(enemy,  kireImg);
-
-  drawItems();
-  drawMissiles();
-  drawBeams();
-
-  drawHpBar(player, 40, 40);
-  drawHpBar(enemy, canvas.width - 220, 40);
-  drawWeaponCharge();
-  drawStageLabel();
-
-  ctx.fillStyle = "#444";
-  ctx.font = "16px 'Yu Gothic'";
-  ctx.fillText("イボジッチ", 40, 30);
-  ctx.fillText("キレジッチ", canvas.width - 220, 30);
-}
-
-function drawGameOver() {
-  drawGame();
-
-  ctx.fillStyle = "rgba(0,0,0,0.5)";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-  ctx.fillStyle = "#fff";
-  ctx.font = "bold 40px 'Yu Gothic'";
-  const tw = ctx.measureText(resultText).width;
-  ctx.fillText(resultText, (canvas.width - tw)/2, 200);
-
-  ctx.font = "22px 'Yu Gothic'";
-  const msg = "Enterキーでタイトルにもどる";
-  const tw2 = ctx.measureText(msg).width;
-  ctx.fillText(msg, (canvas.width - tw2)/2, 240);
-}
-
-function drawStageClear() {
-  drawGame();
-
-  ctx.fillStyle = "rgba(0,0,0,0.5)";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-  ctx.fillStyle = "#fff";
-  ctx.font = "bold 34px 'Yu Gothic'";
-  const tw = ctx.measureText("STAGE " + stage + " CLEAR").width;
-  ctx.fillText("STAGE " + stage + " CLEAR", (canvas.width - tw)/2, 180);
-
-  ctx.font = "22px 'Yu Gothic'";
-  ctx.fillText(stageClearText, canvas.width/2 - 220, 220);
-
-  const msg = "Enterキーで次のステージへ";
-  const tw2 = ctx.measureText(msg).width;
-  ctx.fillText(msg, (canvas.width - tw2)/2, 270);
-}
-
-// ===== メインループ =====
-function loop(timestamp) {
-  const dt = timestamp - lastTime;
-  lastTime = timestamp;
-
-  if (state === STATE_TITLE) {
-    drawTitle();
-  } else if (state === STATE_PLAYING) {
-    update(dt);
-    drawGame();
-  } else if (state === STATE_GAMEOVER) {
-    drawGameOver();
-  } else if (state === STATE_STAGE_CLEAR) {
-    drawStageClear();
-  }
-
-  requestAnimationFrame(loop);
-}
-
-function startGame() {
-  resetGame();
-  requestAnimationFrame(loop);
-}
-
-setupTouchControls();
-</script>
+    restartGame();
+  </script>
 </body>
 </html>
