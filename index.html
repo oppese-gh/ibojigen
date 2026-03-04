@@ -542,7 +542,7 @@
 
     function placeItems() {
       const pool = randomFloorPos();
-      const itemCount = randInt(2, 3);
+      const itemCount = randInt(1, 3);
       let placed = 0;
       for (const p of pool) {
         if (placed >= itemCount) break;
@@ -676,8 +676,17 @@
     }
 
     function enemyAttack(enemy) {
-      const damage = Math.max(1, enemy.atk - state.player.def);
+      const floorAtkBonus = Math.floor(Math.max(0, state.floor - 1) / 4);
+      const scaledAtk = enemy.atk + floorAtkBonus;
+      const damage = Math.max(1, scaledAtk - state.player.def);
       applyDamage(state.player, damage, "プレイヤー");
+
+      if (enemy.type === "dragon" && state.player.hp > 0 && Math.random() < 0.5) {
+        const flameDamage = Math.ceil(state.player.hp * 0.1);
+        state.player.hp -= flameDamage;
+        addLog(`${enemy.char}の炎！ 追加${flameDamage}ダメージ！`);
+      }
+
       if (state.player.hp <= 0) {
         state.player.hp = 0;
         state.gameOver = true;
@@ -711,8 +720,8 @@
       }
 
       if (slot.type === "food") {
-        state.player.hunger = Math.min(state.player.hungerMax, state.player.hunger + 200);
-        addLog("🍖を食べた！ 空腹+200");
+        state.player.hunger = Math.min(state.player.hungerMax, state.player.hunger + 100);
+        addLog("🍖を食べた！ 空腹+100");
       } else if (slot.type === "potion") {
         state.player.hp = Math.min(state.player.maxHp, state.player.hp + 10);
         addLog("🧪を使った！ HP+10");
