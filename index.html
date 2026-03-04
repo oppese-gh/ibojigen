@@ -38,6 +38,7 @@
       font-size: 20px;
     }
     #grid {
+      position: relative;
       margin: 0;
       display: grid;
       grid-template-columns: repeat(40, 24px);
@@ -49,6 +50,20 @@
       overflow: auto;
       user-select: none;
       min-height: calc(25 * 24px + 16px);
+    }
+    #projectile-layer {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 2;
+    }
+    .projectile {
+      position: absolute;
+      width: 24px;
+      height: 24px;
+      line-height: 24px;
+      text-align: center;
+      font-size: 20px;
     }
     .cell {
       width: 24px;
@@ -128,28 +143,37 @@
       dragon: { char: SPRITES.dragon, hp: 24, atk: 7, def: 3, exp: 8 }
     };
 
-    // テーブル駆動で確率を管理することで、しきい値漏れのバグを防ぐ。
-    // floor item配置比率: 🍖18%, 🧪52%, 👁20%, 🛡️5%, 🪓5%
+    // テーブル駆動で確率を管理して、しきい値漏れのバグを防ぐ。
+    // 通常アイテム初期配置比率: 🍖18%, 🧪50%, 👁32%
     const FLOOR_ITEM_TABLE = [
       { type: "food", rate: 0.18 },
-      { type: "potion", rate: 0.52 },
+      { type: "potion", rate: 0.5 },
+      { type: "map", rate: 0.32 }
+    ];
+    // 仕様: 🛡️初期配置は各フロア20%。🪓初期配置は低確率。
+    const INITIAL_SHIELD_CHANCE = 0.2;
+    const INITIAL_AXE_CHANCE = 0.1;
+
+    // enemy drop: 18%で何か落ちる。内訳は🍖35%, 🧪35%, 👁20%, 🛡️5%, 🪓5%
+    const ENEMY_DROP_CHANCE = 0.18;
+    const ENEMY_DROP_TABLE = [
+      { type: "food", rate: 0.35 },
+      { type: "potion", rate: 0.35 },
       { type: "map", rate: 0.2 },
       { type: "shield", rate: 0.05 },
       { type: "axe", rate: 0.05 }
     ];
-    // enemy drop: 18%で何か落ちる。内訳は🍖30%, 🧪35%, 👁15%, 🛡️10%, 🪓10%
-    const ENEMY_DROP_CHANCE = 0.18;
-    const ENEMY_DROP_TABLE = [
-      { type: "food", rate: 0.3 },
-      { type: "potion", rate: 0.35 },
-      { type: "map", rate: 0.15 },
-      { type: "shield", rate: 0.1 },
-      { type: "axe", rate: 0.1 }
-    ];
+
+    const PROJECTILE_STEP_MS = 40;
+    const CELL_SIZE = 24;
+    const GRID_PADDING = 8;
 
     const mapEl = document.getElementById("grid");
     const statusEl = document.getElementById("status");
     const logEl = document.getElementById("log");
+
+    const projectileLayer = document.createElement("div");
+    projectileLayer.id = "projectile-layer";
 
     const state = {
       floor: 1,
@@ -163,7 +187,7 @@
         atk: 3,
         atkBuff: 0,
         def: 1,
-        hunger: 1000,
+        hunger: 500,
         ibo: 0,
         iboMax: 5,
         exp: 0,
@@ -180,7 +204,10 @@
       gameOver: false,
       cleared: false,
       starving: false,
-      floorGearSpawned: 0
+      floorHasShield: false,
+      floorHasAxe: false,
+      floorShieldPlacedInitially: false,
+      inputLocked: false
     };
 
     function randInt(min, max) {
@@ -278,7 +305,10 @@
       state.revealed = false;
       state.seen = Array.from({ length: HEIGHT }, () => Array(WIDTH).fill(false));
       state.iboCooldown = 0;
-      state.floorGearSpawned = 0;
+      state.floorHasShield = false;
+      state.floorHasAxe = false;
+      state.floorShieldPlacedInitially = false;
+      state.inputLocked = false;
 
       const startRoom = state.rooms[0];
       state.player.x = startRoom.cx;
@@ -334,7 +364,8 @@
     }
 
     function rollFromTable(table) {
-      const roll = Math.random();
+      const total = table.reduce((sum, row) => sum + row.rate, 0);
+      const roll = Math.random() * (total > 0 ? total : 1);
       let acc = 0;
       for (const row of table) {
         acc += row.rate;
@@ -356,9 +387,12 @@
     }
 
     function placeItemAt(type, x, y) {
+      if (type === "shield" && state.floorHasShield) return false;
+      if (type === "axe" && state.floorHasAxe) return false;
       if (!positionFree(x, y)) return false;
       state.items.push({ x, y, type, char: spriteForType(type) });
-      if (type === "shield" || type === "axe") state.floorGearSpawned += 1;
+      if (type === "shield") state.floorHasShield = true;
+      if (type === "axe") state.floorHasAxe = true;
       return true;
     }
 
@@ -418,16 +452,30 @@
         placed++;
       }
 
-      // 各フロアで🛡️/🪓を最低1回は体感できるように最低保証する。
-      if (state.floorGearSpawned === 0) {
-        const guaranteedType = Math.random() < 0.5 ? "shield" : "axe";
+      // 仕様: 🛡️初期配置は各フロア20%ちょうど。
+      if (Math.random() < INITIAL_SHIELD_CHANCE) {
         for (const p of pool) {
-          if (placeItemAt(guaranteedType, p.x, p.y)) {
-            addLog(`${spriteForType(guaranteedType)}がこの階に配置された。`);
+          if (placeItemAt("shield", p.x, p.y)) {
+            state.floorShieldPlacedInitially = true;
             break;
           }
         }
       }
+
+      // 🪓は低確率で初期配置（各フロア最大1個）。
+      if (Math.random() < INITIAL_AXE_CHANCE) {
+        for (const p of pool) {
+          if (placeItemAt("axe", p.x, p.y)) break;
+        }
+      }
+    }
+
+    function allowedDropTable() {
+      return ENEMY_DROP_TABLE.filter((row) => {
+        if (row.type === "shield") return !state.floorShieldPlacedInitially && !state.floorHasShield;
+        if (row.type === "axe") return !state.floorHasAxe;
+        return true;
+      });
     }
 
     function render() {
@@ -454,6 +502,7 @@
         }
       }
       mapEl.innerHTML = cells.join("");
+      if (!mapEl.contains(projectileLayer)) mapEl.appendChild(projectileLayer);
 
       statusEl.textContent = [
         `HP ${state.player.hp}/${state.player.maxHp}`,
@@ -508,16 +557,9 @@
 
     function dropItem(x, y) {
       if (itemAt(x, y)) return;
-      const hasFloorGear = state.floorGearSpawned > 0 || state.items.some((it) => it.type === "shield" || it.type === "axe");
-      let type = rollFromTable(ENEMY_DROP_TABLE);
-
-      // 最低保証が未達なら序盤の撃破で🛡️/🪓を優先。出すぎ防止で1階あたり最大2個まで。
-      if (!hasFloorGear) {
-        type = Math.random() < 0.5 ? "shield" : "axe";
-      } else if ((type === "shield" || type === "axe") && state.floorGearSpawned >= 2) {
-        type = Math.random() < 0.5 ? "food" : "potion";
-      }
-
+      const table = allowedDropTable();
+      if (table.length === 0) return;
+      const type = rollFromTable(table);
       if (!placeItemAt(type, x, y)) return;
       addLog(`${spriteForType(type)}が落ちた。`);
     }
@@ -575,7 +617,7 @@
     }
 
     function movePlayer(dx, dy) {
-      if (state.gameOver) return;
+      if (state.gameOver || state.inputLocked) return;
       const nx = state.player.x + dx;
       const ny = state.player.y + dy;
       if (!isWalkable(nx, ny)) return endTurn();
@@ -601,13 +643,13 @@
     }
 
     function waitTurn() {
-      if (state.gameOver) return;
+      if (state.gameOver || state.inputLocked) return;
       addLog("その場で待機した。");
       endTurn();
     }
 
     function eatIbo() {
-      if (state.gameOver) return;
+      if (state.gameOver || state.inputLocked) return;
       if (state.player.ibo < 1) {
         addLog("イボがない！");
         return;
@@ -618,14 +660,25 @@
       endTurn();
     }
 
-    function iboBeam() {
-      if (state.gameOver) return;
+    function sleep(ms) {
+      return new Promise((resolve) => setTimeout(resolve, ms));
+    }
+
+    function setProjectilePos(el, x, y) {
+      el.style.left = `${GRID_PADDING + x * CELL_SIZE}px`;
+      el.style.top = `${GRID_PADDING + y * CELL_SIZE}px`;
+    }
+
+    async function iboBeam() {
+      if (state.gameOver || state.inputLocked) return;
       if (state.player.ibo < 1) {
         addLog("イボがない！");
         return;
       }
+      state.inputLocked = true;
       state.player.ibo -= 1;
       addLog("いぼビーム！");
+
       const dirs = [
         [0, -1],
         [0, 1],
@@ -633,24 +686,49 @@
         [1, 0]
       ];
       const hitSet = new Set();
-      for (const [dx, dy] of dirs) {
-        let x = state.player.x + dx;
-        let y = state.player.y + dy;
-        while (isWalkable(x, y)) {
-          const en = enemyAt(x, y);
-          if (en && !hitSet.has(en)) {
-            hitSet.add(en);
-            const damage = Math.max(1, playerAtkValue() - en.def);
-            applyDamage(en, damage, en.char);
+      const bullets = dirs.map(([dx, dy]) => {
+        const el = document.createElement("div");
+        el.className = "projectile";
+        el.textContent = "🟣";
+        setProjectilePos(el, state.player.x, state.player.y);
+        projectileLayer.appendChild(el);
+        return { x: state.player.x, y: state.player.y, dx, dy, el, active: true };
+      });
+
+      try {
+        while (bullets.some((b) => b.active)) {
+          for (const b of bullets) {
+            if (!b.active) continue;
+            const nx = b.x + b.dx;
+            const ny = b.y + b.dy;
+            if (!isWalkable(nx, ny)) {
+              b.active = false;
+              b.el.remove();
+              continue;
+            }
+            b.x = nx;
+            b.y = ny;
+            setProjectilePos(b.el, b.x, b.y);
+
+            const en = enemyAt(b.x, b.y);
+            if (en && !hitSet.has(en)) {
+              hitSet.add(en);
+              const damage = Math.max(1, playerAtkValue() - en.def);
+              applyDamage(en, damage, en.char);
+            }
           }
-          x += dx;
-          y += dy;
+          render();
+          await sleep(PROJECTILE_STEP_MS);
         }
+
+        for (const en of [...state.enemies]) {
+          if (en.hp <= 0) killEnemy(en);
+        }
+        endTurn();
+      } finally {
+        for (const b of bullets) b.el.remove();
+        state.inputLocked = false;
       }
-      for (const en of [...state.enemies]) {
-        if (en.hp <= 0) killEnemy(en);
-      }
-      endTurn();
     }
 
     function canSeePlayer(ex, ey) {
@@ -735,7 +813,7 @@
     }
 
     function hungerTurn() {
-      const extra = Math.random() < Math.min(0.35, Math.max(0, state.floor - 3) * 0.03) ? 1 : 0;
+      const extra = Math.random() < Math.min(0.2, Math.max(0, state.floor - 5) * 0.02) ? 1 : 0;
       state.player.hunger = Math.max(0, state.player.hunger - 1 - extra);
       state.starving = state.player.hunger === 0;
       if (state.starving) {
@@ -777,7 +855,7 @@
       state.player.atk = 3;
       state.player.atkBuff = 0;
       state.player.def = 1;
-      state.player.hunger = 1000;
+      state.player.hunger = 500;
       state.player.ibo = 0;
       state.player.exp = 0;
       state.player.level = 1;
@@ -795,7 +873,7 @@
         e.preventDefault();
       }
       if (key === "R" || key === "r") return restartGame();
-      if (state.gameOver) return;
+      if (state.gameOver || state.inputLocked) return;
 
       if (key === "ArrowUp") movePlayer(0, -1);
       else if (key === "ArrowDown") movePlayer(0, 1);
