@@ -141,7 +141,7 @@
     <div id="grid" aria-label="game map" role="img"></div>
     <div id="status"></div>
     <div id="log"></div>
-    <div id="help">操作: ↑↓←→移動 / Space 待機 / A いぼビーム / B イボをたべる / 1-3 アイテム使用</div>
+    <div id="help">操作: ↑↓←→移動 / Space 待機 / A いぼビーム / B イボをたべる / 1-5 アイテム使用</div>
   </main>
 
   <script>
@@ -161,11 +161,20 @@
       wolf: "🐺",
       lion: "🦁",
       dragon: "🐉",
-      food: "🍖",
+      food: "🍙",
+      sushi: "🍣",
+      meat: "🥩",
+      feast: "🍖",
       potion: "🧪",
       map: "👁",
       shield: "🛡️",
       axe: "🪓",
+      diamond: "💎",
+      dagger: "🗡️",
+      star: "🌟",
+      starBeam: "✨",
+      zombie: "🧟",
+      skull: "☠️",
       orb: "🟣",
       ladder: "🪜",
       wall: "🧱",
@@ -177,27 +186,41 @@
       guard: { char: SPRITES.guard, hp: 9, atk: 3, def: 1, exp: 2 },
       wolf: { char: SPRITES.wolf, hp: 12, atk: 4, def: 1, exp: 3 },
       lion: { char: SPRITES.lion, hp: 16, atk: 5, def: 2, exp: 5 },
-      dragon: { char: SPRITES.dragon, hp: 24, atk: 7, def: 3, exp: 8 }
+      dragon: { char: SPRITES.dragon, hp: 24, atk: 7, def: 3, exp: 8 },
+      zombie: { char: SPRITES.zombie, hp: 14, atk: 4, def: 1, exp: 4 },
+      skull: { char: SPRITES.skull, hp: 18, atk: 5, def: 2, exp: 6 }
     };
 
     // テーブル駆動で確率を管理して、しきい値漏れのバグを防ぐ。
-    // 通常アイテム初期配置比率: 🍖18%, 🧪52%, 👁20%, 🛡️5%, 🪓5%
+    // 通常アイテム初期配置比率
     const FLOOR_ITEM_TABLE = [
-      { type: "food", rate: 0.18 },
-      { type: "potion", rate: 0.52 },
-      { type: "map", rate: 0.2 },
+      { type: "food", rate: 0.2 },
+      { type: "sushi", rate: 0.18 },
+      { type: "meat", rate: 0.12 },
+      { type: "potion", rate: 0.23 },
+      { type: "map", rate: 0.1 },
+      { type: "diamond", rate: 0.06 },
+      { type: "axe", rate: 0.05 },
+      { type: "dagger", rate: 0.03 },
+      { type: "feast", rate: 0.01 },
+      { type: "star", rate: 0.01 },
       { type: "shield", rate: 0.05 },
-      { type: "axe", rate: 0.05 }
     ];
 
-    // enemy drop: 18%で何か落ちる。内訳は🍖30%, 🧪35%, 👁15%, 🛡️10%, 🪓10%
+    // enemy drop: 18%で何か落ちる。
     const ENEMY_DROP_CHANCE = 0.18;
     const ENEMY_DROP_TABLE = [
-      { type: "food", rate: 0.3 },
-      { type: "potion", rate: 0.35 },
-      { type: "map", rate: 0.15 },
-      { type: "shield", rate: 0.1 },
-      { type: "axe", rate: 0.1 }
+      { type: "food", rate: 0.26 },
+      { type: "sushi", rate: 0.22 },
+      { type: "meat", rate: 0.16 },
+      { type: "potion", rate: 0.14 },
+      { type: "map", rate: 0.08 },
+      { type: "diamond", rate: 0.04 },
+      { type: "axe", rate: 0.03 },
+      { type: "dagger", rate: 0.03 },
+      { type: "feast", rate: 0.02 },
+      { type: "star", rate: 0.01 },
+      { type: "shield", rate: 0.01 }
     ];
 
     const PROJECTILE_STEP_MS = 40;
@@ -220,10 +243,10 @@
         y: 1,
         hp: 20,
         maxHp: 20,
-        atk: 3,
         baseAtk: 3,
-        axeBuff: 0,
-        def: 1,
+        floorAtkMode: null,
+        baseDef: 1,
+        floorDefMode: null,
         hunger: 500,
         hungerMax: 1000,
         ibo: 0,
@@ -244,16 +267,17 @@
       starving: false,
       floorHasShield: false,
       floorHasAxe: false,
+      floorHasDiamond: false,
       inputLocked: false,
-      invSize: 3,
-      inventory: [null, null, null],
+      invSize: 5,
+      inventory: [null, null, null, null, null],
       bestScore: Number(localStorage.getItem("bojirogue_bestScore") || "0"),
       score: 0,
       turns: 0,
-      kills: { dog: 0, guard: 0, wolf: 0, lion: 0, dragon: 0 }
+      kills: { dog: 0, guard: 0, wolf: 0, lion: 0, dragon: 0, zombie: 0, skull: 0 }
     };
 
-    const SCORE_KILL = { dog: 10, guard: 20, wolf: 35, lion: 60, dragon: 120 };
+    const SCORE_KILL = { dog: 10, guard: 20, wolf: 35, lion: 60, dragon: 120, zombie: 45, skull: 80 };
 
     function randInt(min, max) {
       return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -277,8 +301,22 @@
       return level * 3;
     }
 
+    function calcDamage(atk, def) {
+      return Math.max(1, atk - def);
+    }
+
     function playerAtkValue() {
-      return state.player.baseAtk + state.player.axeBuff;
+      if (state.player.floorAtkMode === "axe110") {
+        return Math.ceil(state.player.baseAtk * 1.1 + 1);
+      }
+      return state.player.baseAtk;
+    }
+
+    function playerDefValue() {
+      if (state.player.floorDefMode === "diamond110") {
+        return Math.ceil(state.player.baseDef * 1.1 + 1);
+      }
+      return state.player.baseDef;
     }
 
     function firstEmptySlot() {
@@ -302,7 +340,9 @@
         state.kills.guard * SCORE_KILL.guard +
         state.kills.wolf * SCORE_KILL.wolf +
         state.kills.lion * SCORE_KILL.lion +
-        state.kills.dragon * SCORE_KILL.dragon;
+        state.kills.dragon * SCORE_KILL.dragon +
+        state.kills.zombie * SCORE_KILL.zombie +
+        state.kills.skull * SCORE_KILL.skull;
 
       const floorScore = state.floor * 50;
       const levelScore = state.player.level * 30;
@@ -395,9 +435,9 @@
 
     function setupFloor() {
       const built = createMap();
-      // フロア移行で🪓バフ解除
-      state.player.axeBuff = 0;
-      state.player.atk = state.player.baseAtk;
+      // フロア移行でフロア限定バフ解除
+      state.player.floorAtkMode = null;
+      state.player.floorDefMode = null;
       state.map = built.map;
       state.rooms = built.rooms;
       state.items = [];
@@ -407,6 +447,7 @@
       state.iboCooldown = 0;
       state.floorHasShield = false;
       state.floorHasAxe = false;
+      state.floorHasDiamond = false;
       state.inputLocked = false;
 
       const startRoom = state.rooms[0];
@@ -476,22 +517,36 @@
     function spriteForType(type) {
       return type === "food"
         ? SPRITES.food
-        : type === "potion"
-          ? SPRITES.potion
-          : type === "map"
-            ? SPRITES.map
-            : type === "shield"
-              ? SPRITES.shield
-              : SPRITES.axe;
+        : type === "sushi"
+          ? SPRITES.sushi
+          : type === "meat"
+            ? SPRITES.meat
+            : type === "feast"
+              ? SPRITES.feast
+              : type === "potion"
+                ? SPRITES.potion
+                : type === "map"
+                  ? SPRITES.map
+                  : type === "shield"
+                    ? SPRITES.shield
+                    : type === "axe"
+                      ? SPRITES.axe
+                      : type === "diamond"
+                        ? SPRITES.diamond
+                        : type === "dagger"
+                          ? SPRITES.dagger
+                          : SPRITES.star;
     }
 
     function placeItemAt(type, x, y) {
       if (type === "shield" && state.floorHasShield) return false;
       if (type === "axe" && state.floorHasAxe) return false;
+      if (type === "diamond" && state.floorHasDiamond) return false;
       if (!positionFree(x, y)) return false;
       state.items.push({ x, y, type, char: spriteForType(type) });
       if (type === "shield") state.floorHasShield = true;
       if (type === "axe") state.floorHasAxe = true;
+      if (type === "diamond") state.floorHasDiamond = true;
       return true;
     }
 
@@ -511,10 +566,10 @@
     }
 
     function enemyTypesForFloor() {
-      if (state.floor <= 3) return ["dog", "guard"];
-      if (state.floor <= 6) return ["dog", "wolf"];
-      if (state.floor <= 9) return ["wolf", "lion"];
-      return ["wolf", "lion", "dragon"];
+      if (state.floor <= 3) return ["dog", "guard", "dog", "guard", "dog"];
+      if (state.floor <= 6) return ["dog", "wolf", "dog", "wolf", "zombie"];
+      if (state.floor <= 9) return ["wolf", "lion", "wolf", "zombie", "skull"];
+      return ["wolf", "lion", "dragon", "zombie", "skull", "lion", "skull"];
     }
 
     function floorPowerTier() {
@@ -557,6 +612,7 @@
       return ENEMY_DROP_TABLE.filter((row) => {
         if (row.type === "shield") return !state.floorHasShield;
         if (row.type === "axe") return !state.floorHasAxe;
+        if (row.type === "diamond") return !state.floorHasDiamond;
         return true;
       });
     }
@@ -598,8 +654,8 @@
           階 ${state.floor}
           Lv ${state.player.level}
           EXP ${state.player.exp}/${expToNextLevel()}
-          ATK ${playerAtkValue()}${state.player.axeBuff > 0 ? ` (+${state.player.axeBuff})` : ""}
-          DEF ${state.player.def}
+          ATK ${playerAtkValue()}${state.player.floorAtkMode ? " (🪓)" : ""}
+          DEF ${playerDefValue()}${state.player.floorDefMode ? " (💎)" : ""}
           イボ ${state.player.ibo}/${state.player.iboMax}
           ITEM ${invToString()}
           SCORE ${state.score}
@@ -631,7 +687,7 @@
     }
 
     function playerAttack(enemy) {
-      const damage = Math.max(1, playerAtkValue() - enemy.def);
+      const damage = calcDamage(playerAtkValue(), enemy.def);
       applyDamage(enemy, damage, enemy.char);
       if (enemy.hp <= 0) {
         killEnemy(enemy);
@@ -667,8 +723,7 @@
         const defUp = randInt(0, 1);
         const hpUp = randInt(2, 3);
         state.player.baseAtk += atkUp;
-        state.player.atk = state.player.baseAtk;
-        state.player.def += defUp;
+        state.player.baseDef += defUp;
         state.player.maxHp += hpUp;
         state.player.hp = state.player.maxHp;
         addLog(`レベルアップ！ ATK+${atkUp} DEF+${defUp} MAX_HP+${hpUp}`);
@@ -678,13 +733,35 @@
     function enemyAttack(enemy) {
       const floorAtkBonus = Math.floor(Math.max(0, state.floor - 1) / 4);
       const scaledAtk = enemy.atk + floorAtkBonus;
-      const damage = Math.max(1, scaledAtk - state.player.def);
+      const damage = calcDamage(scaledAtk, playerDefValue());
+
+      if (enemy.type === "skull") {
+        const before = state.player.exp;
+        state.player.exp = Math.max(0, state.player.exp - damage);
+        addLog(`${enemy.char}の呪い！ EXP-${before - state.player.exp}`);
+        if (Math.random() < 0.2) {
+          state.player.maxHp = Math.max(1, state.player.maxHp - 1);
+          if (state.player.hp > state.player.maxHp) state.player.hp = state.player.maxHp;
+          addLog("最大HPが1減った…");
+        }
+        return;
+      }
+
       applyDamage(state.player, damage, "プレイヤー");
 
       if (enemy.type === "dragon" && state.player.hp > 0 && Math.random() < 0.5) {
         const flameDamage = Math.ceil(state.player.hp * 0.1);
         state.player.hp -= flameDamage;
         addLog(`${enemy.char}の炎！ 追加${flameDamage}ダメージ！`);
+      }
+
+      if (enemy.type === "zombie" && state.player.hp > 0) {
+        const corrosion = Math.min(damage * 3, 10);
+        if (corrosion > 0) {
+          state.player.hungerMax = Math.max(1, state.player.hungerMax - corrosion);
+          if (state.player.hunger > state.player.hungerMax) state.player.hunger = state.player.hungerMax;
+          addLog(`${enemy.char}の腐食！ 最大空腹-${corrosion}`);
+        }
       }
 
       if (state.player.hp <= 0) {
@@ -694,6 +771,7 @@
         finalizeScore("GAME OVER");
       }
     }
+
 
     function pickupItem() {
       const it = itemAt(state.player.x, state.player.y);
@@ -709,8 +787,8 @@
       addLog(`${it.char}を拾った。(${invToString()})`);
     }
 
-    function useInventory(slotIndex) {
-      if (state.gameOver) return;
+    async function useInventory(slotIndex) {
+      if (state.gameOver || state.inputLocked) return;
       if (slotIndex < 0 || slotIndex >= state.invSize) return;
 
       const slot = state.inventory[slotIndex];
@@ -719,9 +797,20 @@
         return;
       }
 
+      let consumed = true;
       if (slot.type === "food") {
+        state.player.hunger = Math.min(state.player.hungerMax, state.player.hunger + 50);
+        addLog("🍙を食べた！ 空腹+50");
+      } else if (slot.type === "sushi") {
         state.player.hunger = Math.min(state.player.hungerMax, state.player.hunger + 100);
-        addLog("🍖を食べた！ 空腹+100");
+        addLog("🍣を食べた！ 空腹+100");
+      } else if (slot.type === "meat") {
+        state.player.hunger = Math.min(state.player.hungerMax, state.player.hunger + 150);
+        addLog("🥩を食べた！ 空腹+150");
+      } else if (slot.type === "feast") {
+        state.player.hungerMax += 10;
+        state.player.hunger = Math.min(state.player.hungerMax, state.player.hunger + 200);
+        addLog("🍖を食べた！ 最大空腹+10 & 空腹+200");
       } else if (slot.type === "potion") {
         state.player.hp = Math.min(state.player.maxHp, state.player.hp + 10);
         addLog("🧪を使った！ HP+10");
@@ -729,20 +818,31 @@
         state.revealed = true;
         addLog("👁 地図を見通した！");
       } else if (slot.type === "shield") {
-        state.player.def += 1;
+        state.player.baseDef += 1;
         addLog("🛡️を装備した！ DEF+1（恒久）");
       } else if (slot.type === "axe") {
-        state.player.axeBuff = 2;
-        state.player.atk = state.player.baseAtk;
-        addLog("🪓を装備した！ ATK+2（このフロアのみ）");
+        state.player.floorAtkMode = "axe110";
+        addLog("🪓を装備した！ ATK強化（このフロアのみ）");
+      } else if (slot.type === "diamond") {
+        state.player.floorDefMode = "diamond110";
+        addLog("💎を装備した！ DEF強化（このフロアのみ）");
+      } else if (slot.type === "dagger") {
+        state.player.baseAtk += 1;
+        addLog("🗡️を装備した！ ATK+1（恒久）");
+      } else if (slot.type === "star") {
+        state.inventory[slotIndex] = null;
+        await starBurst();
+        return;
       } else {
         addLog(`${slot.char}は使えない。`);
-        return;
+        consumed = false;
       }
 
+      if (!consumed) return;
       state.inventory[slotIndex] = null;
       endTurn();
     }
+
 
     function walkRegen() {
       state.player.walkCount += 1;
@@ -850,8 +950,65 @@
             const en = enemyAt(b.x, b.y);
             if (en && !hitSet.has(en)) {
               hitSet.add(en);
-              const damage = Math.max(1, playerAtkValue() - en.def);
+              const damage = calcDamage(playerAtkValue(), en.def);
               applyDamage(en, damage, en.char);
+            }
+          }
+          render();
+          await sleep(PROJECTILE_STEP_MS);
+        }
+
+        for (const en of [...state.enemies]) {
+          if (en.hp <= 0) killEnemy(en);
+        }
+        endTurn();
+      } finally {
+        for (const b of bullets) b.el.remove();
+        state.inputLocked = false;
+      }
+    }
+
+    async function starBurst() {
+      if (state.gameOver || state.inputLocked) return;
+      state.inputLocked = true;
+      addLog("🌟が弾けた！");
+
+      const dirs = [
+        [0, -1],
+        [0, 1],
+        [-1, 0],
+        [1, 0]
+      ];
+      const hitSet = new Set();
+      const bullets = dirs.map(([dx, dy]) => {
+        const el = document.createElement("div");
+        el.className = "projectile";
+        el.textContent = SPRITES.starBeam;
+        setProjectilePos(el, state.player.x, state.player.y);
+        projectileLayer.appendChild(el);
+        return { x: state.player.x, y: state.player.y, dx, dy, el, active: true };
+      });
+
+      try {
+        while (bullets.some((b) => b.active)) {
+          for (const b of bullets) {
+            if (!b.active) continue;
+            const nx = b.x + b.dx;
+            const ny = b.y + b.dy;
+            if (nx < 0 || nx >= WIDTH || ny < 0 || ny >= HEIGHT) {
+              b.active = false;
+              b.el.remove();
+              continue;
+            }
+            b.x = nx;
+            b.y = ny;
+            setProjectilePos(b.el, b.x, b.y);
+
+            const en = enemyAt(b.x, b.y);
+            if (en && !hitSet.has(en)) {
+              hitSet.add(en);
+              const normalDamage = calcDamage(playerAtkValue(), en.def);
+              applyDamage(en, normalDamage * 2, en.char);
             }
           }
           render();
@@ -990,9 +1147,9 @@
     function restartGame() {
       state.floor = 1;
       state.player.baseAtk = 3;
-      state.player.atk = state.player.baseAtk;
-      state.player.axeBuff = 0;
-      state.player.def = 1;
+      state.player.floorAtkMode = null;
+      state.player.baseDef = 1;
+      state.player.floorDefMode = null;
       state.player.hp = 20;
       state.player.maxHp = 20;
       state.player.hungerMax = 1000;
@@ -1001,10 +1158,10 @@
       state.player.exp = 0;
       state.player.level = 1;
       state.player.walkCount = 0;
-      state.inventory = [null, null, null];
+      state.inventory = [null, null, null, null, null];
       state.score = 0;
       state.turns = 0;
-      state.kills = { dog: 0, guard: 0, wolf: 0, lion: 0, dragon: 0 };
+      state.kills = { dog: 0, guard: 0, wolf: 0, lion: 0, dragon: 0, zombie: 0, skull: 0 };
       state.logs = [];
       state.gameOver = false;
       state.starving = false;
@@ -1014,7 +1171,7 @@
 
     window.addEventListener("keydown", (e) => {
       const key = e.key;
-      if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", " ", "a", "A", "b", "B", "r", "R", "1", "2", "3"].includes(key)) {
+      if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", " ", "a", "A", "b", "B", "r", "R", "1", "2", "3", "4", "5"].includes(key)) {
         e.preventDefault();
       }
       if (key === "R" || key === "r") return restartGame();
@@ -1030,6 +1187,8 @@
       else if (key === "1") useInventory(0);
       else if (key === "2") useInventory(1);
       else if (key === "3") useInventory(2);
+      else if (key === "4") useInventory(3);
+      else if (key === "5") useInventory(4);
     });
 
     restartGame();
