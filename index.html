@@ -366,7 +366,12 @@
       else if(slot.type==="sushi"){ state.player.hunger=Math.min(state.player.hungerMax,state.player.hunger+100); addLog("🍣を食べた！ 空腹+100"); }
       else if(slot.type==="meat"){ state.player.hunger=Math.min(state.player.hungerMax,state.player.hunger+150); addLog("🥩を食べた！ 空腹+150"); }
       else if(slot.type==="feast"){ state.player.hungerMax+=10; state.player.hunger=Math.min(state.player.hungerMax,state.player.hunger+200); addLog("🍖を食べた！ 最大空腹+10 & 空腹+200"); }
-      else if(slot.type==="potion"){ state.player.hp=Math.min(state.player.maxHp,state.player.hp+10); addLog("🧪を使った！ HP+10"); if(state.player.poison){ state.player.poison=false; addLog("解毒した。"); } }
+      else if(slot.type==="potion"){
+        const heal = randInt(12,18);
+        state.player.hp=Math.min(state.player.maxHp,state.player.hp+heal);
+        addLog(`🧪を使った！ HP+${heal}`);
+        if(state.player.poison){ state.player.poison=false; addLog("解毒した。"); }
+      }
       else if(slot.type==="map"){ state.revealed=true; addLog("👁 地図を見通した！"); }
       else if(slot.type==="shield"){ state.player.baseDef+=1; addLog("🛡️を装備した！ DEF+1（恒久）"); }
       else if(slot.type==="axe"){ state.player.floorAtkBuff=Math.ceil(playerAtkValue()*1.1+1); addLog("🪓を装備した！ ATK強化（このフロアのみ）"); }
@@ -409,7 +414,13 @@
             if(!isWalkable(nx,ny)){ b.active=false; b.el.remove(); continue; }
             b.x=nx; b.y=ny; setProjectilePos(b.el,b.x,b.y);
             const en=enemyAt(b.x,b.y);
-            if(en&&!hitSet.has(en)){ hitSet.add(en); const damage=calcDamage(playerAtkValue(), en.def); applyDamage(en, damage, en.char); }
+            if(en&&!hitSet.has(en)){
+              hitSet.add(en);
+              const base = calcDamage(playerAtkValue(), en.def);
+              const multiplier = randInt(150,200) / 100;
+              const damage = Math.round(base * multiplier);
+              applyDamage(en, damage, en.char);
+            }
           }
           render(); await sleep(PROJECTILE_STEP_MS);
         }
