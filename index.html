@@ -56,7 +56,7 @@
 
     const SPRITES = {
       player:"🧔", wall:"🧱", floor:".", ladder:"🪜", orb:"🟣", starBeam:"✨",
-      dog:"🐕", wolf:"🐺", lion:"🦁", dragon:"🐉", ghost:"👻", zombie:"🧟", skull:"☠️", invader:"👾", spider:"🕷️",
+      dog:"🐕", wolf:"🐺", lion:"🦁", dragon:"🐉", ghost:"👻", zombie:"🧟", skull:"☠️", invader:"👾", spider:"🕷️", chick:"🐥",
       food:"🍙", sushi:"🍣", meat:"🥩", feast:"🍖", potion:"🧪", map:"👁", shield:"🛡️", axe:"🪓", diamond:"💎", dagger:"🗡️", star:"🌟"
     };
 
@@ -69,7 +69,8 @@
       zombie:{char:SPRITES.zombie,hp:15,atk:5,def:2,exp:4},
       skull:{char:SPRITES.skull,hp:17,atk:6,def:2,exp:7},
       invader:{char:SPRITES.invader,hp:23,atk:9,def:4,exp:12},
-      spider:{char:SPRITES.spider,hp:9,atk:4,def:1,exp:3}
+      spider:{char:SPRITES.spider,hp:9,atk:4,def:1,exp:3},
+      chick:{char:SPRITES.chick,hp:100,atk:0,def:1,exp:50}
     };
 
     const FLOOR_ITEM_TABLE = [
@@ -90,11 +91,11 @@
       {min:1,max:2,pool:[{type:"dog",w:60},{type:"wolf",w:28},{type:"ghost",w:12}]},
       {min:3,max:4,pool:[{type:"dog",w:38},{type:"wolf",w:30},{type:"lion",w:16},{type:"ghost",w:8},{type:"spider",w:8}]},
       {min:5,max:8,pool:[{type:"wolf",w:32},{type:"lion",w:22},{type:"dragon",w:12},{type:"ghost",w:10},{type:"zombie",w:12},{type:"spider",w:7},{type:"skull",w:5}]},
-      {min:9,max:12,pool:[{type:"wolf",w:20},{type:"lion",w:24},{type:"dragon",w:15},{type:"ghost",w:8},{type:"zombie",w:13},{type:"spider",w:8},{type:"skull",w:12}]},
-      {min:13,max:999,pool:[{type:"lion",w:22},{type:"dragon",w:16},{type:"ghost",w:7},{type:"zombie",w:12},{type:"spider",w:8},{type:"skull",w:20},{type:"invader",w:15}]}
+      {min:9,max:12,pool:[{type:"wolf",w:20},{type:"lion",w:24},{type:"dragon",w:15},{type:"ghost",w:8},{type:"zombie",w:13},{type:"spider",w:8},{type:"skull",w:12},{type:"chick",w:2}]},
+      {min:13,max:999,pool:[{type:"lion",w:22},{type:"dragon",w:16},{type:"ghost",w:7},{type:"zombie",w:12},{type:"spider",w:8},{type:"skull",w:20},{type:"invader",w:15},{type:"chick",w:2}]}
     ];
 
-    const SCORE_KILL = {dog:10,wolf:35,lion:60,dragon:120,ghost:70,zombie:45,skull:80,invader:160,spider:30};
+    const SCORE_KILL = {dog:10,wolf:35,lion:60,dragon:120,ghost:70,zombie:45,skull:80,invader:160,spider:30,chick:0};
 
     const mapEl = document.getElementById("grid");
     const versionEl = document.getElementById("version");
@@ -108,7 +109,7 @@
       floor:1,map:[],rooms:[],enemies:[],items:[],ladder:{x:0,y:0},logs:[],revealed:false,seen:[],gameOver:false,inputLocked:false,
       invSize:5,inventory:[null,null,null,null,null],bestScore:Number(localStorage.getItem("bojirogue_bestScore")||"0"),score:0,turns:0,
       floorHasShield:false,floorHasAxe:false,
-      kills:{dog:0,wolf:0,lion:0,dragon:0,ghost:0,zombie:0,skull:0,invader:0,spider:0},
+      kills:{dog:0,wolf:0,lion:0,dragon:0,ghost:0,zombie:0,skull:0,invader:0,spider:0,chick:0},
       player:{x:1,y:1,hp:25,maxHp:25,baseAtk:4,baseDef:2,hunger:500,hungerMax:1000,ibo:0,iboMax:5,level:1,exp:0,walkCount:0,poison:false,diamondWard:false,floorAtkBuff:null,floorDefBuff:null},
       iboCooldown:0,starving:false
     };
@@ -238,6 +239,7 @@
         if(p.x===state.ladder.x&&p.y===state.ladder.y) continue;
         const type = weightedEnemyType(enemyPool);
         if(type==="invader" && state.floor<13) continue;
+        if(type==="chick" && state.floor<10) continue;
         state.enemies.push(spawnEnemy(type,p.x,p.y));
         placed++;
       }
@@ -324,10 +326,11 @@
 
     function killEnemy(enemy){
       state.enemies = state.enemies.filter((e)=>e!==enemy);
-      addLog(`${enemy.char}をたおした！`);
+      if(enemy.type === "chick") addLog("🐥「たくましい子…」");
+      else addLog(`${enemy.char}をたおした！`);
       if(state.kills[enemy.type]!==undefined) state.kills[enemy.type] += 1;
       state.player.exp += enemy.exp;
-      if(Math.random()<ENEMY_DROP_CHANCE) dropItem(enemy.x, enemy.y);
+      if(enemy.type !== "chick" && Math.random()<ENEMY_DROP_CHANCE) dropItem(enemy.x, enemy.y);
       maybeLevelUp();
     }
 
@@ -476,7 +479,19 @@
 
     function enemyTurn(){
       for(const en of state.enemies){
-        if(Math.abs(en.x-state.player.x)+Math.abs(en.y-state.player.y)===1){ enemyAttack(en); if(state.gameOver) return; continue; }
+        if(Math.abs(en.x-state.player.x)+Math.abs(en.y-state.player.y)===1){
+          if(en.type === "chick"){
+            const lines = [
+              "🐥「思いやりは！？」",
+              "🐥「もしかして、僕をつかって進んで学習してる？」"
+            ];
+            addLog(lines[Math.floor(Math.random()*lines.length)]);
+            continue;
+          }
+          enemyAttack(en);
+          if(state.gameOver) return;
+          continue;
+        }
         let moved=false;
         if(canSeePlayer(en.x,en.y)){
           const step=bfsStep(en.x,en.y,state.player.x,state.player.y);
@@ -515,7 +530,7 @@
     function restartGame(){
       state.floor=1; state.player={x:1,y:1,hp:25,maxHp:25,baseAtk:4,baseDef:2,hunger:500,hungerMax:1000,ibo:0,iboMax:5,level:1,exp:0,walkCount:0,poison:false,diamondWard:false,floorAtkBuff:null,floorDefBuff:null};
       state.inventory=[null,null,null,null,null]; state.score=0; state.turns=0; state.logs=[]; state.gameOver=false; state.starving=false;
-      state.kills={dog:0,wolf:0,lion:0,dragon:0,ghost:0,zombie:0,skull:0,invader:0,spider:0};
+      state.kills={dog:0,wolf:0,lion:0,dragon:0,ghost:0,zombie:0,skull:0,invader:0,spider:0,chick:0};
       const starterItemType = grantStarterItem();
       addLog(`ぼじろーぐ開始！ 初期アイテム: ${spriteForType(starterItemType)}`); setupFloor();
     }
