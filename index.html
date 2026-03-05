@@ -105,7 +105,7 @@
       invSize:5,inventory:[null,null,null,null,null],bestScore:Number(localStorage.getItem("bojirogue_bestScore")||"0"),score:0,turns:0,
       floorHasShield:false,floorHasAxe:false,
       kills:{dog:0,wolf:0,lion:0,dragon:0,ghost:0,zombie:0,skull:0,invader:0,spider:0},
-      player:{x:1,y:1,hp:20,maxHp:20,baseAtk:3,baseDef:1,hunger:500,hungerMax:1000,ibo:0,iboMax:5,level:1,exp:0,walkCount:0,poison:false,diamondWard:false,floorAtkBuff:null,floorDefBuff:null},
+      player:{x:1,y:1,hp:25,maxHp:25,baseAtk:3,baseDef:1,hunger:500,hungerMax:1000,ibo:0,iboMax:5,level:1,exp:0,walkCount:0,poison:false,diamondWard:false,floorAtkBuff:null,floorDefBuff:null},
       iboCooldown:0,starving:false
     };
 
@@ -286,7 +286,7 @@
       let damage = normal;
       const critChance = clamp01((atk - def) / 100);
       if(Math.random() < critChance){
-        damage = normal * 2 + 1;
+        damage = normal * 2;
         addLog(`きゅうしょを攻撃！${damage}ダメージ！！`);
       }
       if(isEnemyAttack && Math.random() < 0.5) damage += 1;
