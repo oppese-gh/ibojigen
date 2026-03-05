@@ -497,7 +497,7 @@
     function endTurn(){ state.turns+=1; enemyTurn(); if(state.gameOver) return render(); hungerTurn(); if(state.gameOver) return render(); iboTurn(); render(); }
 
     function restartGame(){
-      state.floor=1; state.player={x:1,y:1,hp:20,maxHp:20,baseAtk:3,baseDef:1,hunger:500,hungerMax:1000,ibo:0,iboMax:5,level:1,exp:0,walkCount:0,poison:false,diamondWard:false,floorAtkBuff:null,floorDefBuff:null};
+      state.floor=1; state.player={x:1,y:1,hp:25,maxHp:25,baseAtk:3,baseDef:1,hunger:500,hungerMax:1000,ibo:0,iboMax:5,level:1,exp:0,walkCount:0,poison:false,diamondWard:false,floorAtkBuff:null,floorDefBuff:null};
       state.inventory=[null,null,null,null,null]; state.score=0; state.turns=0; state.logs=[]; state.gameOver=false; state.starving=false;
       state.kills={dog:0,wolf:0,lion:0,dragon:0,ghost:0,zombie:0,skull:0,invader:0,spider:0};
       addLog("ぼじろーぐ開始！"); setupFloor();
