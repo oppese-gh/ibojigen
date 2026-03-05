@@ -34,7 +34,7 @@
 </head>
 <body>
   <main class="wrap">
-    <h1>ぼじろーぐ</h1>
+    <h1 id="app-title">ぼじろーぐ <span id="version"></span></h1>
     <div id="grid" aria-label="game map" role="img"></div>
     <div id="status"></div>
     <div id="log"></div>
@@ -52,6 +52,7 @@
     const PROJECTILE_STEP_MS = 40;
     const CELL_SIZE = 24;
     const GRID_PADDING = 8;
+    const APP_VERSION = "v1.01";
 
     const SPRITES = {
       player:"🧔", wall:"🧱", floor:".", ladder:"🪜", orb:"🟣", starBeam:"✨",
@@ -92,9 +93,11 @@
     const SCORE_KILL = {dog:10,wolf:35,lion:60,dragon:120,ghost:70,zombie:45,skull:80,invader:160,spider:30};
 
     const mapEl = document.getElementById("grid");
+    const versionEl = document.getElementById("version");
     const statusEl = document.getElementById("status");
     const logEl = document.getElementById("log");
     const projectileLayer = document.createElement("div");
+    if (versionEl) versionEl.textContent = APP_VERSION;
     projectileLayer.id = "projectile-layer";
 
     const state = {
