@@ -5,134 +5,31 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ぼじろーぐ</title>
   <style>
-    :root {
-      --bg: #111;
-      --panel: #1b1b1b;
-      --text: #f2f2f2;
-      --accent: #7ad1ff;
-      --wall: #7f8c8d;
-      --floor: #2c3e50;
-    }
+    :root { --bg:#111; --panel:#1b1b1b; --text:#f2f2f2; --accent:#7ad1ff; }
     * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      min-height: 100vh;
-      display: grid;
-      place-items: center;
-      background: var(--bg);
-      color: var(--text);
-      font-family: system-ui, "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif;
-      padding: 12px;
-    }
-    .wrap {
-      width: min(100%, 980px);
-      background: var(--panel);
-      border: 1px solid #333;
-      border-radius: 10px;
-      padding: 12px;
-      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
-    }
-    h1 {
-      margin: 0 0 8px;
-      color: var(--accent);
-      font-size: 20px;
-    }
-    #grid {
-      position: relative;
-      margin: 0;
-      display: grid;
-      grid-template-columns: repeat(40, 24px);
-      grid-auto-rows: 24px;
-      width: fit-content;
-      background: #0d0d0d;
-      border: 1px solid #444;
-      padding: 8px;
-      overflow: auto;
-      user-select: none;
-      min-height: calc(25 * 24px + 16px);
-    }
-    #projectile-layer {
-      position: absolute;
-      inset: 0;
-      pointer-events: none;
-      z-index: 2;
-    }
-    .projectile {
-      position: absolute;
-      width: 24px;
-      height: 24px;
-      line-height: 24px;
-      text-align: center;
-      font-size: 20px;
-    }
-    .cell {
-      width: 24px;
-      height: 24px;
-      line-height: 24px;
-      text-align: center;
-      font-size: 20px;
-    }
-    #status {
-      margin-top: 8px;
-      padding: 8px;
-      border: 1px solid #3b3b3b;
-      background: #141414;
-      font-size: 16px;
-      line-height: 1.5;
-      white-space: normal;
-    }
-    .row {
-      display: flex;
-      gap: 14px;
-      align-items: center;
-      flex-wrap: wrap;
-    }
-    .stat {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .label { min-width: 2.2em; }
-    .meter {
-      width: 180px;
-      height: 12px;
-      border: 1px solid #666;
-      background: #242424;
-      border-radius: 3px;
-      overflow: hidden;
-    }
-    .fill {
-      display: block;
-      height: 100%;
-      width: 0;
-      background: #f1c40f;
-      border-radius: inherit;
-    }
-    .tone-yellow .fill { background: #f1c40f; }
-    .tone-orange .fill { background: #ff9800; }
-    .tone-red .fill { background: #b53b2f; }
-    .tone-yellow .num { color: #f1c40f; }
-    .tone-orange .num { color: #ff9800; }
-    .tone-red .num { color: #e74c3c; }
-    .meter.tone-red { border-color: #e74c3c; }
-    .meta { margin-top: 6px; }
-    #log {
-      margin-top: 8px;
-      border: 1px solid #3b3b3b;
-      background: #101010;
-      min-height: 72px;
-      max-height: 132px;
-      overflow-y: auto;
-      padding: 8px;
-      font-size: 14px;
-      line-height: 1.35;
-    }
-    #help {
-      margin-top: 8px;
-      color: #ccc;
-      font-size: 13px;
-    }
-    .line { margin-bottom: 3px; }
+    body { margin:0; min-height:100vh; display:grid; place-items:center; background:var(--bg); color:var(--text); font-family:system-ui,"Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif; padding:12px; }
+    .wrap { width:min(100%,980px); background:var(--panel); border:1px solid #333; border-radius:10px; padding:12px; box-shadow:0 8px 30px rgba(0,0,0,.35); }
+    h1 { margin:0 0 8px; color:var(--accent); font-size:20px; }
+    #grid { position:relative; margin:0; display:grid; grid-template-columns:repeat(40,24px); grid-auto-rows:24px; width:fit-content; background:#0d0d0d; border:1px solid #444; padding:8px; overflow:auto; user-select:none; min-height:calc(25 * 24px + 16px); }
+    #projectile-layer { position:absolute; inset:0; pointer-events:none; z-index:2; }
+    .projectile { position:absolute; width:24px; height:24px; line-height:24px; text-align:center; font-size:20px; }
+    .cell { width:24px; height:24px; line-height:24px; text-align:center; font-size:20px; }
+    #status { margin-top:8px; padding:8px; border:1px solid #3b3b3b; background:#141414; font-size:16px; line-height:1.45; white-space:normal; }
+    .row { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+    .stat { display:flex; align-items:center; gap:6px; }
+    .label { min-width:2.2em; }
+    .meter { width:180px; height:12px; border:1px solid #666; background:#242424; border-radius:3px; overflow:hidden; }
+    .fill { display:block; height:100%; width:0; background:#f1c40f; border-radius:inherit; }
+    .tone-yellow .fill { background:#f1c40f; }
+    .tone-orange .fill { background:#ff9800; }
+    .tone-red .fill { background:#b53b2f; }
+    .tone-yellow .num { color:#f1c40f; }
+    .tone-orange .num { color:#ff9800; }
+    .tone-red .num { color:#e74c3c; }
+    .meter.tone-red { border-color:#e74c3c; }
+    #log { margin-top:8px; border:1px solid #3b3b3b; background:#101010; min-height:72px; max-height:132px; overflow-y:auto; padding:8px; font-size:14px; line-height:1.35; }
+    #help { margin-top:8px; color:#ccc; font-size:13px; }
+    .line { margin-bottom:3px; }
   </style>
 </head>
 <body>
@@ -141,7 +38,7 @@
     <div id="grid" aria-label="game map" role="img"></div>
     <div id="status"></div>
     <div id="log"></div>
-    <div id="help">操作: ↑↓←→移動 / Space 待機 / A いぼビーム / B イボをたべる / 1-5 アイテム使用</div>
+    <div id="help">操作: ↑↓←→移動 / Space 待機 / A いぼビーム / B イボ食い / 1-5 アイテム使用 / R リスタート</div>
   </main>
 
   <script>
@@ -150,1045 +47,469 @@
     const WIDTH = 40;
     const HEIGHT = 25;
     const MAX_LOG = 6;
-
     const TILE_WALL = "#";
     const TILE_FLOOR = ".";
-
-    const SPRITES = {
-      player: "🧔",
-      dog: "🐕",
-      guard: "👮",
-      wolf: "🐺",
-      lion: "🦁",
-      dragon: "🐉",
-      food: "🍙",
-      sushi: "🍣",
-      meat: "🥩",
-      feast: "🍖",
-      potion: "🧪",
-      map: "👁",
-      shield: "🛡️",
-      axe: "🪓",
-      diamond: "💎",
-      dagger: "🗡️",
-      star: "🌟",
-      starBeam: "✨",
-      zombie: "🧟",
-      skull: "☠️",
-      orb: "🟣",
-      ladder: "🪜",
-      wall: "🧱",
-      floor: "."
-    };
-
-    const ENEMY_ARCHETYPES = {
-      dog: { char: SPRITES.dog, hp: 6, atk: 2, def: 0, exp: 1 },
-      guard: { char: SPRITES.guard, hp: 9, atk: 3, def: 1, exp: 2 },
-      wolf: { char: SPRITES.wolf, hp: 12, atk: 4, def: 1, exp: 3 },
-      lion: { char: SPRITES.lion, hp: 16, atk: 5, def: 2, exp: 5 },
-      dragon: { char: SPRITES.dragon, hp: 24, atk: 7, def: 3, exp: 8 },
-      zombie: { char: SPRITES.zombie, hp: 14, atk: 4, def: 1, exp: 4 },
-      skull: { char: SPRITES.skull, hp: 18, atk: 5, def: 2, exp: 6 }
-    };
-
-    // テーブル駆動で確率を管理して、しきい値漏れのバグを防ぐ。
-    // 通常アイテム初期配置比率
-    const FLOOR_ITEM_TABLE = [
-      { type: "food", rate: 0.2 },
-      { type: "sushi", rate: 0.18 },
-      { type: "meat", rate: 0.12 },
-      { type: "potion", rate: 0.23 },
-      { type: "map", rate: 0.1 },
-      { type: "diamond", rate: 0.06 },
-      { type: "axe", rate: 0.05 },
-      { type: "dagger", rate: 0.03 },
-      { type: "feast", rate: 0.01 },
-      { type: "star", rate: 0.01 },
-      { type: "shield", rate: 0.05 },
-    ];
-
-    // enemy drop: 18%で何か落ちる。
-    const ENEMY_DROP_CHANCE = 0.18;
-    const ENEMY_DROP_TABLE = [
-      { type: "food", rate: 0.26 },
-      { type: "sushi", rate: 0.22 },
-      { type: "meat", rate: 0.16 },
-      { type: "potion", rate: 0.14 },
-      { type: "map", rate: 0.08 },
-      { type: "diamond", rate: 0.04 },
-      { type: "axe", rate: 0.03 },
-      { type: "dagger", rate: 0.03 },
-      { type: "feast", rate: 0.02 },
-      { type: "star", rate: 0.01 },
-      { type: "shield", rate: 0.01 }
-    ];
-
     const PROJECTILE_STEP_MS = 40;
     const CELL_SIZE = 24;
     const GRID_PADDING = 8;
 
+    const SPRITES = {
+      player:"🧔", wall:"🧱", floor:".", ladder:"🪜", orb:"🟣", starBeam:"✨",
+      dog:"🐕", wolf:"🐺", lion:"🦁", dragon:"🐉", ghost:"👻", zombie:"🧟", skull:"☠️", invader:"👾", spider:"🕷️",
+      food:"🍙", sushi:"🍣", meat:"🥩", feast:"🍖", potion:"🧪", map:"👁", shield:"🛡️", axe:"🪓", diamond:"💎", dagger:"🗡️", star:"🌟"
+    };
+
+    const ENEMY_ARCHETYPES = {
+      dog:{char:SPRITES.dog,hp:6,atk:2,def:0,exp:1},
+      wolf:{char:SPRITES.wolf,hp:11,atk:4,def:1,exp:3},
+      lion:{char:SPRITES.lion,hp:16,atk:6,def:2,exp:5},
+      dragon:{char:SPRITES.dragon,hp:24,atk:8,def:3,exp:9},
+      ghost:{char:SPRITES.ghost,hp:14,atk:5,def:1,exp:6},
+      zombie:{char:SPRITES.zombie,hp:15,atk:5,def:2,exp:4},
+      skull:{char:SPRITES.skull,hp:17,atk:6,def:2,exp:7},
+      invader:{char:SPRITES.invader,hp:23,atk:9,def:4,exp:12},
+      spider:{char:SPRITES.spider,hp:9,atk:4,def:1,exp:3}
+    };
+
+    const FLOOR_ITEM_TABLE = [
+      {type:"food",rate:0.22},{type:"sushi",rate:0.18},{type:"meat",rate:0.12},{type:"potion",rate:0.18},{type:"map",rate:0.08},
+      {type:"diamond",rate:0.05},{type:"axe",rate:0.05},{type:"dagger",rate:0.04},{type:"shield",rate:0.05},{type:"feast",rate:0.02},{type:"star",rate:0.01}
+    ];
+    const ENEMY_DROP_CHANCE = 0.2;
+    const ENEMY_DROP_TABLE = [
+      {type:"food",rate:0.24},{type:"sushi",rate:0.2},{type:"meat",rate:0.16},{type:"potion",rate:0.14},{type:"map",rate:0.08},
+      {type:"diamond",rate:0.04},{type:"axe",rate:0.04},{type:"dagger",rate:0.04},{type:"shield",rate:0.03},{type:"feast",rate:0.02},{type:"star",rate:0.01}
+    ];
+
+    const FLOOR_ENEMY_TABLES = [
+      {min:1,max:2,pool:[{type:"dog",w:60},{type:"wolf",w:28},{type:"ghost",w:12}]},
+      {min:3,max:4,pool:[{type:"dog",w:38},{type:"wolf",w:30},{type:"lion",w:16},{type:"ghost",w:8},{type:"spider",w:8}]},
+      {min:5,max:8,pool:[{type:"wolf",w:32},{type:"lion",w:22},{type:"dragon",w:12},{type:"ghost",w:10},{type:"zombie",w:12},{type:"spider",w:7},{type:"skull",w:5}]},
+      {min:9,max:12,pool:[{type:"wolf",w:20},{type:"lion",w:24},{type:"dragon",w:15},{type:"ghost",w:8},{type:"zombie",w:13},{type:"spider",w:8},{type:"skull",w:12}]},
+      {min:13,max:999,pool:[{type:"lion",w:22},{type:"dragon",w:16},{type:"ghost",w:7},{type:"zombie",w:12},{type:"spider",w:8},{type:"skull",w:20},{type:"invader",w:15}]}
+    ];
+
+    const SCORE_KILL = {dog:10,wolf:35,lion:60,dragon:120,ghost:70,zombie:45,skull:80,invader:160,spider:30};
+
     const mapEl = document.getElementById("grid");
     const statusEl = document.getElementById("status");
     const logEl = document.getElementById("log");
-
     const projectileLayer = document.createElement("div");
     projectileLayer.id = "projectile-layer";
 
     const state = {
-      floor: 1,
-      map: [],
-      rooms: [],
-      player: {
-        x: 1,
-        y: 1,
-        hp: 20,
-        maxHp: 20,
-        baseAtk: 3,
-        floorAtkMode: null,
-        baseDef: 1,
-        floorDefMode: null,
-        hunger: 500,
-        hungerMax: 1000,
-        ibo: 0,
-        iboMax: 5,
-        exp: 0,
-        level: 1,
-        walkCount: 0
-      },
-      enemies: [],
-      items: [],
-      ladder: { x: 0, y: 0 },
-      logs: [],
-      revealed: false,
-      seen: [],
-      iboCooldown: 0,
-      gameOver: false,
-      cleared: false,
-      starving: false,
-      floorHasShield: false,
-      floorHasAxe: false,
-      floorHasDiamond: false,
-      inputLocked: false,
-      invSize: 5,
-      inventory: [null, null, null, null, null],
-      bestScore: Number(localStorage.getItem("bojirogue_bestScore") || "0"),
-      score: 0,
-      turns: 0,
-      kills: { dog: 0, guard: 0, wolf: 0, lion: 0, dragon: 0, zombie: 0, skull: 0 }
+      floor:1,map:[],rooms:[],enemies:[],items:[],ladder:{x:0,y:0},logs:[],revealed:false,seen:[],gameOver:false,inputLocked:false,
+      invSize:5,inventory:[null,null,null,null,null],bestScore:Number(localStorage.getItem("bojirogue_bestScore")||"0"),score:0,turns:0,
+      floorHasShield:false,floorHasAxe:false,
+      kills:{dog:0,wolf:0,lion:0,dragon:0,ghost:0,zombie:0,skull:0,invader:0,spider:0},
+      player:{x:1,y:1,hp:20,maxHp:20,baseAtk:3,baseDef:1,hunger:500,hungerMax:1000,ibo:0,iboMax:5,level:1,exp:0,walkCount:0,poison:false,diamondWard:false,floorAtkBuff:null,floorDefBuff:null},
+      iboCooldown:0,starving:false
     };
 
-    const SCORE_KILL = { dog: 10, guard: 20, wolf: 35, lion: 60, dragon: 120, zombie: 45, skull: 80 };
+    const clamp01 = (v) => Math.max(0, Math.min(1, v));
+    const randInt = (min,max) => Math.floor(Math.random()*(max-min+1))+min;
+    function shuffle(arr){for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]];}return arr;}
+    const expToNextLevel = (level = state.player.level) => level * 3;
+    const calcDamage = (atk,def) => Math.max(1, atk - def);
+    const playerAtkValue = () => state.player.floorAtkBuff ?? state.player.baseAtk;
+    const playerDefValue = () => state.player.floorDefBuff ?? state.player.baseDef;
+    const meterPercent = (value,max) => max <= 0 ? 0 : Math.max(0, Math.min(100, Math.round(value/max*100)));
+    const statusTone = (value,pct) => value <= 0 ? "tone-red" : (pct < 25 ? "tone-orange" : "tone-yellow");
 
-    function randInt(min, max) {
-      return Math.floor(Math.random() * (max - min + 1)) + min;
-    }
+    function addLog(message){ state.logs.unshift(message); if(state.logs.length>MAX_LOG) state.logs.pop(); logEl.innerHTML=state.logs.map((m)=>`<div class="line">${m}</div>`).join(""); }
 
-    function shuffle(arr) {
-      for (let i = arr.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [arr[i], arr[j]] = [arr[j], arr[i]];
-      }
-      return arr;
-    }
-
-    function addLog(message) {
-      state.logs.unshift(message);
-      if (state.logs.length > MAX_LOG) state.logs.pop();
-      logEl.innerHTML = state.logs.map((m) => `<div class="line">${m}</div>`).join("");
-    }
-
-    function expToNextLevel(level = state.player.level) {
-      return level * 3;
-    }
-
-    function calcDamage(atk, def) {
-      return Math.max(1, atk - def);
-    }
-
-    function playerAtkValue() {
-      if (state.player.floorAtkMode === "axe110") {
-        return Math.ceil(state.player.baseAtk * 1.1 + 1);
-      }
-      return state.player.baseAtk;
-    }
-
-    function playerDefValue() {
-      if (state.player.floorDefMode === "diamond110") {
-        return Math.ceil(state.player.baseDef * 1.1 + 1);
-      }
-      return state.player.baseDef;
-    }
-
-    function firstEmptySlot() {
-      return state.inventory.findIndex((slot) => slot === null);
-    }
-
-    function addToInventory(item) {
-      const idx = firstEmptySlot();
-      if (idx === -1) return false;
-      state.inventory[idx] = { type: item.type, char: item.char };
-      return true;
-    }
-
-    function invToString() {
-      return state.inventory.map((slot) => (slot ? slot.char : "-")).join(" ");
-    }
-
-    function calcScore() {
-      const killScore =
-        state.kills.dog * SCORE_KILL.dog +
-        state.kills.guard * SCORE_KILL.guard +
-        state.kills.wolf * SCORE_KILL.wolf +
-        state.kills.lion * SCORE_KILL.lion +
-        state.kills.dragon * SCORE_KILL.dragon +
-        state.kills.zombie * SCORE_KILL.zombie +
-        state.kills.skull * SCORE_KILL.skull;
-
-      const floorScore = state.floor * 50;
-      const levelScore = state.player.level * 30;
-      return killScore + floorScore + levelScore;
-    }
-
-    function finalizeScore(reasonText = "") {
-      state.score = calcScore();
-      if (state.score > state.bestScore) {
-        state.bestScore = state.score;
-        localStorage.setItem("bojirogue_bestScore", String(state.bestScore));
-        addLog(`新記録！ BEST ${state.bestScore} (${reasonText})`);
-      } else {
-        addLog(`SCORE ${state.score} / BEST ${state.bestScore} (${reasonText})`);
-      }
-    }
-
-    function meterPercent(value, max) {
-      if (max <= 0) return 0;
-      return Math.max(0, Math.min(100, Math.round((value / max) * 100)));
-    }
-
-    function statusTone(value, pct) {
-      if (value <= 0) return "tone-red";
-      if (pct < 25) return "tone-orange";
-      return "tone-yellow";
-    }
-
-    function gaugeHtml(label, value, max, meterType = "") {
+    function gaugeHtml(label, value, max) {
       const pct = meterPercent(value, max);
       const tone = statusTone(value, pct);
-      return `<div class="stat ${tone}"><span class="label">${label}</span><div class="meter ${meterType} ${value <= 0 ? "tone-red" : ""}"><div class="fill" style="width:${pct}%"></div></div><span class="num">${value}/${max}</span></div>`;
+      return `<div class="stat ${tone}"><span class="label">${label}</span><div class="meter ${value<=0?"tone-red":""}"><div class="fill" style="width:${pct}%"></div></div><span class="num">${value}/${max}</span></div>`;
+    }
+
+    function invToString(){ return state.inventory.map((slot)=>slot?slot.char:"▢").join(" "); }
+
+    function calcScore(){
+      const killScore = Object.keys(state.kills).reduce((sum,k)=>sum + state.kills[k]*(SCORE_KILL[k]||0),0);
+      return killScore + state.floor * 50 + state.player.level * 30;
+    }
+
+    function finalizeScore(reasonText=""){
+      state.score = calcScore();
+      if(state.score > state.bestScore){ state.bestScore = state.score; localStorage.setItem("bojirogue_bestScore", String(state.bestScore)); addLog(`新記録！ BEST ${state.bestScore} (${reasonText})`); }
+      else addLog(`SCORE ${state.score} / BEST ${state.bestScore} (${reasonText})`);
     }
 
     function createMap() {
-      const map = Array.from({ length: HEIGHT }, () => Array(WIDTH).fill(TILE_WALL));
-      const rooms = [];
-      const roomCount = randInt(6, 10);
-      let attempts = 0;
-      while (rooms.length < roomCount && attempts < 120) {
+      const map = Array.from({length:HEIGHT},()=>Array(WIDTH).fill(TILE_WALL));
+      const rooms=[]; const roomCount=randInt(6,10); let attempts=0;
+      while(rooms.length<roomCount && attempts<120){
         attempts++;
-        const w = randInt(4, 8);
-        const h = randInt(3, 6);
-        const x = randInt(1, WIDTH - w - 2);
-        const y = randInt(1, HEIGHT - h - 2);
-        const room = { x, y, w, h, cx: x + Math.floor(w / 2), cy: y + Math.floor(h / 2) };
-
-        const overlap = rooms.some((r) => {
-          return x - 1 <= r.x + r.w && x + w + 1 >= r.x && y - 1 <= r.y + r.h && y + h + 1 >= r.y;
-        });
-        if (overlap) continue;
-
-        for (let yy = y; yy < y + h; yy++) {
-          for (let xx = x; xx < x + w; xx++) map[yy][xx] = TILE_FLOOR;
-        }
-
-        if (rooms.length > 0) {
-          const prev = rooms[rooms.length - 1];
-          carveCorridor(map, prev.cx, prev.cy, room.cx, room.cy);
-        }
+        const w=randInt(4,8), h=randInt(3,6), x=randInt(1,WIDTH-w-2), y=randInt(1,HEIGHT-h-2);
+        const room={x,y,w,h,cx:x+Math.floor(w/2),cy:y+Math.floor(h/2)};
+        const overlap = rooms.some((r)=>x-1<=r.x+r.w&&x+w+1>=r.x&&y-1<=r.y+r.h&&y+h+1>=r.y);
+        if(overlap) continue;
+        for(let yy=y;yy<y+h;yy++) for(let xx=x;xx<x+w;xx++) map[yy][xx]=TILE_FLOOR;
+        if(rooms.length>0){ const prev=rooms[rooms.length-1]; carveCorridor(map, prev.cx, prev.cy, room.cx, room.cy); }
         rooms.push(room);
       }
-      return { map, rooms };
+      return {map, rooms};
     }
 
-    function carveCorridor(map, x1, y1, x2, y2) {
-      let x = x1;
-      let y = y1;
-      if (Math.random() < 0.5) {
-        while (x !== x2) {
-          map[y][x] = TILE_FLOOR;
-          x += x < x2 ? 1 : -1;
-        }
-        while (y !== y2) {
-          map[y][x] = TILE_FLOOR;
-          y += y < y2 ? 1 : -1;
-        }
-      } else {
-        while (y !== y2) {
-          map[y][x] = TILE_FLOOR;
-          y += y < y2 ? 1 : -1;
-        }
-        while (x !== x2) {
-          map[y][x] = TILE_FLOOR;
-          x += x < x2 ? 1 : -1;
-        }
-      }
-      map[y2][x2] = TILE_FLOOR;
+    function carveCorridor(map, x1,y1,x2,y2){
+      let x=x1,y=y1;
+      if(Math.random()<0.5){ while(x!==x2){map[y][x]=TILE_FLOOR; x += x<x2?1:-1;} while(y!==y2){map[y][x]=TILE_FLOOR; y += y<y2?1:-1;} }
+      else { while(y!==y2){map[y][x]=TILE_FLOOR; y += y<y2?1:-1;} while(x!==x2){map[y][x]=TILE_FLOOR; x += x<x2?1:-1;} }
+      map[y2][x2]=TILE_FLOOR;
     }
 
-    function setupFloor() {
+    function setupFloor(){
       const built = createMap();
-      // フロア移行でフロア限定バフ解除
-      state.player.floorAtkMode = null;
-      state.player.floorDefMode = null;
-      state.map = built.map;
-      state.rooms = built.rooms;
-      state.items = [];
-      state.enemies = [];
-      state.revealed = false;
-      state.seen = Array.from({ length: HEIGHT }, () => Array(WIDTH).fill(false));
-      state.iboCooldown = 0;
-      state.floorHasShield = false;
-      state.floorHasAxe = false;
-      state.floorHasDiamond = false;
-      state.inputLocked = false;
-
-      const startRoom = state.rooms[0];
-      state.player.x = startRoom.cx;
-      state.player.y = startRoom.cy;
-
-      let far = state.rooms[0];
-      let best = -1;
-      for (const r of state.rooms) {
-        const d = Math.abs(r.cx - startRoom.cx) + Math.abs(r.cy - startRoom.cy);
-        if (d > best) {
-          best = d;
-          far = r;
-        }
-      }
-      state.ladder = { x: far.cx, y: far.cy };
-
-      placeEnemies();
-      placeItems();
-      addLog(`第${state.floor}階に降りた。`);
-      render();
+      state.map=built.map; state.rooms=built.rooms; state.items=[]; state.enemies=[]; state.revealed=false;
+      state.seen = Array.from({length:HEIGHT},()=>Array(WIDTH).fill(false));
+      state.floorHasShield=false; state.floorHasAxe=false;
+      state.player.floorAtkBuff = null; state.player.floorDefBuff = null; state.player.diamondWard = false;
+      state.inputLocked=false; state.iboCooldown=0;
+      const startRoom=state.rooms[0]; state.player.x=startRoom.cx; state.player.y=startRoom.cy;
+      let far=state.rooms[0],best=-1;
+      for(const r of state.rooms){ const d=Math.abs(r.cx-startRoom.cx)+Math.abs(r.cy-startRoom.cy); if(d>best){best=d; far=r;} }
+      state.ladder={x:far.cx,y:far.cy};
+      placeEnemies(); placeItems(); addLog(`第${state.floor}階に降りた。`); render();
     }
 
-    function isWalkable(x, y) {
-      return x >= 0 && x < WIDTH && y >= 0 && y < HEIGHT && state.map[y][x] === TILE_FLOOR;
-    }
+    const isWalkable = (x,y) => x>=0&&x<WIDTH&&y>=0&&y<HEIGHT&&state.map[y][x]===TILE_FLOOR;
+    const enemyAt = (x,y) => state.enemies.find((e)=>e.x===x&&e.y===y);
+    const itemAt = (x,y) => state.items.find((i)=>i.x===x&&i.y===y);
 
-    function enemyAt(x, y) {
-      return state.enemies.find((e) => e.x === x && e.y === y);
-    }
-
-    function itemAt(x, y) {
-      return state.items.find((it) => it.x === x && it.y === y);
-    }
-
-    function positionFree(x, y) {
-      if (!isWalkable(x, y)) return false;
-      if (state.player.x === x && state.player.y === y) return false;
-      if (enemyAt(x, y)) return false;
-      if (itemAt(x, y)) return false;
-      if (state.ladder.x === x && state.ladder.y === y) return false;
+    function positionFree(x,y){
+      if(!isWalkable(x,y)) return false;
+      if(state.player.x===x&&state.player.y===y) return false;
+      if(enemyAt(x,y)||itemAt(x,y)) return false;
+      if(state.ladder.x===x&&state.ladder.y===y) return false;
       return true;
     }
 
-    function randomFloorPos() {
-      const cells = [];
-      for (let y = 1; y < HEIGHT - 1; y++) {
-        for (let x = 1; x < WIDTH - 1; x++) {
-          if (state.map[y][x] === TILE_FLOOR) cells.push({ x, y });
-        }
-      }
-      shuffle(cells);
-      return cells;
+    function randomFloorPos(){
+      const cells=[];
+      for(let y=1;y<HEIGHT-1;y++) for(let x=1;x<WIDTH-1;x++) if(state.map[y][x]===TILE_FLOOR) cells.push({x,y});
+      return shuffle(cells);
     }
 
-    function rollFromTable(table) {
-      const total = table.reduce((sum, row) => sum + row.rate, 0);
-      const roll = Math.random() * (total > 0 ? total : 1);
-      let acc = 0;
-      for (const row of table) {
-        acc += row.rate;
-        if (roll < acc) return row.type;
-      }
-      return table[table.length - 1].type;
-    }
+    function rollFromTable(table){ const total=table.reduce((s,r)=>s+r.rate,0); let roll=Math.random()*(total||1); for(const row of table){ roll-=row.rate; if(roll<=0) return row.type; } return table[table.length-1].type; }
+    function weightedEnemyType(pool){ const total=pool.reduce((s,r)=>s+r.w,0); let roll=Math.random()*total; for(const row of pool){ roll-=row.w; if(roll<=0) return row.type; } return pool[pool.length-1].type; }
+    const spriteForType = (type) => SPRITES[type] || SPRITES.star;
 
-    function spriteForType(type) {
-      return type === "food"
-        ? SPRITES.food
-        : type === "sushi"
-          ? SPRITES.sushi
-          : type === "meat"
-            ? SPRITES.meat
-            : type === "feast"
-              ? SPRITES.feast
-              : type === "potion"
-                ? SPRITES.potion
-                : type === "map"
-                  ? SPRITES.map
-                  : type === "shield"
-                    ? SPRITES.shield
-                    : type === "axe"
-                      ? SPRITES.axe
-                      : type === "diamond"
-                        ? SPRITES.diamond
-                        : type === "dagger"
-                          ? SPRITES.dagger
-                          : SPRITES.star;
-    }
-
-    function placeItemAt(type, x, y) {
-      if (type === "shield" && state.floorHasShield) return false;
-      if (type === "axe" && state.floorHasAxe) return false;
-      if (type === "diamond" && state.floorHasDiamond) return false;
-      if (!positionFree(x, y)) return false;
-      state.items.push({ x, y, type, char: spriteForType(type) });
-      if (type === "shield") state.floorHasShield = true;
-      if (type === "axe") state.floorHasAxe = true;
-      if (type === "diamond") state.floorHasDiamond = true;
+    function placeItemAt(type,x,y){
+      if(type==="shield" && state.floorHasShield) return false;
+      if(type==="axe" && state.floorHasAxe) return false;
+      if(!positionFree(x,y)) return false;
+      state.items.push({x,y,type,char:spriteForType(type)});
+      if(type==="shield") state.floorHasShield=true;
+      if(type==="axe") state.floorHasAxe=true;
       return true;
     }
 
-    function placeEnemies() {
-      const pool = randomFloorPos();
-      const count = randInt(2, 3) + Math.floor((state.floor - 1) * 0.55);
-      const options = enemyTypesForFloor();
-      let placed = 0;
-      for (const p of pool) {
-        if (placed >= count) break;
-        if (Math.abs(p.x - state.player.x) + Math.abs(p.y - state.player.y) < 4) continue;
-        if (p.x === state.ladder.x && p.y === state.ladder.y) continue;
-        const type = options[randInt(0, options.length - 1)];
-        state.enemies.push(spawnEnemy(type, p.x, p.y));
+    function floorPowerTier(){ if(state.floor<=2)return 0; if(state.floor<=4)return 1; if(state.floor<=6)return 2; if(state.floor<=8)return 3; if(state.floor<=10)return 4; return 5+Math.floor((state.floor-10)/2); }
+
+    function enemyPoolForFloor(){ return FLOOR_ENEMY_TABLES.find((row)=>state.floor>=row.min&&state.floor<=row.max).pool; }
+
+    function spawnEnemy(type,x,y){
+      const base = ENEMY_ARCHETYPES[type]; const tier = floorPowerTier();
+      return { x,y,type,char:base.char,exp:base.exp, hp:base.hp+tier*2+Math.floor(Math.max(0,state.floor-6)/3), atk:base.atk+Math.floor((tier+1)/2), def:base.def+Math.floor(tier/3) };
+    }
+
+    function placeEnemies(){
+      const pool=randomFloorPos();
+      const count=randInt(2,3)+Math.floor((state.floor-1)*0.55);
+      const enemyPool = enemyPoolForFloor();
+      let placed=0;
+      for(const p of pool){
+        if(placed>=count) break;
+        if(Math.abs(p.x-state.player.x)+Math.abs(p.y-state.player.y)<4) continue;
+        if(p.x===state.ladder.x&&p.y===state.ladder.y) continue;
+        const type = weightedEnemyType(enemyPool);
+        if(type==="invader" && state.floor<13) continue;
+        state.enemies.push(spawnEnemy(type,p.x,p.y));
         placed++;
       }
     }
 
-    function enemyTypesForFloor() {
-      if (state.floor <= 3) return ["dog", "guard", "dog", "guard", "dog"];
-      if (state.floor <= 6) return ["dog", "wolf", "dog", "wolf", "zombie"];
-      if (state.floor <= 9) return ["wolf", "lion", "wolf", "zombie", "skull"];
-      return ["wolf", "lion", "dragon", "zombie", "skull", "lion", "skull"];
+    function placeItems(){
+      const pool=randomFloorPos(); const itemCount=randInt(1,3); let placed=0;
+      for(const p of pool){ if(placed>=itemCount) break; const type=rollFromTable(FLOOR_ITEM_TABLE); if(placeItemAt(type,p.x,p.y)) placed++; }
     }
 
-    function floorPowerTier() {
-      if (state.floor <= 2) return 0;
-      if (state.floor <= 4) return 1;
-      if (state.floor <= 6) return 2;
-      if (state.floor <= 8) return 3;
-      if (state.floor <= 10) return 4;
-      return 5 + Math.floor((state.floor - 10) / 2);
+    function allowedDropTable(){
+      return ENEMY_DROP_TABLE.filter((row)=>!(row.type==="shield"&&state.floorHasShield)&&!(row.type==="axe"&&state.floorHasAxe));
     }
 
-    function spawnEnemy(type, x, y) {
-      const base = ENEMY_ARCHETYPES[type];
-      const tier = floorPowerTier();
-      return {
-        x,
-        y,
-        type,
-        char: base.char,
-        hp: base.hp + tier * 2 + Math.floor(Math.max(0, state.floor - 6) / 3),
-        atk: base.atk + Math.floor((tier + 1) / 2),
-        def: base.def + Math.floor(tier / 3)
-      };
-    }
-
-    function placeItems() {
-      const pool = randomFloorPos();
-      const itemCount = randInt(1, 3);
-      let placed = 0;
-      for (const p of pool) {
-        if (placed >= itemCount) break;
-        const type = rollFromTable(FLOOR_ITEM_TABLE);
-        if (!placeItemAt(type, p.x, p.y)) continue;
-        placed++;
+    function updateSeen(){
+      if(state.revealed){ for(let y=0;y<HEIGHT;y++) for(let x=0;x<WIDTH;x++) state.seen[y][x]=true; return; }
+      const radius=8;
+      for(let y=state.player.y-radius;y<=state.player.y+radius;y++){
+        for(let x=state.player.x-radius;x<=state.player.x+radius;x++){
+          if(x<0||y<0||x>=WIDTH||y>=HEIGHT) continue;
+          if(Math.abs(x-state.player.x)+Math.abs(y-state.player.y)<=radius+2) state.seen[y][x]=true;
+        }
       }
-
     }
 
-    function allowedDropTable() {
-      return ENEMY_DROP_TABLE.filter((row) => {
-        if (row.type === "shield") return !state.floorHasShield;
-        if (row.type === "axe") return !state.floorHasAxe;
-        if (row.type === "diamond") return !state.floorHasDiamond;
-        return true;
-      });
-    }
-
-    function render() {
-      state.score = calcScore();
-      updateSeen();
-      const cells = [];
-      for (let y = 0; y < HEIGHT; y++) {
-        for (let x = 0; x < WIDTH; x++) {
+    function render(){
+      state.score=calcScore(); updateSeen();
+      const cells=[];
+      for(let y=0;y<HEIGHT;y++){
+        for(let x=0;x<WIDTH;x++){
           const visible = state.revealed || state.seen[y][x];
-          let ch = " ";
-          if (!visible) {
-            cells.push(`<div class="cell">${ch}</div>`);
-            continue;
-          }
-          ch = state.map[y][x] === TILE_WALL ? SPRITES.wall : SPRITES.floor;
-
-          if (state.ladder.x === x && state.ladder.y === y) ch = SPRITES.ladder;
-          const it = itemAt(x, y);
-          if (it) ch = it.char;
-          const en = enemyAt(x, y);
-          if (en) ch = en.char;
-          if (state.player.x === x && state.player.y === y) ch = SPRITES.player;
-
+          if(!visible){ cells.push(`<div class="cell"> </div>`); continue; }
+          let ch = state.map[y][x]===TILE_WALL ? SPRITES.wall : SPRITES.floor;
+          if(state.ladder.x===x&&state.ladder.y===y) ch=SPRITES.ladder;
+          const it=itemAt(x,y); if(it) ch=it.char;
+          const en=enemyAt(x,y); if(en) ch=en.char;
+          if(state.player.x===x&&state.player.y===y) ch=SPRITES.player;
           cells.push(`<div class="cell">${ch}</div>`);
         }
       }
-      mapEl.innerHTML = cells.join("");
-      if (!mapEl.contains(projectileLayer)) mapEl.appendChild(projectileLayer);
-
-      // ステータスを2行固定にして、HP/空腹の見やすさを優先する。
+      mapEl.innerHTML=cells.join(""); if(!mapEl.contains(projectileLayer)) mapEl.appendChild(projectileLayer);
+      const status = state.player.poison ? "☠️POISON" : "";
       statusEl.innerHTML = `
-        <div class="row">
-          ${gaugeHtml("HP", state.player.hp, state.player.maxHp, "hp")}
-          ${gaugeHtml("空腹", state.player.hunger, state.player.hungerMax, "hunger")}
-        </div>
-        <div class="row meta">
-          階 ${state.floor}
-          Lv ${state.player.level}
-          EXP ${state.player.exp}/${expToNextLevel()}
-          ATK ${playerAtkValue()}${state.player.floorAtkMode ? " (🪓)" : ""}
-          DEF ${playerDefValue()}${state.player.floorDefMode ? " (💎)" : ""}
-          イボ ${state.player.ibo}/${state.player.iboMax}
-          ITEM ${invToString()}
-          SCORE ${state.score}
-          BEST ${state.bestScore}
-        </div>`;
+        <div class="row">${gaugeHtml("HP", state.player.hp, state.player.maxHp)} ${gaugeHtml("空腹", state.player.hunger, state.player.hungerMax)}</div>
+        <div class="row">階 ${state.floor} Lv ${state.player.level} EXP ${state.player.exp}/${expToNextLevel()} ATK ${playerAtkValue()} DEF ${playerDefValue()} イボ(${state.player.ibo}/${state.player.iboMax}) ITEM ${invToString()} SCORE ${state.score} BEST ${state.bestScore} ${status}</div>`;
     }
 
-    function updateSeen() {
-      if (state.revealed) {
-        for (let y = 0; y < HEIGHT; y++) {
-          for (let x = 0; x < WIDTH; x++) state.seen[y][x] = true;
-        }
-        return;
+    function firstEmptySlot(){ return state.inventory.findIndex((s)=>s===null); }
+    function addToInventory(item){ const idx=firstEmptySlot(); if(idx===-1) return false; state.inventory[idx]={type:item.type,char:item.char}; return true; }
+
+    function applyDamage(target, amount, name=""){ target.hp -= amount; if(name) addLog(`${name}に${amount}ダメージ！`); }
+
+    function resolveAttackDamage(atk, def, isEnemyAttack){
+      const normal = calcDamage(atk, def);
+      let damage = normal;
+      const critChance = clamp01((atk - def) / 100);
+      if(Math.random() < critChance){
+        damage = normal * 2 + 1;
+        addLog(`きゅうしょを攻撃！${damage}ダメージ！！`);
       }
-      const radius = 8;
-      for (let y = state.player.y - radius; y <= state.player.y + radius; y++) {
-        for (let x = state.player.x - radius; x <= state.player.x + radius; x++) {
-          if (x < 0 || y < 0 || x >= WIDTH || y >= HEIGHT) continue;
-          if (Math.abs(x - state.player.x) + Math.abs(y - state.player.y) <= radius + 2) {
-            state.seen[y][x] = true;
-          }
-        }
-      }
+      if(isEnemyAttack && Math.random() < 0.5) damage += 1;
+      return damage;
     }
 
-    function applyDamage(target, amount, name = "") {
-      target.hp -= amount;
-      if (name) addLog(`${name}に${amount}ダメージ！`);
-    }
-
-    function playerAttack(enemy) {
-      const damage = calcDamage(playerAtkValue(), enemy.def);
+    function playerAttack(enemy){
+      const damage = resolveAttackDamage(playerAtkValue(), enemy.def, false);
       applyDamage(enemy, damage, enemy.char);
-      if (enemy.hp <= 0) {
-        killEnemy(enemy);
+      if(enemy.hp<=0) killEnemy(enemy);
+    }
+
+    function maybeLevelUp(){
+      while(state.player.exp >= expToNextLevel()){
+        state.player.exp -= expToNextLevel(); state.player.level += 1;
+        const atkUp = randInt(0,1), defUp = randInt(0,1), hpUp = randInt(2,3);
+        state.player.baseAtk += atkUp; state.player.baseDef += defUp; state.player.maxHp += hpUp; state.player.hp = state.player.maxHp;
+        addLog(`レベルアップ！ ATK+${atkUp} DEF+${defUp} MAXHP+${hpUp}`);
       }
     }
 
-    function killEnemy(enemy) {
-      state.enemies = state.enemies.filter((e) => e !== enemy);
+    function dropItem(x,y){ if(itemAt(x,y)) return; const table=allowedDropTable(); if(!table.length) return; const type=rollFromTable(table); if(placeItemAt(type,x,y)) addLog(`${spriteForType(type)}が落ちた。`); }
+
+    function killEnemy(enemy){
+      state.enemies = state.enemies.filter((e)=>e!==enemy);
       addLog(`${enemy.char}をたおした！`);
-      if (state.kills[enemy.type] !== undefined) state.kills[enemy.type] += 1;
-      state.player.exp += ENEMY_ARCHETYPES[enemy.type].exp;
-      if (Math.random() < ENEMY_DROP_CHANCE) {
-        dropItem(enemy.x, enemy.y);
-      }
+      if(state.kills[enemy.type]!==undefined) state.kills[enemy.type] += 1;
+      state.player.exp += enemy.exp;
+      if(Math.random()<ENEMY_DROP_CHANCE) dropItem(enemy.x, enemy.y);
       maybeLevelUp();
     }
 
-    function dropItem(x, y) {
-      if (itemAt(x, y)) return;
-      const table = allowedDropTable();
-      if (table.length === 0) return;
-      const type = rollFromTable(table);
-      if (!placeItemAt(type, x, y)) return;
-      addLog(`${spriteForType(type)}が落ちた。`);
-    }
+    function endAsGameOver(msg){ state.player.hp=Math.max(0,state.player.hp); state.gameOver=true; addLog(msg); finalizeScore("GAME OVER"); }
 
-    function maybeLevelUp() {
-      while (state.player.exp >= expToNextLevel()) {
-        state.player.exp -= expToNextLevel();
-        state.player.level++;
-        // レベルアップ幅を乱数化して成長にゆらぎを持たせる。
-        const atkUp = randInt(1, 2);
-        const defUp = randInt(0, 1);
-        const hpUp = randInt(2, 3);
-        state.player.baseAtk += atkUp;
-        state.player.baseDef += defUp;
-        state.player.maxHp += hpUp;
-        state.player.hp = state.player.maxHp;
-        addLog(`レベルアップ！ ATK+${atkUp} DEF+${defUp} MAX_HP+${hpUp}`);
-      }
-    }
-
-    function enemyAttack(enemy) {
-      const floorAtkBonus = Math.floor(Math.max(0, state.floor - 1) / 4);
-      const scaledAtk = enemy.atk + floorAtkBonus;
-      const damage = calcDamage(scaledAtk, playerDefValue());
-
-      if (enemy.type === "skull") {
-        const before = state.player.exp;
-        state.player.exp = Math.max(0, state.player.exp - damage);
-        addLog(`${enemy.char}の呪い！ EXP-${before - state.player.exp}`);
-        if (Math.random() < 0.2) {
-          state.player.maxHp = Math.max(1, state.player.maxHp - 1);
-          if (state.player.hp > state.player.maxHp) state.player.hp = state.player.maxHp;
-          addLog("最大HPが1減った…");
-        }
+    function enemyAttack(enemy){
+      const damage = resolveAttackDamage(enemy.atk, playerDefValue(), true);
+      if(enemy.type === "skull"){
+        const before=state.player.exp; state.player.exp=Math.max(0,state.player.exp-damage); addLog(`${enemy.char}の呪い！ EXP-${before-state.player.exp}`);
+        if(!state.player.diamondWard && Math.random()<0.2){ state.player.maxHp=Math.max(1,state.player.maxHp-1); if(state.player.hp>state.player.maxHp) state.player.hp=state.player.maxHp; addLog("最大HPが1減った…"); }
         return;
       }
 
       applyDamage(state.player, damage, "プレイヤー");
 
-      if (enemy.type === "dragon" && state.player.hp > 0 && Math.random() < 0.5) {
-        const flameDamage = Math.ceil(state.player.hp * 0.1);
-        state.player.hp -= flameDamage;
-        addLog(`${enemy.char}の炎！ 追加${flameDamage}ダメージ！`);
-      }
+      if(enemy.type === "ghost" && state.player.hp>0 && Math.random()<0.35){ state.player.hp -= 1; addLog(`${enemy.char}の冷気！ 追加1ダメージ！`); }
+      if(enemy.type === "dragon" && state.player.hp>0 && Math.random()<0.5){ const flame=Math.ceil(state.player.hp*0.1); state.player.hp -= flame; addLog(`${enemy.char}の炎！ 追加${flame}ダメージ！`); }
+      if(enemy.type === "zombie" && state.player.hp>0 && !state.player.diamondWard){ const corrosion=Math.min(damage*3,10); if(corrosion>0){ state.player.hungerMax=Math.max(1,state.player.hungerMax-corrosion); if(state.player.hunger>state.player.hungerMax) state.player.hunger=state.player.hungerMax; addLog(`${enemy.char}の腐食！ 最大空腹-${corrosion}`);} }
+      if(enemy.type === "invader" && state.player.hp>0 && !state.player.diamondWard && Math.random()<0.2){ state.player.baseDef=Math.max(1,state.player.baseDef-1); if(state.player.floorDefBuff!==null) state.player.floorDefBuff=Math.ceil(state.player.baseDef*1.1+1); addLog("防御力が下がった…"); }
+      if(enemy.type === "spider" && state.player.hp>0 && !state.player.diamondWard && Math.random()<0.2){ state.player.poison=true; addLog("毒を受けた！"); }
 
-      if (enemy.type === "zombie" && state.player.hp > 0) {
-        const corrosion = Math.min(damage * 3, 10);
-        if (corrosion > 0) {
-          state.player.hungerMax = Math.max(1, state.player.hungerMax - corrosion);
-          if (state.player.hunger > state.player.hungerMax) state.player.hunger = state.player.hungerMax;
-          addLog(`${enemy.char}の腐食！ 最大空腹-${corrosion}`);
+      if(state.player.hp<=0) endAsGameOver("あなたは力尽きた… Rで再開");
+    }
+
+    function pickupItem(){
+      const it = itemAt(state.player.x,state.player.y); if(!it) return;
+      if(!addToInventory(it)){ addLog("持ち物がいっぱいだ。"); return; }
+      state.items = state.items.filter((i)=>i!==it); addLog(`${it.char}を拾った。(${invToString()})`);
+    }
+
+    async function useInventory(slotIndex){
+      if(state.gameOver||state.inputLocked||slotIndex<0||slotIndex>=state.invSize) return;
+      const slot = state.inventory[slotIndex]; if(!slot){ addLog(`スロット${slotIndex+1}は空だ。`); return; }
+      let consumed=true;
+      if(slot.type==="food"){ state.player.hunger=Math.min(state.player.hungerMax,state.player.hunger+50); addLog("🍙を食べた！ 空腹+50"); }
+      else if(slot.type==="sushi"){ state.player.hunger=Math.min(state.player.hungerMax,state.player.hunger+100); addLog("🍣を食べた！ 空腹+100"); }
+      else if(slot.type==="meat"){ state.player.hunger=Math.min(state.player.hungerMax,state.player.hunger+150); addLog("🥩を食べた！ 空腹+150"); }
+      else if(slot.type==="feast"){ state.player.hungerMax+=10; state.player.hunger=Math.min(state.player.hungerMax,state.player.hunger+200); addLog("🍖を食べた！ 最大空腹+10 & 空腹+200"); }
+      else if(slot.type==="potion"){ state.player.hp=Math.min(state.player.maxHp,state.player.hp+10); addLog("🧪を使った！ HP+10"); if(state.player.poison){ state.player.poison=false; addLog("解毒した。"); } }
+      else if(slot.type==="map"){ state.revealed=true; addLog("👁 地図を見通した！"); }
+      else if(slot.type==="shield"){ state.player.baseDef+=1; addLog("🛡️を装備した！ DEF+1（恒久）"); }
+      else if(slot.type==="axe"){ state.player.floorAtkBuff=Math.ceil(playerAtkValue()*1.1+1); addLog("🪓を装備した！ ATK強化（このフロアのみ）"); }
+      else if(slot.type==="diamond"){ state.player.floorDefBuff=Math.ceil(state.player.baseDef*1.1+1); state.player.diamondWard=true; addLog("💎を装備した！ DEF強化（このフロアのみ）"); }
+      else if(slot.type==="dagger"){ state.player.baseAtk+=1; addLog("🗡️を装備した！ ATK+1（恒久）"); }
+      else if(slot.type==="star"){ state.inventory[slotIndex]=null; await starBurst(); return; }
+      else { consumed=false; addLog(`${slot.char}は使えない。`); }
+      if(!consumed) return;
+      state.inventory[slotIndex]=null; endTurn();
+    }
+
+    function walkRegen(){ state.player.walkCount+=1; if(state.player.walkCount%12!==0||state.starving||state.player.hp>=state.player.maxHp) return; state.player.hp=Math.min(state.player.maxHp,state.player.hp+1); addLog("歩いて体勢を立て直した。HP+1"); }
+
+    function movePlayer(dx,dy){
+      if(state.gameOver||state.inputLocked) return;
+      const nx=state.player.x+dx, ny=state.player.y+dy;
+      if(!isWalkable(nx,ny)) return endTurn();
+      const foe = enemyAt(nx,ny); if(foe){ playerAttack(foe); return endTurn(); }
+      state.player.x=nx; state.player.y=ny; walkRegen(); pickupItem();
+      if(nx===state.ladder.x&&ny===state.ladder.y){ state.floor+=1; addLog("🪜 次の階へ進む！"); setupFloor(); return; }
+      endTurn();
+    }
+
+    function waitTurn(){ if(state.gameOver||state.inputLocked) return; addLog("その場で待機した。"); endTurn(); }
+    function eatIbo(){ if(state.gameOver||state.inputLocked) return; if(state.player.ibo<1){ addLog("イボがない！"); return; } state.player.ibo-=1; state.player.hunger=Math.min(state.player.hungerMax,state.player.hunger+60); addLog("イボをたべた！ 空腹+60"); endTurn(); }
+    const sleep = (ms)=>new Promise((resolve)=>setTimeout(resolve,ms));
+    function setProjectilePos(el,x,y){ el.style.left=`${GRID_PADDING + x*CELL_SIZE}px`; el.style.top=`${GRID_PADDING + y*CELL_SIZE}px`; }
+
+    async function iboBeam(){
+      if(state.gameOver||state.inputLocked) return;
+      if(state.player.ibo<1){ addLog("イボがない！"); return; }
+      state.inputLocked=true; state.player.ibo-=1; addLog("いぼビーム！");
+      const dirs=[[0,-1],[0,1],[-1,0],[1,0]]; const hitSet=new Set();
+      const bullets=dirs.map(([dx,dy])=>{ const el=document.createElement("div"); el.className="projectile"; el.textContent=SPRITES.orb; setProjectilePos(el,state.player.x,state.player.y); projectileLayer.appendChild(el); return {x:state.player.x,y:state.player.y,dx,dy,el,active:true}; });
+      try{
+        while(bullets.some((b)=>b.active)){
+          for(const b of bullets){
+            if(!b.active) continue;
+            const nx=b.x+b.dx, ny=b.y+b.dy;
+            if(!isWalkable(nx,ny)){ b.active=false; b.el.remove(); continue; }
+            b.x=nx; b.y=ny; setProjectilePos(b.el,b.x,b.y);
+            const en=enemyAt(b.x,b.y);
+            if(en&&!hitSet.has(en)){ hitSet.add(en); const damage=calcDamage(playerAtkValue(), en.def); applyDamage(en, damage, en.char); }
+          }
+          render(); await sleep(PROJECTILE_STEP_MS);
         }
-      }
-
-      if (state.player.hp <= 0) {
-        state.player.hp = 0;
-        state.gameOver = true;
-        addLog("あなたは力尽きた… Rで再開");
-        finalizeScore("GAME OVER");
-      }
+        for(const en of [...state.enemies]) if(en.hp<=0) killEnemy(en);
+        endTurn();
+      } finally { for(const b of bullets) b.el.remove(); state.inputLocked=false; }
     }
 
-
-    function pickupItem() {
-      const it = itemAt(state.player.x, state.player.y);
-      if (!it) return;
-
-      const ok = addToInventory(it);
-      if (!ok) {
-        addLog("持ち物がいっぱいだ。");
-        return;
-      }
-
-      state.items = state.items.filter((i) => i !== it);
-      addLog(`${it.char}を拾った。(${invToString()})`);
-    }
-
-    async function useInventory(slotIndex) {
-      if (state.gameOver || state.inputLocked) return;
-      if (slotIndex < 0 || slotIndex >= state.invSize) return;
-
-      const slot = state.inventory[slotIndex];
-      if (!slot) {
-        addLog(`スロット${slotIndex + 1}は空だ。`);
-        return;
-      }
-
-      let consumed = true;
-      if (slot.type === "food") {
-        state.player.hunger = Math.min(state.player.hungerMax, state.player.hunger + 50);
-        addLog("🍙を食べた！ 空腹+50");
-      } else if (slot.type === "sushi") {
-        state.player.hunger = Math.min(state.player.hungerMax, state.player.hunger + 100);
-        addLog("🍣を食べた！ 空腹+100");
-      } else if (slot.type === "meat") {
-        state.player.hunger = Math.min(state.player.hungerMax, state.player.hunger + 150);
-        addLog("🥩を食べた！ 空腹+150");
-      } else if (slot.type === "feast") {
-        state.player.hungerMax += 10;
-        state.player.hunger = Math.min(state.player.hungerMax, state.player.hunger + 200);
-        addLog("🍖を食べた！ 最大空腹+10 & 空腹+200");
-      } else if (slot.type === "potion") {
-        state.player.hp = Math.min(state.player.maxHp, state.player.hp + 10);
-        addLog("🧪を使った！ HP+10");
-      } else if (slot.type === "map") {
-        state.revealed = true;
-        addLog("👁 地図を見通した！");
-      } else if (slot.type === "shield") {
-        state.player.baseDef += 1;
-        addLog("🛡️を装備した！ DEF+1（恒久）");
-      } else if (slot.type === "axe") {
-        state.player.floorAtkMode = "axe110";
-        addLog("🪓を装備した！ ATK強化（このフロアのみ）");
-      } else if (slot.type === "diamond") {
-        state.player.floorDefMode = "diamond110";
-        addLog("💎を装備した！ DEF強化（このフロアのみ）");
-      } else if (slot.type === "dagger") {
-        state.player.baseAtk += 1;
-        addLog("🗡️を装備した！ ATK+1（恒久）");
-      } else if (slot.type === "star") {
-        state.inventory[slotIndex] = null;
-        await starBurst();
-        return;
-      } else {
-        addLog(`${slot.char}は使えない。`);
-        consumed = false;
-      }
-
-      if (!consumed) return;
-      state.inventory[slotIndex] = null;
-      endTurn();
-    }
-
-
-    function walkRegen() {
-      state.player.walkCount += 1;
-      if (state.player.walkCount % 12 !== 0) return;
-      if (state.starving) return;
-      if (state.player.hp >= state.player.maxHp) return;
-      state.player.hp = Math.min(state.player.maxHp, state.player.hp + 1);
-      addLog("歩いて体勢を立て直した。HP+1");
-    }
-
-    function movePlayer(dx, dy) {
-      if (state.gameOver || state.inputLocked) return;
-      const nx = state.player.x + dx;
-      const ny = state.player.y + dy;
-      if (!isWalkable(nx, ny)) return endTurn();
-
-      const foe = enemyAt(nx, ny);
-      if (foe) {
-        playerAttack(foe);
-        return endTurn();
-      }
-
-      state.player.x = nx;
-      state.player.y = ny;
-      walkRegen();
-      pickupItem();
-
-      if (nx === state.ladder.x && ny === state.ladder.y) {
-        state.floor += 1;
-        addLog("🪜 次の階へ進む！");
-        setupFloor();
-        return;
-      }
-      endTurn();
-    }
-
-    function waitTurn() {
-      if (state.gameOver || state.inputLocked) return;
-      addLog("その場で待機した。");
-      endTurn();
-    }
-
-    function eatIbo() {
-      if (state.gameOver || state.inputLocked) return;
-      if (state.player.ibo < 1) {
-        addLog("イボがない！");
-        return;
-      }
-      state.player.ibo -= 1;
-      state.player.hunger = Math.min(state.player.hungerMax, state.player.hunger + 60);
-      addLog("イボをたべた！ 空腹+60");
-      endTurn();
-    }
-
-    function sleep(ms) {
-      return new Promise((resolve) => setTimeout(resolve, ms));
-    }
-
-    function setProjectilePos(el, x, y) {
-      el.style.left = `${GRID_PADDING + x * CELL_SIZE}px`;
-      el.style.top = `${GRID_PADDING + y * CELL_SIZE}px`;
-    }
-
-    async function iboBeam() {
-      if (state.gameOver || state.inputLocked) return;
-      if (state.player.ibo < 1) {
-        addLog("イボがない！");
-        return;
-      }
-      state.inputLocked = true;
-      state.player.ibo -= 1;
-      addLog("いぼビーム！");
-
-      const dirs = [
-        [0, -1],
-        [0, 1],
-        [-1, 0],
-        [1, 0]
-      ];
-      const hitSet = new Set();
-      const bullets = dirs.map(([dx, dy]) => {
-        const el = document.createElement("div");
-        el.className = "projectile";
-        el.textContent = SPRITES.orb;
-        setProjectilePos(el, state.player.x, state.player.y);
-        projectileLayer.appendChild(el);
-        return { x: state.player.x, y: state.player.y, dx, dy, el, active: true };
-      });
-
-      try {
-        while (bullets.some((b) => b.active)) {
-          for (const b of bullets) {
-            if (!b.active) continue;
-            const nx = b.x + b.dx;
-            const ny = b.y + b.dy;
-            if (!isWalkable(nx, ny)) {
-              b.active = false;
-              b.el.remove();
-              continue;
-            }
-            b.x = nx;
-            b.y = ny;
-            setProjectilePos(b.el, b.x, b.y);
-
-            const en = enemyAt(b.x, b.y);
-            if (en && !hitSet.has(en)) {
+    async function starBurst(){
+      if(state.gameOver||state.inputLocked) return;
+      state.inputLocked=true; addLog("🌟が弾けた！");
+      const dirs=[[0,-1],[0,1],[-1,0],[1,0]]; const hitSet=new Set();
+      const bullets=dirs.map(([dx,dy])=>{ const el=document.createElement("div"); el.className="projectile"; el.textContent=SPRITES.starBeam; setProjectilePos(el,state.player.x,state.player.y); projectileLayer.appendChild(el); return {x:state.player.x,y:state.player.y,dx,dy,el,active:true}; });
+      try{
+        while(bullets.some((b)=>b.active)){
+          for(const b of bullets){
+            if(!b.active) continue;
+            const nx=b.x+b.dx, ny=b.y+b.dy;
+            if(nx<0||nx>=WIDTH||ny<0||ny>=HEIGHT){ b.active=false; b.el.remove(); continue; }
+            b.x=nx; b.y=ny; setProjectilePos(b.el,b.x,b.y);
+            const en=enemyAt(b.x,b.y);
+            if(en&&!hitSet.has(en)){
               hitSet.add(en);
-              const damage = calcDamage(playerAtkValue(), en.def);
-              applyDamage(en, damage, en.char);
+              const beamBase = calcDamage(playerAtkValue(), en.def);
+              applyDamage(en, beamBase*2, en.char);
             }
           }
-          render();
-          await sleep(PROJECTILE_STEP_MS);
+          render(); await sleep(PROJECTILE_STEP_MS);
         }
-
-        for (const en of [...state.enemies]) {
-          if (en.hp <= 0) killEnemy(en);
-        }
+        for(const en of [...state.enemies]) if(en.hp<=0) killEnemy(en);
         endTurn();
-      } finally {
-        for (const b of bullets) b.el.remove();
-        state.inputLocked = false;
-      }
+      } finally { for(const b of bullets) b.el.remove(); state.inputLocked=false; }
     }
 
-    async function starBurst() {
-      if (state.gameOver || state.inputLocked) return;
-      state.inputLocked = true;
-      addLog("🌟が弾けた！");
+    const canSeePlayer = (ex,ey)=>Math.abs(ex-state.player.x)+Math.abs(ey-state.player.y)<=12;
 
-      const dirs = [
-        [0, -1],
-        [0, 1],
-        [-1, 0],
-        [1, 0]
-      ];
-      const hitSet = new Set();
-      const bullets = dirs.map(([dx, dy]) => {
-        const el = document.createElement("div");
-        el.className = "projectile";
-        el.textContent = SPRITES.starBeam;
-        setProjectilePos(el, state.player.x, state.player.y);
-        projectileLayer.appendChild(el);
-        return { x: state.player.x, y: state.player.y, dx, dy, el, active: true };
-      });
-
-      try {
-        while (bullets.some((b) => b.active)) {
-          for (const b of bullets) {
-            if (!b.active) continue;
-            const nx = b.x + b.dx;
-            const ny = b.y + b.dy;
-            if (nx < 0 || nx >= WIDTH || ny < 0 || ny >= HEIGHT) {
-              b.active = false;
-              b.el.remove();
-              continue;
-            }
-            b.x = nx;
-            b.y = ny;
-            setProjectilePos(b.el, b.x, b.y);
-
-            const en = enemyAt(b.x, b.y);
-            if (en && !hitSet.has(en)) {
-              hitSet.add(en);
-              const normalDamage = calcDamage(playerAtkValue(), en.def);
-              applyDamage(en, normalDamage * 2, en.char);
-            }
-          }
-          render();
-          await sleep(PROJECTILE_STEP_MS);
-        }
-
-        for (const en of [...state.enemies]) {
-          if (en.hp <= 0) killEnemy(en);
-        }
-        endTurn();
-      } finally {
-        for (const b of bullets) b.el.remove();
-        state.inputLocked = false;
-      }
-    }
-
-    function canSeePlayer(ex, ey) {
-      return Math.abs(ex - state.player.x) + Math.abs(ey - state.player.y) <= 12;
-    }
-
-    function bfsStep(startX, startY, goalX, goalY) {
-      const queue = [{ x: startX, y: startY }];
-      const came = new Map();
-      const key = (x, y) => `${x},${y}`;
-      came.set(key(startX, startY), null);
-      let found = false;
-
-      while (queue.length > 0) {
-        const cur = queue.shift();
-        if (cur.x === goalX && cur.y === goalY) {
-          found = true;
-          break;
-        }
-        const dirs = [
-          [1, 0],
-          [-1, 0],
-          [0, 1],
-          [0, -1]
-        ];
-        for (const [dx, dy] of dirs) {
-          const nx = cur.x + dx;
-          const ny = cur.y + dy;
-          const k = key(nx, ny);
-          if (!isWalkable(nx, ny) || came.has(k)) continue;
-          if (enemyAt(nx, ny) && !(nx === goalX && ny === goalY)) continue;
-          came.set(k, cur);
-          queue.push({ x: nx, y: ny });
+    function bfsStep(startX,startY,goalX,goalY){
+      const q=[{x:startX,y:startY}], came=new Map(), key=(x,y)=>`${x},${y}`; came.set(key(startX,startY), null);
+      while(q.length){
+        const cur=q.shift(); if(cur.x===goalX&&cur.y===goalY) break;
+        for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
+          const nx=cur.x+dx, ny=cur.y+dy, k=key(nx,ny);
+          if(!isWalkable(nx,ny)||came.has(k)) continue;
+          if(enemyAt(nx,ny)&&!(nx===goalX&&ny===goalY)) continue;
+          came.set(k,cur); q.push({x:nx,y:ny});
         }
       }
-
-      if (!found) return null;
-      let node = { x: goalX, y: goalY };
-      let prev = came.get(key(node.x, node.y));
-      while (prev && !(prev.x === startX && prev.y === startY)) {
-        node = prev;
-        prev = came.get(key(node.x, node.y));
-      }
+      if(!came.has(key(goalX,goalY))) return null;
+      let node={x:goalX,y:goalY}, prev=came.get(key(node.x,node.y));
+      while(prev&&!(prev.x===startX&&prev.y===startY)){ node=prev; prev=came.get(key(node.x,node.y)); }
       return node;
     }
 
-    function enemyTurn() {
-      for (const en of state.enemies) {
-        if (Math.abs(en.x - state.player.x) + Math.abs(en.y - state.player.y) === 1) {
-          enemyAttack(en);
-          if (state.gameOver) return;
-          continue;
+    function enemyTurn(){
+      for(const en of state.enemies){
+        if(Math.abs(en.x-state.player.x)+Math.abs(en.y-state.player.y)===1){ enemyAttack(en); if(state.gameOver) return; continue; }
+        let moved=false;
+        if(canSeePlayer(en.x,en.y)){
+          const step=bfsStep(en.x,en.y,state.player.x,state.player.y);
+          if(step&&!(step.x===state.player.x&&step.y===state.player.y)&&!enemyAt(step.x,step.y)){ en.x=step.x; en.y=step.y; moved=true; }
         }
-        let moved = false;
-        if (canSeePlayer(en.x, en.y)) {
-          const step = bfsStep(en.x, en.y, state.player.x, state.player.y);
-          if (step && !(step.x === state.player.x && step.y === state.player.y) && !enemyAt(step.x, step.y)) {
-            en.x = step.x;
-            en.y = step.y;
-            moved = true;
-          }
-        }
-        if (!moved) {
-          const dirs = shuffle([
-            [1, 0],
-            [-1, 0],
-            [0, 1],
-            [0, -1]
-          ]);
-          for (const [dx, dy] of dirs) {
-            const nx = en.x + dx;
-            const ny = en.y + dy;
-            if (!isWalkable(nx, ny)) continue;
-            if (enemyAt(nx, ny)) continue;
-            if (nx === state.player.x && ny === state.player.y) continue;
-            en.x = nx;
-            en.y = ny;
-            break;
+        if(!moved){
+          for(const [dx,dy] of shuffle([[1,0],[-1,0],[0,1],[0,-1]])){
+            const nx=en.x+dx, ny=en.y+dy;
+            if(!isWalkable(nx,ny)||enemyAt(nx,ny)||(nx===state.player.x&&ny===state.player.y)) continue;
+            en.x=nx; en.y=ny; break;
           }
         }
       }
     }
 
-    function hungerTurn() {
-      const extra = Math.random() < Math.min(0.2, Math.max(0, state.floor - 5) * 0.02) ? 1 : 0;
-      state.player.hunger = Math.max(0, state.player.hunger - 1 - extra);
+    function hungerTurn(){
+      const extra = Math.random() < Math.min(0.2, Math.max(0,state.floor-5)*0.02) ? 1 : 0;
+      let consume = 1 + extra;
+      if(state.player.poison) consume *= 2;
+      state.player.hunger = Math.max(0, state.player.hunger - consume);
       state.starving = state.player.hunger === 0;
-      if (state.starving) {
-        state.player.hp -= 1;
-        addLog("ピンチ！ 空腹ダメージ1");
-        if (state.player.hp <= 0) {
-          state.player.hp = 0;
-          state.gameOver = true;
-          addLog("空腹で倒れた… Rで再開");
-          finalizeScore("GAME OVER");
-        }
+      if(state.starving){
+        state.player.hp -= 1; addLog("ピンチ！ 空腹ダメージ1");
+        if(state.player.hp<=0) endAsGameOver("空腹で倒れた… Rで再開");
       }
     }
 
-    function iboTurn() {
-      if (state.iboCooldown > 0) state.iboCooldown -= 1;
-      if (state.player.hunger <= 0) return;
-      if (state.player.ibo >= state.player.iboMax) return;
-      if (state.iboCooldown !== 0) return;
-      if (Math.random() < 0.01) {
-        state.player.ibo += 1;
-        state.iboCooldown = 10;
-        addLog("イボがはえた！");
-      }
+    function iboTurn(){
+      if(state.iboCooldown>0) state.iboCooldown -= 1;
+      if(state.player.hunger<=0||state.player.ibo>=state.player.iboMax||state.iboCooldown!==0) return;
+      if(Math.random()<0.01){ state.player.ibo += 1; state.iboCooldown = 10; addLog("イボがはえた！"); }
     }
 
-    function endTurn() {
-      state.turns += 1;
-      enemyTurn();
-      if (state.gameOver) return render();
-      hungerTurn();
-      if (state.gameOver) return render();
-      iboTurn();
-      render();
+    function endTurn(){ state.turns+=1; enemyTurn(); if(state.gameOver) return render(); hungerTurn(); if(state.gameOver) return render(); iboTurn(); render(); }
+
+    function restartGame(){
+      state.floor=1; state.player={x:1,y:1,hp:20,maxHp:20,baseAtk:3,baseDef:1,hunger:500,hungerMax:1000,ibo:0,iboMax:5,level:1,exp:0,walkCount:0,poison:false,diamondWard:false,floorAtkBuff:null,floorDefBuff:null};
+      state.inventory=[null,null,null,null,null]; state.score=0; state.turns=0; state.logs=[]; state.gameOver=false; state.starving=false;
+      state.kills={dog:0,wolf:0,lion:0,dragon:0,ghost:0,zombie:0,skull:0,invader:0,spider:0};
+      addLog("ぼじろーぐ開始！"); setupFloor();
     }
 
-    function restartGame() {
-      state.floor = 1;
-      state.player.baseAtk = 3;
-      state.player.floorAtkMode = null;
-      state.player.baseDef = 1;
-      state.player.floorDefMode = null;
-      state.player.hp = 20;
-      state.player.maxHp = 20;
-      state.player.hungerMax = 1000;
-      state.player.hunger = 500;
-      state.player.ibo = 0;
-      state.player.exp = 0;
-      state.player.level = 1;
-      state.player.walkCount = 0;
-      state.inventory = [null, null, null, null, null];
-      state.score = 0;
-      state.turns = 0;
-      state.kills = { dog: 0, guard: 0, wolf: 0, lion: 0, dragon: 0, zombie: 0, skull: 0 };
-      state.logs = [];
-      state.gameOver = false;
-      state.starving = false;
-      addLog("ぼじろーぐ開始！");
-      setupFloor();
-    }
-
-    window.addEventListener("keydown", (e) => {
-      const key = e.key;
-      if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", " ", "a", "A", "b", "B", "r", "R", "1", "2", "3", "4", "5"].includes(key)) {
-        e.preventDefault();
-      }
-      if (key === "R" || key === "r") return restartGame();
-      if (state.gameOver || state.inputLocked) return;
-
-      if (key === "ArrowUp") movePlayer(0, -1);
-      else if (key === "ArrowDown") movePlayer(0, 1);
-      else if (key === "ArrowLeft") movePlayer(-1, 0);
-      else if (key === "ArrowRight") movePlayer(1, 0);
-      else if (key === " ") waitTurn();
-      else if (key === "A" || key === "a") iboBeam();
-      else if (key === "B" || key === "b") eatIbo();
-      else if (key === "1") useInventory(0);
-      else if (key === "2") useInventory(1);
-      else if (key === "3") useInventory(2);
-      else if (key === "4") useInventory(3);
-      else if (key === "5") useInventory(4);
+    window.addEventListener("keydown", (e)=>{
+      const key=e.key;
+      if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"," ","a","A","b","B","r","R","1","2","3","4","5"].includes(key)) e.preventDefault();
+      if(key==="r"||key==="R") return restartGame();
+      if(state.gameOver||state.inputLocked) return;
+      if(key==="ArrowUp") movePlayer(0,-1);
+      else if(key==="ArrowDown") movePlayer(0,1);
+      else if(key==="ArrowLeft") movePlayer(-1,0);
+      else if(key==="ArrowRight") movePlayer(1,0);
+      else if(key===" ") waitTurn();
+      else if(key==="a"||key==="A") iboBeam();
+      else if(key==="b"||key==="B") eatIbo();
+      else if(key==="1") useInventory(0);
+      else if(key==="2") useInventory(1);
+      else if(key==="3") useInventory(2);
+      else if(key==="4") useInventory(3);
+      else if(key==="5") useInventory(4);
     });
 
     restartGame();
