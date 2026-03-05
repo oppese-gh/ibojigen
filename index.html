@@ -81,6 +81,10 @@
       {type:"food",rate:0.24},{type:"sushi",rate:0.2},{type:"meat",rate:0.16},{type:"potion",rate:0.14},{type:"map",rate:0.08},
       {type:"diamond",rate:0.04},{type:"axe",rate:0.04},{type:"dagger",rate:0.04},{type:"shield",rate:0.03},{type:"feast",rate:0.02},{type:"star",rate:0.01}
     ];
+    const STARTER_ITEM_TABLE = [
+      {type:"food",rate:0.24},{type:"sushi",rate:0.2},{type:"meat",rate:0.16},{type:"potion",rate:0.14},{type:"map",rate:0.08},
+      {type:"diamond",rate:0.04},{type:"axe",rate:0.04},{type:"dagger",rate:0.04},{type:"shield",rate:0.03},{type:"feast",rate:0.02},{type:"star",rate:0.01}
+    ];
 
     const FLOOR_ENEMY_TABLES = [
       {min:1,max:2,pool:[{type:"dog",w:60},{type:"wolf",w:28},{type:"ghost",w:12}]},
@@ -285,6 +289,7 @@
 
     function firstEmptySlot(){ return state.inventory.findIndex((s)=>s===null); }
     function addToInventory(item){ const idx=firstEmptySlot(); if(idx===-1) return false; state.inventory[idx]={type:item.type,char:item.char}; return true; }
+    function grantStarterItem(){ const type=rollFromTable(STARTER_ITEM_TABLE); addToInventory({type,char:spriteForType(type)}); return type; }
 
     function applyDamage(target, amount, name=""){ target.hp -= amount; if(name) addLog(`${name}に${amount}ダメージ！`); }
 
@@ -500,7 +505,8 @@
       state.floor=1; state.player={x:1,y:1,hp:25,maxHp:25,baseAtk:3,baseDef:1,hunger:500,hungerMax:1000,ibo:0,iboMax:5,level:1,exp:0,walkCount:0,poison:false,diamondWard:false,floorAtkBuff:null,floorDefBuff:null};
       state.inventory=[null,null,null,null,null]; state.score=0; state.turns=0; state.logs=[]; state.gameOver=false; state.starving=false;
       state.kills={dog:0,wolf:0,lion:0,dragon:0,ghost:0,zombie:0,skull:0,invader:0,spider:0};
-      addLog("ぼじろーぐ開始！"); setupFloor();
+      const starterItemType = grantStarterItem();
+      addLog(`ぼじろーぐ開始！ 初期アイテム: ${spriteForType(starterItemType)}`); setupFloor();
     }
 
     window.addEventListener("keydown", (e)=>{
