@@ -116,6 +116,11 @@
     const calcDamage = (atk,def) => Math.max(1, atk - def);
     const playerAtkValue = () => state.player.floorAtkBuff ?? state.player.baseAtk;
     const playerDefValue = () => state.player.floorDefBuff ?? state.player.baseDef;
+    function formatBuffStat(label, baseValue, buffedValue, icon) {
+      const buff = buffedValue - baseValue;
+      const buffText = buff > 0 ? `（+${buff}${icon}）` : "";
+      return `${label} ${buffedValue}${buffText}`;
+    }
     const meterPercent = (value,max) => max <= 0 ? 0 : Math.max(0, Math.min(100, Math.round(value/max*100)));
     const statusTone = (value,pct) => value <= 0 ? "tone-red" : (pct < 25 ? "tone-orange" : "tone-yellow");
 
@@ -271,9 +276,11 @@
       }
       mapEl.innerHTML=cells.join(""); if(!mapEl.contains(projectileLayer)) mapEl.appendChild(projectileLayer);
       const status = state.player.poison ? "☠️POISON" : "";
+      const atkText = formatBuffStat("ATK", state.player.baseAtk, playerAtkValue(), "🪓");
+      const defText = formatBuffStat("DEF", state.player.baseDef, playerDefValue(), "💎");
       statusEl.innerHTML = `
         <div class="row">${gaugeHtml("HP", state.player.hp, state.player.maxHp)} ${gaugeHtml("空腹", state.player.hunger, state.player.hungerMax)}</div>
-        <div class="row">階 ${state.floor} Lv ${state.player.level} EXP ${state.player.exp}/${expToNextLevel()} ATK ${playerAtkValue()} DEF ${playerDefValue()} イボ(${state.player.ibo}/${state.player.iboMax}) ITEM ${invToString()} SCORE ${state.score} BEST ${state.bestScore} ${status}</div>`;
+        <div class="row">階 ${state.floor} Lv ${state.player.level} EXP ${state.player.exp}/${expToNextLevel()} ${atkText} ${defText} イボ(${state.player.ibo}/${state.player.iboMax}) ITEM ${invToString()} SCORE ${state.score} BEST ${state.bestScore} ${status}</div>`;
     }
 
     function firstEmptySlot(){ return state.inventory.findIndex((s)=>s===null); }
