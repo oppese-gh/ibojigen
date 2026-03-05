@@ -445,7 +445,7 @@
             if(en&&!hitSet.has(en)){
               hitSet.add(en);
               const beamBase = calcDamage(playerAtkValue(), en.def);
-              applyDamage(en, beamBase*2, en.char);
+              applyDamage(en, beamBase*4, en.char);
             }
           }
           render(); await sleep(PROJECTILE_STEP_MS);
