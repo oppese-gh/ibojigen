@@ -477,7 +477,13 @@
     function pickupItem(){
       const it = itemAt(state.player.x,state.player.y); if(!it) return;
       if(!addToInventory(it)){ addLog("持ち物がいっぱいだ。"); return; }
-      state.items = state.items.filter((i)=>i!==it); addLog(`${it.char}を拾った。(${invToString()})`);
+      state.items = state.items.filter((i)=>i!==it);
+      if(it.type === "poop" || it.char === "💩"){
+        addLog("💩を拾った。");
+        addLog("…これは、『かりんとう』というお菓子だ…");
+      }else{
+        addLog(`${it.char}を拾った。(${invToString()})`);
+      }
     }
 
     function openChest(){
