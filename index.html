@@ -159,6 +159,17 @@
       else addLog(`SCORE ${state.score} / BEST ${state.bestScore} (${reasonText})`);
     }
 
+    function resetBestScore(){
+      if(state.turns===0 || state.gameOver===true){
+        state.bestScore = 0;
+        localStorage.removeItem("bojirogue_bestScore");
+        addLog("ハイスコアをリセットした。");
+      }else{
+        addLog("ハイスコアのリセットは開始前かゲームオーバー時のみ。");
+      }
+      render();
+    }
+
     function createMap() {
       const map = Array.from({length:HEIGHT},()=>Array(WIDTH).fill(TILE_WALL));
       const rooms=[]; const roomCount=randInt(6,10); let attempts=0;
@@ -722,6 +733,11 @@
 
     window.addEventListener("keydown", (e)=>{
       const key=e.key;
+      if(e.ctrlKey && e.altKey && (key==="s" || key==="S")){
+        e.preventDefault();
+        resetBestScore();
+        return;
+      }
       if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"," ","a","A","b","B","r","R","1","2","3","4","5"].includes(key)) e.preventDefault();
       if(key==="r"||key==="R") return restartGame();
       if(state.gameOver||state.inputLocked) return;
