@@ -16,6 +16,7 @@
     .cell { width:24px; height:24px; line-height:24px; text-align:center; font-size:20px; }
     #status { margin-top:8px; padding:8px; border:1px solid #3b3b3b; background:#141414; font-size:16px; line-height:1.45; white-space:normal; }
     .row { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+    .monster-alert { color:#ff5252; font-weight:700; }
     .stat { display:flex; align-items:center; gap:6px; }
     .label { min-width:2.2em; }
     .meter { width:180px; height:12px; border:1px solid #666; background:#242424; border-radius:3px; overflow:hidden; }
@@ -116,7 +117,7 @@
 
     // ===== Game state =====
     const state = {
-      floor:1,map:[],rooms:[],enemies:[],items:[],chests:[],asahiyama:null,floorEventType:"normal",ladder:{x:0,y:0},logs:[],revealed:false,seen:[],gameOver:false,inputLocked:false,
+      floor:1,map:[],rooms:[],enemies:[],items:[],chests:[],asahiyama:null,floorEventType:"normal",ladder:{x:0,y:0},logs:[],revealed:false,seen:[],visibleNow:[],gameOver:false,inputLocked:false,
       invSize:5,inventory:[null,null,null,null,null],bestScore:Number(localStorage.getItem("bojirogue_bestScore")||"0"),score:0,turns:0,
       floorHasShield:false,floorHasAxe:false,
       kills:{dog:0,wolf:0,lion:0,dragon:0,ghost:0,zombie:0,skull:0,invader:0,spider:0,chick:0,mimic:0,rain:0},
@@ -207,6 +208,7 @@
       const built = createMap();
       state.map=built.map; state.rooms=built.rooms; state.items=[]; state.enemies=[]; state.chests=[]; state.asahiyama=null; state.revealed=false;
       state.seen = Array.from({length:HEIGHT},()=>Array(WIDTH).fill(false));
+      state.visibleNow = Array.from({length:HEIGHT},()=>Array(WIDTH).fill(false));
       state.floorHasShield=false; state.floorHasAxe=false;
       state.player.floorAtkBuff = 0; state.player.floorDefBuff = 0; state.player.diamondWard = false;
       state.inputLocked=false; state.iboCooldown=0;
@@ -215,7 +217,7 @@
       for(const r of state.rooms){ const d=Math.abs(r.cx-startRoom.cx)+Math.abs(r.cy-startRoom.cy); if(d>best){best=d; far=r;} }
       state.ladder={x:far.cx,y:far.cy};
       state.floorEventType = determineFloorEvent();
-      const enemyMultiplier = state.floorEventType === "monsterHouse" ? 3 : 1;
+      const enemyMultiplier = state.floorEventType === "monsterHouse" ? 5 : 1;
       const initialItemCount = state.floorEventType === "monsterHouse" ? 0 : null;
       placeEnemies(enemyMultiplier);
       placeExtraLadderRoomEnemy(far, enemyMultiplier);
@@ -382,12 +384,24 @@
     }
 
     function updateSeen(){
-      if(state.revealed){ for(let y=0;y<HEIGHT;y++) for(let x=0;x<WIDTH;x++) state.seen[y][x]=true; return; }
+      for(let y=0;y<HEIGHT;y++) for(let x=0;x<WIDTH;x++) state.visibleNow[y][x]=false;
+      if(state.revealed){
+        for(let y=0;y<HEIGHT;y++){
+          for(let x=0;x<WIDTH;x++){
+            state.visibleNow[y][x]=true;
+            state.seen[y][x]=true;
+          }
+        }
+        return;
+      }
       const radius=state.player.vision;
       for(let y=state.player.y-radius;y<=state.player.y+radius;y++){
         for(let x=state.player.x-radius;x<=state.player.x+radius;x++){
           if(x<0||y<0||x>=WIDTH||y>=HEIGHT) continue;
-          if(Math.abs(x-state.player.x)+Math.abs(y-state.player.y)<=radius+2) state.seen[y][x]=true;
+          if(Math.abs(x-state.player.x)+Math.abs(y-state.player.y)<=radius+2){
+            state.visibleNow[y][x]=true;
+            state.seen[y][x]=true;
+          }
         }
       }
     }
@@ -398,25 +412,30 @@
       const cells=[];
       for(let y=0;y<HEIGHT;y++){
         for(let x=0;x<WIDTH;x++){
-          const visible = state.revealed || state.seen[y][x];
-          if(!visible){ cells.push(`<div class="cell"> </div>`); continue; }
+          const visibleNow = state.visibleNow[y][x];
+          const seen = state.seen[y][x];
+          if(!visibleNow && !seen){ cells.push(`<div class="cell"> </div>`); continue; }
           let ch = state.map[y][x]===TILE_WALL ? SPRITES.wall : SPRITES.floor;
-          if(state.ladder.x===x&&state.ladder.y===y) ch=SPRITES.ladder;
-          const it=itemAt(x,y); if(it) ch=it.char;
-          const chest=chestAt(x,y); if(chest) ch=chest.char;
-          const asahiyama=asahiyamaAt(x,y); if(asahiyama) ch=asahiyama.char;
-          const en=enemyAt(x,y); if(en) ch=en.char;
+          if(visibleNow){
+            if(state.ladder.x===x&&state.ladder.y===y) ch=SPRITES.ladder;
+            const it=itemAt(x,y); if(it) ch=it.char;
+            const chest=chestAt(x,y); if(chest) ch=chest.char;
+            const asahiyama=asahiyamaAt(x,y); if(asahiyama) ch=asahiyama.char;
+            const en=enemyAt(x,y); if(en) ch=en.char;
+          }
           if(state.player.x===x&&state.player.y===y) ch=SPRITES.player;
           cells.push(`<div class="cell">${ch}</div>`);
         }
       }
       mapEl.innerHTML=cells.join(""); if(!mapEl.contains(projectileLayer)) mapEl.appendChild(projectileLayer);
       const status = state.player.poison ? "☠️POISON" : "";
+      const monsterAlert = state.floorEventType === "monsterHouse" ? "<span class=\"monster-alert\">❗️❗️❗️モンスターハウス❗️❗️❗️</span>" : "";
       const atkText = formatBuffStat("ATK", state.player.baseAtk, playerAtkValue(), "🪓");
       const defText = formatBuffStat("DEF", state.player.baseDef, playerDefValue(), "💎");
       statusEl.innerHTML = `
         <div class="row">${gaugeHtml("HP", state.player.hp, state.player.maxHp)} ${gaugeHtml("空腹", state.player.hunger, state.player.hungerMax)}</div>
-        <div class="row">階 ${state.floor} Lv ${state.player.level} EXP ${state.player.exp}/${expToNextLevel()} 視界 ${state.player.vision}/${state.player.visionMax} ${atkText} ${defText} イボ(${state.player.ibo}/${state.player.iboMax}) ITEM ${invToString()} SCORE ${state.score} BEST ${state.bestScore} ${status}</div>`;
+        <div class="row">階 ${state.floor} Lv ${state.player.level} EXP ${state.player.exp}/${expToNextLevel()} 視界 ${state.player.vision}/${state.player.visionMax} ${atkText} ${defText} SCORE ${state.score} BEST ${state.bestScore} ${status} ${monsterAlert}</div>
+        <div class="row">イボ(${state.player.ibo}/${state.player.iboMax}) ITEM ${invToString()}</div>`;
     }
 
     function firstEmptySlot(){ return state.inventory.findIndex((s)=>s===null); }
@@ -818,6 +837,7 @@
     function restartGame(){
       state.floor=1; state.player={x:1,y:1,hp:20,maxHp:20,baseAtk:4,baseDef:2,hunger:500,hungerMax:500,ibo:0,iboMax:5,level:1,exp:0,walkCount:0,poison:false,diamondWard:false,floorAtkBuff:0,floorDefBuff:0,vision:6,visionMax:10,visionMin:3};
       state.inventory=[null,null,null,null,null]; state.score=0; state.turns=0; state.logs=[]; state.gameOver=false; state.starving=false; state.asahiyama=null; state.floorEventType="normal";
+      state.seen=[]; state.visibleNow=[];
       state.kills={dog:0,wolf:0,lion:0,dragon:0,ghost:0,zombie:0,skull:0,invader:0,spider:0,chick:0,mimic:0,rain:0};
       const starterItemType = grantStarterItem();
       addLog(`ぼじろーぐ開始！ 初期アイテム: ${spriteForType(starterItemType)}`); setupFloor();
