@@ -56,7 +56,7 @@
 
     const SPRITES = {
       player:"🧔", wall:"🧱", floor:".", ladder:"🪜", orb:"🟣", starBeam:"✨",
-      dog:"🐕", wolf:"🐺", lion:"🦁", dragon:"🐉", ghost:"👻", zombie:"🧟", skull:"☠️", invader:"👾", spider:"🕷️", chick:"🐥",
+      dog:"🐕", wolf:"🐺", lion:"🦁", dragon:"🐉", ghost:"👻", zombie:"🧟", skull:"☠️", invader:"👾", spider:"🕷️", chick:"🐥", mimic:"🎁",
       food:"🍙", sushi:"🍣", meat:"🥩", feast:"🍖", potion:"🧪", map:"👁", shield:"🛡️", axe:"🪓", diamond:"💎", dagger:"🗡️", star:"🌟", poop:"💩"
     };
 
@@ -70,7 +70,8 @@
       skull:{char:SPRITES.skull,hp:17,atk:6,def:2,exp:7},
       invader:{char:SPRITES.invader,hp:23,atk:9,def:4,exp:12},
       spider:{char:SPRITES.spider,hp:9,atk:4,def:1,exp:3},
-      chick:{char:SPRITES.chick,hp:100,atk:0,def:1,exp:50}
+      chick:{char:SPRITES.chick,hp:100,atk:0,def:1,exp:50},
+      mimic:{char:SPRITES.mimic,hp:18,atk:6,def:2,exp:8}
     };
 
     const FLOOR_ITEM_TABLE = [
@@ -82,6 +83,10 @@
       {type:"food",rate:0.22},{type:"sushi",rate:0.18},{type:"meat",rate:0.14},{type:"potion",rate:0.13},{type:"map",rate:0.07},
       {type:"diamond",rate:0.035},{type:"axe",rate:0.035},{type:"dagger",rate:0.035},{type:"shield",rate:0.025},{type:"feast",rate:0.02},{type:"star",rate:0.01},{type:"poop",rate:0.04}
     ];
+    const MIMIC_RARE_DROP_TABLE = [
+      {type:"potion",rate:0.19},{type:"map",rate:0.16},{type:"diamond",rate:0.12},{type:"axe",rate:0.12},{type:"dagger",rate:0.12},
+      {type:"shield",rate:0.12},{type:"feast",rate:0.07},{type:"star",rate:0.05},{type:"poop",rate:0.05}
+    ];
     const STARTER_ITEM_TABLE = [
       {type:"food",rate:0.22},{type:"sushi",rate:0.18},{type:"meat",rate:0.14},{type:"potion",rate:0.13},{type:"map",rate:0.07},
       {type:"diamond",rate:0.035},{type:"axe",rate:0.035},{type:"dagger",rate:0.035},{type:"shield",rate:0.025},{type:"feast",rate:0.02},{type:"star",rate:0.01},{type:"poop",rate:0.04}
@@ -90,12 +95,12 @@
     const FLOOR_ENEMY_TABLES = [
       {min:1,max:2,pool:[{type:"dog",w:60},{type:"wolf",w:28},{type:"ghost",w:12}]},
       {min:3,max:4,pool:[{type:"dog",w:38},{type:"wolf",w:30},{type:"lion",w:16},{type:"ghost",w:8},{type:"spider",w:8}]},
-      {min:5,max:8,pool:[{type:"wolf",w:32},{type:"lion",w:22},{type:"ghost",w:10},{type:"zombie",w:12},{type:"spider",w:7},{type:"skull",w:5}]},
-      {min:9,max:12,pool:[{type:"wolf",w:20},{type:"lion",w:24},{type:"dragon",w:15},{type:"ghost",w:8},{type:"zombie",w:13},{type:"spider",w:8},{type:"skull",w:12},{type:"chick",w:2}]},
-      {min:13,max:999,pool:[{type:"lion",w:22},{type:"dragon",w:16},{type:"ghost",w:7},{type:"zombie",w:12},{type:"spider",w:8},{type:"skull",w:20},{type:"invader",w:15},{type:"chick",w:2}]}
+      {min:5,max:8,pool:[{type:"wolf",w:32},{type:"lion",w:22},{type:"ghost",w:10},{type:"zombie",w:12},{type:"spider",w:7},{type:"skull",w:5},{type:"mimic",w:2}]},
+      {min:9,max:12,pool:[{type:"wolf",w:20},{type:"lion",w:24},{type:"dragon",w:15},{type:"ghost",w:8},{type:"zombie",w:13},{type:"spider",w:8},{type:"skull",w:12},{type:"mimic",w:3},{type:"chick",w:2}]},
+      {min:13,max:999,pool:[{type:"lion",w:22},{type:"dragon",w:16},{type:"ghost",w:7},{type:"zombie",w:12},{type:"spider",w:8},{type:"skull",w:20},{type:"invader",w:15},{type:"mimic",w:4},{type:"chick",w:2}]}
     ];
 
-    const SCORE_KILL = {dog:10,wolf:35,lion:60,dragon:120,ghost:70,zombie:45,skull:80,invader:160,spider:30,chick:0};
+    const SCORE_KILL = {dog:10,wolf:35,lion:60,dragon:120,ghost:70,zombie:45,skull:80,invader:160,spider:30,chick:0,mimic:90};
 
     const mapEl = document.getElementById("grid");
     const versionEl = document.getElementById("version");
@@ -109,7 +114,7 @@
       floor:1,map:[],rooms:[],enemies:[],items:[],ladder:{x:0,y:0},logs:[],revealed:false,seen:[],gameOver:false,inputLocked:false,
       invSize:5,inventory:[null,null,null,null,null],bestScore:Number(localStorage.getItem("bojirogue_bestScore")||"0"),score:0,turns:0,
       floorHasShield:false,floorHasAxe:false,
-      kills:{dog:0,wolf:0,lion:0,dragon:0,ghost:0,zombie:0,skull:0,invader:0,spider:0,chick:0},
+      kills:{dog:0,wolf:0,lion:0,dragon:0,ghost:0,zombie:0,skull:0,invader:0,spider:0,chick:0,mimic:0},
       player:{x:1,y:1,hp:20,maxHp:20,baseAtk:4,baseDef:2,hunger:500,hungerMax:500,ibo:0,iboMax:5,level:1,exp:0,walkCount:0,poison:false,diamondWard:false,floorAtkBuff:null,floorDefBuff:null},
       iboCooldown:0,starving:false
     };
@@ -228,7 +233,7 @@
     function spawnEnemy(type,x,y){
       const base = ENEMY_ARCHETYPES[type]; const tier = floorPowerTier();
       const lateAtkBonus = Math.max(0, Math.floor((state.floor - 11) / 3) + 1);
-      return { x,y,type,char:base.char,exp:base.exp, hp:base.hp+tier*2+Math.floor(Math.max(0,state.floor-6)/3), atk:base.atk+Math.floor((tier+1)/2)+lateAtkBonus, def:base.def+Math.floor(tier/3) };
+      return { x,y,type,char:base.char,exp:base.exp, hp:base.hp+tier*2+Math.floor(Math.max(0,state.floor-6)/3), atk:base.atk+Math.floor((tier+1)/2)+lateAtkBonus, def:base.def+Math.floor(tier/3), active:type!=="mimic" };
     }
 
     function placeEnemies(){
@@ -273,8 +278,8 @@
       for(const p of pool){ if(placed>=itemCount) break; const type=rollFromTable(FLOOR_ITEM_TABLE); if(placeItemAt(type,p.x,p.y)) placed++; }
     }
 
-    function allowedDropTable(){
-      return ENEMY_DROP_TABLE.filter((row)=>!(row.type==="shield"&&state.floorHasShield)&&!(row.type==="axe"&&state.floorHasAxe));
+    function allowedDropTable(table){
+      return table.filter((row)=>!(row.type==="shield"&&state.floorHasShield)&&!(row.type==="axe"&&state.floorHasAxe));
     }
 
     function updateSeen(){
@@ -318,10 +323,10 @@
 
     function applyDamage(target, amount, name=""){ target.hp -= amount; if(name) addLog(`${name}に${amount}ダメージ！`); }
 
-    function resolveAttackDamage(atk, def, isEnemyAttack){
+    function resolveAttackDamage(atk, def, isEnemyAttack, critMultiplier=1){
       const normal = calcDamage(atk, def);
       let damage = normal;
-      const critChance = clamp01((atk - def) / 100);
+      const critChance = clamp01(((atk - def) / 100) * critMultiplier);
       if(Math.random() < critChance){
         damage = normal * 2;
         addLog(`きゅうしょを攻撃！${damage}ダメージ！！`);
@@ -330,8 +335,13 @@
       return damage;
     }
 
+    function activateMimic(enemy){
+      if(enemy.type === "mimic" && !enemy.active) enemy.active = true;
+    }
+
     function playerAttack(enemy){
       const damage = resolveAttackDamage(playerAtkValue(), enemy.def, false);
+      activateMimic(enemy);
       applyDamage(enemy, damage, enemy.char);
       if(enemy.hp<=0) killEnemy(enemy);
     }
@@ -345,7 +355,8 @@
       }
     }
 
-    function dropItem(x,y){ if(itemAt(x,y)) return; const table=allowedDropTable(); if(!table.length) return; const type=rollFromTable(table); if(placeItemAt(type,x,y)) addLog(`${spriteForType(type)}が落ちた。`); }
+    function dropItemFromTable(x,y,dropTable){ if(itemAt(x,y)) return; const table=allowedDropTable(dropTable); if(!table.length) return; const type=rollFromTable(table); if(placeItemAt(type,x,y)) addLog(`${spriteForType(type)}が落ちた。`); }
+    function dropItem(x,y){ dropItemFromTable(x,y,ENEMY_DROP_TABLE); }
 
     function killEnemy(enemy){
       state.enemies = state.enemies.filter((e)=>e!==enemy);
@@ -353,15 +364,22 @@
       else addLog(`${enemy.char}をたおした！`);
       if(state.kills[enemy.type]!==undefined) state.kills[enemy.type] += 1;
       state.player.exp += enemy.exp;
-      if(enemy.type !== "chick" && Math.random()<ENEMY_DROP_CHANCE) dropItem(enemy.x, enemy.y);
+      if(enemy.type === "mimic") dropItemFromTable(enemy.x, enemy.y, MIMIC_RARE_DROP_TABLE);
+      else if(enemy.type !== "chick" && Math.random()<ENEMY_DROP_CHANCE) dropItem(enemy.x, enemy.y);
       maybeLevelUp();
     }
 
     function endAsGameOver(msg){ state.player.hp=Math.max(0,state.player.hp); state.gameOver=true; addLog(msg); finalizeScore("GAME OVER"); }
 
     function enemyAttack(enemy){
-      const damage = resolveAttackDamage(enemy.atk, playerDefValue(), true);
+      const damage = resolveAttackDamage(enemy.atk, playerDefValue(), true, enemy.type === "mimic" ? 2 : 1);
       applyDamage(state.player, damage, "プレイヤー");
+
+      if(enemy.type === "mimic" && state.player.hp>0 && Math.random()<0.05){
+        state.player.baseAtk = Math.max(1, state.player.baseAtk - 1);
+        if(state.player.floorAtkBuff !== null) state.player.floorAtkBuff = Math.ceil(state.player.baseAtk*1.1+1);
+        addLog("攻撃力が下がった…");
+      }
 
       if(enemy.type === "skull"){
         const before=state.player.exp; state.player.exp=Math.max(0,state.player.exp-damage); addLog(`${enemy.char}の呪い！ EXP-${before-state.player.exp}`);
@@ -458,6 +476,7 @@
               const base = calcDamage(playerAtkValue(), en.def);
               const multiplier = randInt(150,200) / 100;
               const damage = Math.round(base * multiplier);
+              activateMimic(en);
               applyDamage(en, damage, en.char);
             }
           }
@@ -484,6 +503,7 @@
             if(en&&!hitSet.has(en)){
               hitSet.add(en);
               const beamBase = calcDamage(playerAtkValue(), en.def);
+              activateMimic(en);
               applyDamage(en, beamBase*4, en.char);
             }
           }
@@ -520,6 +540,7 @@
           const en=enemyAt(x,y);
           if(en){
             const damage = Math.max(1, calcDamage(playerAtkValue()*5, en.def));
+            activateMimic(en);
             applyDamage(en, damage, en.char);
             addLog(`💩が命中！ ${damage}ダメージ！`);
             if(en.hp<=0) killEnemy(en);
@@ -557,6 +578,7 @@
 
     function enemyTurn(){
       for(const en of state.enemies){
+        if(en.type === "mimic" && !en.active) continue;
         if(Math.abs(en.x-state.player.x)+Math.abs(en.y-state.player.y)===1){
           if(en.type === "chick"){
             const lines = [
@@ -608,7 +630,7 @@
     function restartGame(){
       state.floor=1; state.player={x:1,y:1,hp:20,maxHp:20,baseAtk:4,baseDef:2,hunger:500,hungerMax:500,ibo:0,iboMax:5,level:1,exp:0,walkCount:0,poison:false,diamondWard:false,floorAtkBuff:null,floorDefBuff:null};
       state.inventory=[null,null,null,null,null]; state.score=0; state.turns=0; state.logs=[]; state.gameOver=false; state.starving=false;
-      state.kills={dog:0,wolf:0,lion:0,dragon:0,ghost:0,zombie:0,skull:0,invader:0,spider:0,chick:0};
+      state.kills={dog:0,wolf:0,lion:0,dragon:0,ghost:0,zombie:0,skull:0,invader:0,spider:0,chick:0,mimic:0};
       const starterItemType = grantStarterItem();
       addLog(`ぼじろーぐ開始！ 初期アイテム: ${spriteForType(starterItemType)}`); setupFloor();
     }
