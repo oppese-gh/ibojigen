@@ -750,7 +750,7 @@
 
     window.addEventListener("keydown", (e)=>{
       const key=e.key;
-      if(e.ctrlKey && e.altKey && (key==="h" || key==="H")){
+      if(key === "Delete"){
         e.preventDefault();
         resetBestScore();
         return;
