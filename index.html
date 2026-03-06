@@ -225,7 +225,8 @@
 
     function spawnEnemy(type,x,y){
       const base = ENEMY_ARCHETYPES[type]; const tier = floorPowerTier();
-      return { x,y,type,char:base.char,exp:base.exp, hp:base.hp+tier*2+Math.floor(Math.max(0,state.floor-6)/3), atk:base.atk+Math.floor((tier+1)/2), def:base.def+Math.floor(tier/3) };
+      const lateAtkBonus = Math.max(0, Math.floor((state.floor - 11) / 3) + 1);
+      return { x,y,type,char:base.char,exp:base.exp, hp:base.hp+tier*2+Math.floor(Math.max(0,state.floor-6)/3), atk:base.atk+Math.floor((tier+1)/2)+lateAtkBonus, def:base.def+Math.floor(tier/3) };
     }
 
     function placeEnemies(){
