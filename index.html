@@ -110,7 +110,7 @@
       invSize:5,inventory:[null,null,null,null,null],bestScore:Number(localStorage.getItem("bojirogue_bestScore")||"0"),score:0,turns:0,
       floorHasShield:false,floorHasAxe:false,
       kills:{dog:0,wolf:0,lion:0,dragon:0,ghost:0,zombie:0,skull:0,invader:0,spider:0,chick:0},
-      player:{x:1,y:1,hp:25,maxHp:25,baseAtk:4,baseDef:2,hunger:500,hungerMax:1000,ibo:0,iboMax:5,level:1,exp:0,walkCount:0,poison:false,diamondWard:false,floorAtkBuff:null,floorDefBuff:null},
+      player:{x:1,y:1,hp:20,maxHp:20,baseAtk:4,baseDef:2,hunger:500,hungerMax:500,ibo:0,iboMax:5,level:1,exp:0,walkCount:0,poison:false,diamondWard:false,floorAtkBuff:null,floorDefBuff:null},
       iboCooldown:0,starving:false
     };
 
@@ -350,7 +350,7 @@
       if(enemy.type === "ghost" && state.player.hp>0 && Math.random()<0.35){ state.player.hp -= 1; addLog(`${enemy.char}の冷気！ 追加1ダメージ！`); }
       if(enemy.type === "dragon" && state.player.hp>0 && Math.random()<0.5){ const flame=Math.ceil(state.player.hp*0.1); state.player.hp -= flame; addLog(`${enemy.char}の炎！ 追加${flame}ダメージ！`); }
       if(enemy.type === "zombie" && state.player.hp>0 && !state.player.diamondWard){ const corrosion=Math.min(damage*3,10); if(corrosion>0){ state.player.hungerMax=Math.max(1,state.player.hungerMax-corrosion); if(state.player.hunger>state.player.hungerMax) state.player.hunger=state.player.hungerMax; addLog(`${enemy.char}の腐食！ 最大空腹-${corrosion}`);} }
-      if(enemy.type === "invader" && state.player.hp>0 && !state.player.diamondWard && Math.random()<0.2){ state.player.baseDef=Math.max(1,state.player.baseDef-1); if(state.player.floorDefBuff!==null) state.player.floorDefBuff=Math.ceil(state.player.baseDef*1.1+1); addLog("防御力が下がった…"); }
+      if(enemy.type === "invader" && state.player.hp>0 && !state.player.diamondWard && Math.random()<0.1){ state.player.baseDef=Math.max(1,state.player.baseDef-1); if(state.player.floorDefBuff!==null) state.player.floorDefBuff=Math.ceil(state.player.baseDef*1.1+1); addLog("防御力が下がった…"); }
       if(enemy.type === "spider" && state.player.hp>0 && !state.player.diamondWard && Math.random()<0.2){ state.player.poison=true; addLog("毒を受けた！"); }
 
       if(state.player.hp<=0) endAsGameOver("あなたは力尽きた… Rで再開");
@@ -369,9 +369,9 @@
       if(slot.type==="food"){ state.player.hunger=Math.min(state.player.hungerMax,state.player.hunger+50); addLog("🍙を食べた！ 空腹+50"); }
       else if(slot.type==="sushi"){ state.player.hunger=Math.min(state.player.hungerMax,state.player.hunger+100); addLog("🍣を食べた！ 空腹+100"); }
       else if(slot.type==="meat"){ state.player.hunger=Math.min(state.player.hungerMax,state.player.hunger+150); addLog("🥩を食べた！ 空腹+150"); }
-      else if(slot.type==="feast"){ state.player.hungerMax+=10; state.player.hunger=Math.min(state.player.hungerMax,state.player.hunger+200); addLog("🍖を食べた！ 最大空腹+10 & 空腹+200"); }
+      else if(slot.type==="feast"){ state.player.maxHp+=1; state.player.hungerMax+=20; state.player.hunger=Math.min(state.player.hungerMax,state.player.hunger+200); addLog("🍖を食べた！ 最大HP+1 & 最大空腹+20 & 空腹+200"); }
       else if(slot.type==="potion"){
-        const heal = randInt(12,18);
+        const heal = Math.ceil(state.player.maxHp * 0.1 + 10 + randInt(-2,2));
         state.player.hp=Math.min(state.player.maxHp,state.player.hp+heal);
         addLog(`🧪を使った！ HP+${heal}`);
         if(state.player.poison){ state.player.poison=false; addLog("解毒した。"); }
@@ -529,7 +529,7 @@
     function endTurn(){ state.turns+=1; enemyTurn(); if(state.gameOver) return render(); hungerTurn(); if(state.gameOver) return render(); iboTurn(); render(); }
 
     function restartGame(){
-      state.floor=1; state.player={x:1,y:1,hp:25,maxHp:25,baseAtk:4,baseDef:2,hunger:500,hungerMax:1000,ibo:0,iboMax:5,level:1,exp:0,walkCount:0,poison:false,diamondWard:false,floorAtkBuff:null,floorDefBuff:null};
+      state.floor=1; state.player={x:1,y:1,hp:20,maxHp:20,baseAtk:4,baseDef:2,hunger:500,hungerMax:500,ibo:0,iboMax:5,level:1,exp:0,walkCount:0,poison:false,diamondWard:false,floorAtkBuff:null,floorDefBuff:null};
       state.inventory=[null,null,null,null,null]; state.score=0; state.turns=0; state.logs=[]; state.gameOver=false; state.starving=false;
       state.kills={dog:0,wolf:0,lion:0,dragon:0,ghost:0,zombie:0,skull:0,invader:0,spider:0,chick:0};
       const starterItemType = grantStarterItem();
