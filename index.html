@@ -397,7 +397,11 @@
 
   addLog(`${enemy.char}の冷気！ 空腹${beforeHunger}→${state.player.hunger} & 追加${extraHp}ダメージ！`);
 }
-      if(enemy.type === "dragon" && state.player.hp>0 && Math.random()<0.5){ const flame = Math.max(1, Math.ceil(state.player.hp * 0.12) - Math.floor(playerDefValue() / 3)); }
+      if(enemy.type === "dragon" && state.player.hp>0 && Math.random()<0.5){
+  const flame = Math.max(1, Math.ceil(state.player.hp * 0.12) - Math.floor(playerDefValue() / 3));
+  state.player.hp -= flame;
+  addLog(`${enemy.char}の炎！ 追加${flame}ダメージ！`);
+}
       if(enemy.type === "zombie" && state.player.hp>0 && !state.player.diamondWard){ const corrosion=Math.min(damage*3,10); if(corrosion>0){ state.player.hungerMax=Math.max(1,state.player.hungerMax-corrosion); if(state.player.hunger>state.player.hungerMax) state.player.hunger=state.player.hungerMax; addLog(`${enemy.char}の腐食！ 最大空腹-${corrosion}`);} }
       if(enemy.type === "invader" && state.player.hp>0 && !state.player.diamondWard && Math.random()<0.1){ state.player.baseDef=Math.max(1,state.player.baseDef-1); if(state.player.floorDefBuff!==null) state.player.floorDefBuff=Math.ceil(state.player.baseDef*1.1+1); addLog("防御力が下がった…"); }
       if(enemy.type === "spider" && state.player.hp>0 && !state.player.diamondWard && Math.random()<0.2){ state.player.poison=true; addLog("毒を受けた！"); }
@@ -415,9 +419,9 @@
       if(state.gameOver||state.inputLocked||slotIndex<0||slotIndex>=state.invSize) return;
       const slot = state.inventory[slotIndex]; if(!slot){ addLog(`スロット${slotIndex+1}は空だ。`); return; }
       let consumed=true;
-      if(slot.type==="food"){ state.player.hunger=Math.min(state.player.hungerMax,state.player.hunger+50); addLog("🍙を食べた！ 空腹+50"); }
-      else if(slot.type==="sushi"){ state.player.hunger=Math.min(state.player.hungerMax,state.player.hunger+100); addLog("🍣を食べた！ 空腹+100"); }
-      else if(slot.type==="meat"){ state.player.hunger=Math.min(state.player.hungerMax,state.player.hunger+150); addLog("🥩を食べた！ 空腹+150"); }
+      if(slot.type==="food"){ state.player.hunger=Math.min(state.player.hungerMax,state.player.hunger+40); addLog("🍙を食べた！ 空腹+40"); }
+      else if(slot.type==="sushi"){ state.player.hunger=Math.min(state.player.hungerMax,state.player.hunger+80); addLog("🍣を食べた！ 空腹+80"); }
+      else if(slot.type==="meat"){ state.player.hunger=Math.min(state.player.hungerMax,state.player.hunger+120); addLog("🥩を食べた！ 空腹+120"); }
       else if(slot.type==="feast"){ state.player.maxHp+=1; state.player.hungerMax+=20; state.player.hunger=Math.min(state.player.hungerMax,state.player.hunger+200); addLog("🍖を食べた！ 最大HP+1 & 最大空腹+20 & 空腹+200"); }
       else if(slot.type==="potion"){
         const heal = Math.ceil(state.player.maxHp * 0.1 + 10 + randInt(-2,2));
@@ -524,7 +528,7 @@
       }
       const [dx,dy]=dirs[randInt(0,dirs.length-1)];
       state.inputLocked=true;
-      addLog("くそまほう！！");
+      addLog("💩  くそまほう！！💩");
       const el=document.createElement("div");
       el.className="projectile";
       el.textContent=SPRITES.poop;
@@ -582,8 +586,8 @@
         if(Math.abs(en.x-state.player.x)+Math.abs(en.y-state.player.y)===1){
           if(en.type === "chick"){
             const lines = [
-              "🐥「思いやりは！？」",
-              "🐥「もしかして、僕をつかって進んで学習してる？」"
+              "🐥「ぎゃあああ！…『思いやり』は無いの！？」",
+              "🐥「もしかして、僕を攻撃することで『進んで学習』をしてる？」"
             ];
             addLog(lines[Math.floor(Math.random()*lines.length)]);
             continue;
@@ -610,11 +614,11 @@
     function hungerTurn(){
       const extra = Math.random() < Math.min(0.2, Math.max(0,state.floor-5)*0.02) ? 1 : 0;
       let consume = 1 + extra;
-      if(state.player.poison) consume *= 2;
+      if(state.player.poison) consume *= 3;
       state.player.hunger = Math.max(0, state.player.hunger - consume);
       state.starving = state.player.hunger === 0;
       if(state.starving){
-        state.player.hp -= 1; addLog("ピンチ！ 空腹ダメージ1");
+        state.player.hp -= 1; addLog("大ピンチ！ 空腹ダメージ1");
         if(state.player.hp<=0) endAsGameOver("空腹で倒れた… Rで再開");
       }
     }
@@ -622,7 +626,7 @@
     function iboTurn(){
       if(state.iboCooldown>0) state.iboCooldown -= 1;
       if(state.player.hunger<=0||state.player.ibo>=state.player.iboMax||state.iboCooldown!==0) return;
-      if(Math.random()<0.01){ state.player.ibo += 1; state.iboCooldown = 10; addLog("イボがはえた！"); }
+      if(Math.random()<0.01){ state.player.ibo += 1; state.iboCooldown = 10; addLog("【イボがはえた！】"); }
     }
 
     function endTurn(){ state.turns+=1; enemyTurn(); if(state.gameOver) return render(); hungerTurn(); if(state.gameOver) return render(); iboTurn(); render(); }
