@@ -57,7 +57,7 @@
     const SPRITES = {
       player:"🧔", wall:"🧱", floor:".", ladder:"🪜", orb:"🟣", starBeam:"✨",
       dog:"🐕", wolf:"🐺", lion:"🦁", dragon:"🐉", ghost:"👻", zombie:"🧟", skull:"☠️", invader:"👾", spider:"🕷️", chick:"🐥", mimic:"🎁", rain:"🌧️",
-      food:"🍙", sushi:"🍣", meat:"🥩", feast:"🍖", potion:"🧪", map:"👁", shield:"🛡️", axe:"🪓", diamond:"💎", dagger:"🗡️", star:"🌟", sun:"🌤️", poop:"💩"
+      food:"🍙", sushi:"🍣", meat:"🥩", feast:"🍖", potion:"🧪", map:"👁", shield:"🛡️", axe:"🪓", diamond:"💎", dagger:"🗡️", star:"🌟", sun:"🌤️", poop:"💩", asahiyama:"🏔️"
     };
 
     const ENEMY_ARCHETYPES = {
@@ -115,7 +115,7 @@
     projectileLayer.id = "projectile-layer";
 
     const state = {
-      floor:1,map:[],rooms:[],enemies:[],items:[],chests:[],ladder:{x:0,y:0},logs:[],revealed:false,seen:[],gameOver:false,inputLocked:false,
+      floor:1,map:[],rooms:[],enemies:[],items:[],chests:[],asahiyama:null,ladder:{x:0,y:0},logs:[],revealed:false,seen:[],gameOver:false,inputLocked:false,
       invSize:5,inventory:[null,null,null,null,null],bestScore:Number(localStorage.getItem("bojirogue_bestScore")||"0"),score:0,turns:0,
       floorHasShield:false,floorHasAxe:false,
       kills:{dog:0,wolf:0,lion:0,dragon:0,ghost:0,zombie:0,skull:0,invader:0,spider:0,chick:0,mimic:0,rain:0},
@@ -195,7 +195,7 @@
 
     function setupFloor(){
       const built = createMap();
-      state.map=built.map; state.rooms=built.rooms; state.items=[]; state.enemies=[]; state.chests=[]; state.revealed=false;
+      state.map=built.map; state.rooms=built.rooms; state.items=[]; state.enemies=[]; state.chests=[]; state.asahiyama=null; state.revealed=false;
       state.seen = Array.from({length:HEIGHT},()=>Array(WIDTH).fill(false));
       state.floorHasShield=false; state.floorHasAxe=false;
       state.player.floorAtkBuff = null; state.player.floorDefBuff = null; state.player.diamondWard = false;
@@ -208,6 +208,7 @@
       placeExtraLadderRoomEnemy(far);
       placeItems();
       placeTreasureEventObjects();
+      placeAsahiyama();
       addLog(`第${state.floor}階に降りた。`); render();
     }
 
@@ -215,11 +216,12 @@
     const enemyAt = (x,y) => state.enemies.find((e)=>e.x===x&&e.y===y);
     const itemAt = (x,y) => state.items.find((i)=>i.x===x&&i.y===y);
     const chestAt = (x,y) => state.chests.find((c)=>c.x===x&&c.y===y);
+    const asahiyamaAt = (x,y) => state.asahiyama && state.asahiyama.x===x && state.asahiyama.y===y ? state.asahiyama : null;
 
     function positionFree(x,y){
       if(!isWalkable(x,y)) return false;
       if(state.player.x===x&&state.player.y===y) return false;
-      if(enemyAt(x,y)||itemAt(x,y)||chestAt(x,y)) return false;
+      if(enemyAt(x,y)||itemAt(x,y)||chestAt(x,y)||asahiyamaAt(x,y)) return false;
       if(state.ladder.x===x&&state.ladder.y===y) return false;
       return true;
     }
@@ -310,6 +312,45 @@
       }
     }
 
+
+
+    function placeAsahiyama(){
+      const hpLow = state.player.hp <= Math.floor(state.player.maxHp / 2);
+      const hungerLow = state.player.hunger <= Math.floor(state.player.hungerMax / 2);
+      const needsCare = hpLow || hungerLow || state.player.poison;
+      if(!needsCare || Math.random() >= 0.1) return;
+      let pool = randomFloorPos().filter((p)=>positionFree(p.x,p.y));
+      if(!pool.length) return;
+      const picked = pool[randInt(0, pool.length-1)];
+      state.asahiyama = {x:picked.x, y:picked.y, type:"asahiyama", char:SPRITES.asahiyama};
+    }
+
+    function triggerAsahiyama(asahiyama){
+      if(!asahiyama) return;
+      const beforeHp = state.player.hp;
+      const beforeMaxHp = state.player.maxHp;
+      const targetHp = Math.min(beforeMaxHp, Math.ceil((beforeHp + beforeMaxHp) / 2));
+      state.player.hp = targetHp;
+      const hpGain = state.player.hp - beforeHp;
+
+      const expGoal = Math.max(0, expToNextLevel() - 1);
+      const expGain = Math.max(0, expGoal - state.player.exp);
+      state.player.exp += expGain;
+
+      const usedSlots = state.inventory.filter(Boolean).length;
+      const maxHpGain = Math.max(0, state.invSize - usedSlots);
+      state.player.maxHp += maxHpGain;
+
+      if(state.player.vision <= 5) state.player.vision = 6;
+      if(state.player.poison) state.player.poison = false;
+
+      addLog(`『おもいやり』HP回復${hpGain}　『進んで学習』EXP${expGain}　『たくましい』最大HP+${maxHpGain}`);
+      addLog("身体に力がみなぎった。…あさひやまは静かに消え去った。");
+
+      state.asahiyama = null;
+      dropItemFromTable(asahiyama.x, asahiyama.y, FLOOR_ITEM_TABLE);
+    }
+
     function allowedDropTable(table){
       return table.filter((row)=>!(row.type==="shield"&&state.floorHasShield)&&!(row.type==="axe"&&state.floorHasAxe));
     }
@@ -336,6 +377,7 @@
           if(state.ladder.x===x&&state.ladder.y===y) ch=SPRITES.ladder;
           const it=itemAt(x,y); if(it) ch=it.char;
           const chest=chestAt(x,y); if(chest) ch=chest.char;
+          const asahiyama=asahiyamaAt(x,y); if(asahiyama) ch=asahiyama.char;
           const en=enemyAt(x,y); if(en) ch=en.char;
           if(state.player.x===x&&state.player.y===y) ch=SPRITES.player;
           cells.push(`<div class="cell">${ch}</div>`);
@@ -556,7 +598,10 @@
       const nx=state.player.x+dx, ny=state.player.y+dy;
       if(!isWalkable(nx,ny)) return endTurn();
       const foe = enemyAt(nx,ny); if(foe){ playerAttack(foe); return endTurn(); }
-      state.player.x=nx; state.player.y=ny; walkRegen(); pickupItem(); openChest();
+      state.player.x=nx; state.player.y=ny; walkRegen();
+      const asahiyama = asahiyamaAt(nx,ny);
+      if(asahiyama) triggerAsahiyama(asahiyama);
+      pickupItem(); openChest();
       if(nx===state.ladder.x&&ny===state.ladder.y){ state.floor+=1; addLog("🪜 次の階へ進む！"); setupFloor(); return; }
       endTurn();
     }
@@ -742,7 +787,7 @@
 
     function restartGame(){
       state.floor=1; state.player={x:1,y:1,hp:20,maxHp:20,baseAtk:4,baseDef:2,hunger:500,hungerMax:500,ibo:0,iboMax:5,level:1,exp:0,walkCount:0,poison:false,diamondWard:false,floorAtkBuff:null,floorDefBuff:null,vision:6,visionMax:10,visionMin:3};
-      state.inventory=[null,null,null,null,null]; state.score=0; state.turns=0; state.logs=[]; state.gameOver=false; state.starving=false;
+      state.inventory=[null,null,null,null,null]; state.score=0; state.turns=0; state.logs=[]; state.gameOver=false; state.starving=false; state.asahiyama=null;
       state.kills={dog:0,wolf:0,lion:0,dragon:0,ghost:0,zombie:0,skull:0,invader:0,spider:0,chick:0,mimic:0,rain:0};
       const starterItemType = grantStarterItem();
       addLog(`ぼじろーぐ開始！ 初期アイテム: ${spriteForType(starterItemType)}`); setupFloor();
