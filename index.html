@@ -509,7 +509,7 @@
 
     function buildDeathMessage(causeInfo={cause:"generic"}){
       if(state.player.poison) return "あなたは毒に侵されて死んだ…。 Rで再開";
-      if(causeInfo.cause === "enemy" && causeInfo.enemyChar) return `あなたは、${causeInfo.enemyChar}に殺され力尽きた…。 Rで再開`;
+      if(causeInfo.cause === "enemy" && causeInfo.enemyChar) return `あなたは、${causeInfo.enemyChar}にトドメをさされ、力尽きた…。 Rで再開`;
       if(causeInfo.cause === "hunger") return "あなたは飢え、豪華な食事のまぼろしを見ながら倒れた…。 Rで再開";
       return "あなたは力尽きた…。 Rで再開";
     }
