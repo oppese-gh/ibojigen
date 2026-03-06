@@ -402,6 +402,12 @@
       const damage = resolveAttackDamage(enemy.atk, playerDefValue(), true, enemy.type === "mimic" ? 2 : 1);
       applyDamage(state.player, damage, "プレイヤー");
 
+      if(enemy.type === "lion" && state.player.hp > 0 && Math.random() < 0.15){
+        const extraDamage = resolveAttackDamage(enemy.atk, playerDefValue(), true);
+        state.player.hp -= extraDamage;
+        addLog(`すばやく、追撃をうけた！${extraDamage}ダメージ！！`);
+      }
+
       if(enemy.type === "mimic" && state.player.hp>0 && Math.random()<0.05){
         state.player.baseAtk = Math.max(1, state.player.baseAtk - 1);
         if(state.player.floorAtkBuff !== null) state.player.floorAtkBuff = Math.ceil(state.player.baseAtk*1.1+1);
