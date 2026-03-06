@@ -414,9 +414,9 @@
         }
         else {
           state.player.hunger = Math.max(0, state.player.hunger - randInt(1, 2));
-          addLog("疲れた身体に降り注ぐ雨が、苛立つ。");
+          addLog("疲れた身体に降り注ぐ雨が、とても苛立つ。");
         }
-        if(state.player.hp<=0) endAsGameOver("あなたは力尽きた… Rで再開");
+        if(state.player.hp<=0) endAsGameOver("あなたは力尽きた…… Rで再開");
         return;
       }
 
@@ -426,7 +426,7 @@
       if(enemy.type === "lion" && state.player.hp > 0 && Math.random() < 0.15){
         const extraDamage = resolveAttackDamage(enemy.atk, playerDefValue(), true);
         state.player.hp -= extraDamage;
-        addLog(`すばやく、追撃をうけた！${extraDamage}ダメージ！！`);
+        addLog(`すばやい追撃をうけた！${extraDamage}ダメージ！！`);
       }
 
       if(enemy.type === "mimic" && state.player.hp>0 && Math.random()<0.05){
@@ -609,7 +609,7 @@
       }
       const [dx,dy]=dirs[randInt(0,dirs.length-1)];
       state.inputLocked=true;
-      addLog("💩  くそまほう！！💩");
+      addLog("💩  くそまほう！　💩　茶色い疾風が勢いよく飛び出す！！");
       const el=document.createElement("div");
       el.className="projectile";
       el.textContent=SPRITES.poop;
@@ -627,7 +627,7 @@
             const damage = Math.max(1, calcDamage(playerAtkValue()*5, en.def));
             activateMimic(en);
             applyDamage(en, damage, en.char);
-            addLog(`💩が命中！ ${damage}ダメージ！`);
+            addLog(`💩が突きささる！ ${damage}ダメージ！`);
             if(en.hp<=0) killEnemy(en);
             break;
           }
