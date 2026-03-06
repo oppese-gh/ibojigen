@@ -486,8 +486,20 @@
       let consumed=true;
       if(slot.type==="food"){ state.player.hunger=Math.min(state.player.hungerMax,state.player.hunger+40); addLog("🍙を食べた！ 空腹+40"); }
       else if(slot.type==="meat"){ state.player.hunger=Math.min(state.player.hungerMax,state.player.hunger+80); addLog("🥩を食べた！ 空腹+80"); } 
-      else if(slot.type==="sushi"){ state.player.hunger=Math.min(state.player.hungerMax,state.player.hunger+120); addLog("🍣を食べた！ 空腹+120"); }
-      else if(slot.type==="feast"){ state.player.maxHp+=1; state.player.hungerMax+=20; state.player.hunger=Math.min(state.player.hungerMax,state.player.hunger+200); addLog("🍖を食べた！ 最大HP+1 & 最大空腹+20 & 空腹+200"); }
+      else if(slot.type==="sushi"){
+        state.player.hunger=Math.min(state.player.hungerMax,state.player.hunger+120);
+        const healHp=Math.ceil((state.player.maxHp-state.player.hp)/3);
+        state.player.hp=Math.min(state.player.maxHp,state.player.hp+healHp);
+        addLog(`🍣を食べた！ 空腹+120 / HP+${healHp}`);
+      }
+      else if(slot.type==="feast"){
+        state.player.maxHp+=1;
+        state.player.hungerMax+=20;
+        state.player.hunger=Math.min(state.player.hungerMax,state.player.hunger+200);
+        const healHp=Math.ceil((state.player.maxHp-state.player.hp)/1.5);
+        state.player.hp=Math.min(state.player.maxHp,state.player.hp+healHp);
+        addLog(`🍖を食べた！ 最大HP+1 & 最大空腹+20 & 空腹+200 / HP+${healHp}`);
+      }
       else if(slot.type==="potion"){
         const heal = Math.ceil(state.player.maxHp * 0.1 + 10 + randInt(-2,2));
         state.player.hp=Math.min(state.player.maxHp,state.player.hp+heal);
