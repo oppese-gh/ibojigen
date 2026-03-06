@@ -368,7 +368,17 @@
         if(!state.player.diamondWard && Math.random()<0.2){ state.player.maxHp=Math.max(1,state.player.maxHp-1); if(state.player.hp>state.player.maxHp) state.player.hp=state.player.maxHp; addLog("最大HPが1減った…"); }
       }
 
-      if(enemy.type === "ghost" && state.player.hp>0 && Math.random()<0.35){ state.player.hp -= 1; addLog(`${enemy.char}の冷気！ 追加1ダメージ！`); }
+      if (enemy.type === "ghost" && state.player.hp > 0 && Math.random() < 0.30) {
+  // 空腹を98%に（切り上げ）
+  const beforeHunger = state.player.hunger;
+  state.player.hunger = Math.ceil(state.player.hunger * 0.98);
+
+  // HPを1〜2減らす
+  const extraHp = randInt(1, 2);
+  state.player.hp -= extraHp;
+
+  addLog(`${enemy.char}の冷気！ 空腹${beforeHunger}→${state.player.hunger} & 追加${extraHp}ダメージ！`);
+}
       if(enemy.type === "dragon" && state.player.hp>0 && Math.random()<0.5){ const flame=Math.ceil(state.player.hp*0.12); state.player.hp -= flame; addLog(`${enemy.char}の炎！ 追加${flame}ダメージ！`); }
       if(enemy.type === "zombie" && state.player.hp>0 && !state.player.diamondWard){ const corrosion=Math.min(damage*3,10); if(corrosion>0){ state.player.hungerMax=Math.max(1,state.player.hungerMax-corrosion); if(state.player.hunger>state.player.hungerMax) state.player.hunger=state.player.hungerMax; addLog(`${enemy.char}の腐食！ 最大空腹-${corrosion}`);} }
       if(enemy.type === "invader" && state.player.hp>0 && !state.player.diamondWard && Math.random()<0.1){ state.player.baseDef=Math.max(1,state.player.baseDef-1); if(state.player.floorDefBuff!==null) state.player.floorDefBuff=Math.ceil(state.player.baseDef*1.1+1); addLog("防御力が下がった…"); }
