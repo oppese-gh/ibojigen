@@ -115,7 +115,7 @@
     projectileLayer.id = "projectile-layer";
 
     const state = {
-      floor:1,map:[],rooms:[],enemies:[],items:[],chests:[],asahiyama:null,ladder:{x:0,y:0},logs:[],revealed:false,seen:[],gameOver:false,inputLocked:false,
+      floor:1,map:[],rooms:[],enemies:[],items:[],chests:[],asahiyama:null,floorEventType:"normal",ladder:{x:0,y:0},logs:[],revealed:false,seen:[],gameOver:false,inputLocked:false,
       invSize:5,inventory:[null,null,null,null,null],bestScore:Number(localStorage.getItem("bojirogue_bestScore")||"0"),score:0,turns:0,
       floorHasShield:false,floorHasAxe:false,
       kills:{dog:0,wolf:0,lion:0,dragon:0,ghost:0,zombie:0,skull:0,invader:0,spider:0,chick:0,mimic:0,rain:0},
@@ -204,12 +204,17 @@
       let far=state.rooms[0],best=-1;
       for(const r of state.rooms){ const d=Math.abs(r.cx-startRoom.cx)+Math.abs(r.cy-startRoom.cy); if(d>best){best=d; far=r;} }
       state.ladder={x:far.cx,y:far.cy};
-      placeEnemies();
-      placeExtraLadderRoomEnemy(far);
-      placeItems();
+      state.floorEventType = determineFloorEvent();
+      const enemyMultiplier = state.floorEventType === "monsterHouse" ? 3 : 1;
+      const initialItemCount = state.floorEventType === "monsterHouse" ? 0 : null;
+      placeEnemies(enemyMultiplier);
+      placeExtraLadderRoomEnemy(far, enemyMultiplier);
+      placeItems(initialItemCount);
       placeTreasureEventObjects();
       placeAsahiyama();
-      addLog(`第${state.floor}階に降りた。`); render();
+      addLog(`第${state.floor}階に降りた。`);
+      if(state.floorEventType === "monsterHouse") addLog("！！なんという　まものの気配！！");
+      render();
     }
 
     const isWalkable = (x,y) => x>=0&&x<WIDTH&&y>=0&&y<HEIGHT&&state.map[y][x]===TILE_FLOOR;
@@ -248,6 +253,15 @@
 
     function floorPowerTier(){ if(state.floor<=2)return 0; if(state.floor<=4)return 1; if(state.floor<=6)return 2; if(state.floor<=8)return 3; if(state.floor<=10)return 4; return 5+Math.floor((state.floor-10)/2); }
 
+    function determineFloorEvent(){
+      const hpLow = state.player.hp <= state.player.maxHp / 2;
+      const hungerLow = state.player.hunger <= state.player.hungerMax / 2;
+      if((hpLow || hungerLow || state.player.poison) && Math.random() < 0.1) return "asahiyama";
+      const inventoryFull = state.inventory.every(Boolean);
+      if(inventoryFull && Math.random() < 0.2) return "monsterHouse";
+      return "normal";
+    }
+
     function enemyPoolForFloor(){ return FLOOR_ENEMY_TABLES.find((row)=>state.floor>=row.min&&state.floor<=row.max).pool; }
 
     function spawnEnemy(type,x,y){
@@ -256,9 +270,9 @@
       return { x,y,type,char:base.char,exp:base.exp, hp:base.hp+tier*2+Math.floor(Math.max(0,state.floor-6)/3), atk:base.atk+Math.floor((tier+1)/2)+lateAtkBonus, def:base.def+Math.floor(tier/3), active:type!=="mimic" };
     }
 
-    function placeEnemies(){
+    function placeEnemies(multiplier=1){
       const pool=randomFloorPos();
-      const count=randInt(2,3)+Math.floor((state.floor-1)*0.55);
+      const count=(randInt(2,3)+Math.floor((state.floor-1)*0.55))*multiplier;
       const enemyPool = enemyPoolForFloor();
       let placed=0;
       for(const p of pool){
@@ -274,7 +288,7 @@
     }
 
 
-    function placeExtraLadderRoomEnemy(ladderRoom){
+    function placeExtraLadderRoomEnemy(ladderRoom, multiplier=1){
       if(!ladderRoom) return;
       const enemyPool = enemyPoolForFloor();
       const candidates=[];
@@ -286,15 +300,20 @@
         }
       }
       if(!candidates.length) return;
-      const picked = candidates[randInt(0,candidates.length-1)];
-      const type = weightedEnemyType(enemyPool);
-      if(type==="invader" && state.floor<13) return;
-      if(type==="chick" && state.floor<10) return;
-      state.enemies.push(spawnEnemy(type,picked.x,picked.y));
+      const shuffled = shuffle(candidates);
+      let placed = 0;
+      for(const picked of shuffled){
+        if(placed >= multiplier) break;
+        const type = weightedEnemyType(enemyPool);
+        if(type==="invader" && state.floor<13) continue;
+        if(type==="chick" && state.floor<10) continue;
+        state.enemies.push(spawnEnemy(type,picked.x,picked.y));
+        placed += 1;
+      }
     }
 
-    function placeItems(){
-      const pool=randomFloorPos(); const itemCount=randInt(1,3); let placed=0;
+    function placeItems(itemCountOverride=null){
+      const pool=randomFloorPos(); const itemCount=itemCountOverride ?? randInt(1,3); let placed=0;
       for(const p of pool){ if(placed>=itemCount) break; const type=rollFromTable(FLOOR_ITEM_TABLE); if(placeItemAt(type,p.x,p.y)) placed++; }
     }
 
@@ -315,10 +334,7 @@
 
 
     function placeAsahiyama(){
-      const hpLow = state.player.hp <= Math.floor(state.player.maxHp / 2);
-      const hungerLow = state.player.hunger <= Math.floor(state.player.hungerMax / 2);
-      const needsCare = hpLow || hungerLow || state.player.poison;
-      if(!needsCare || Math.random() >= 0.1) return;
+      if(state.floorEventType !== "asahiyama") return;
       let pool = randomFloorPos().filter((p)=>positionFree(p.x,p.y));
       if(!pool.length) return;
       const picked = pool[randInt(0, pool.length-1)];
@@ -787,7 +803,7 @@
 
     function restartGame(){
       state.floor=1; state.player={x:1,y:1,hp:20,maxHp:20,baseAtk:4,baseDef:2,hunger:500,hungerMax:500,ibo:0,iboMax:5,level:1,exp:0,walkCount:0,poison:false,diamondWard:false,floorAtkBuff:null,floorDefBuff:null,vision:6,visionMax:10,visionMin:3};
-      state.inventory=[null,null,null,null,null]; state.score=0; state.turns=0; state.logs=[]; state.gameOver=false; state.starving=false; state.asahiyama=null;
+      state.inventory=[null,null,null,null,null]; state.score=0; state.turns=0; state.logs=[]; state.gameOver=false; state.starving=false; state.asahiyama=null; state.floorEventType="normal";
       state.kills={dog:0,wolf:0,lion:0,dragon:0,ghost:0,zombie:0,skull:0,invader:0,spider:0,chick:0,mimic:0,rain:0};
       const starterItemType = grantStarterItem();
       addLog(`ぼじろーぐ開始！ 初期アイテム: ${spriteForType(starterItemType)}`); setupFloor();
