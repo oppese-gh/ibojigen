@@ -88,6 +88,9 @@
       {type:"potion",rate:0.10},{type:"diamond",rate:0.15},{type:"axe",rate:0.15},{type:"dagger",rate:0.20},
       {type:"shield",rate:0.20},{type:"feast",rate:0.10},{type:"star",rate:0.05},{type:"poop",rate:0.05}
     ];
+    const CHEST_COMMON_DROP_TABLE = [
+      {type:"food",rate:0.28},{type:"sushi",rate:0.22},{type:"meat",rate:0.16},{type:"potion",rate:0.16},{type:"map",rate:0.10},{type:"poop",rate:0.08}
+    ];
     const STARTER_ITEM_TABLE = [
       {type:"food",rate:0.22},{type:"sushi",rate:0.18},{type:"meat",rate:0.14},{type:"potion",rate:0.13},{type:"map",rate:0.07},{type:"sun",rate:0.06},
       {type:"diamond",rate:0.035},{type:"axe",rate:0.035},{type:"dagger",rate:0.035},{type:"shield",rate:0.025},{type:"feast",rate:0.02},{type:"star",rate:0.01},{type:"poop",rate:0.04}
@@ -96,9 +99,9 @@
     const FLOOR_ENEMY_TABLES = [
       {min:1,max:2,pool:[{type:"dog",w:60},{type:"wolf",w:28},{type:"ghost",w:12}]},
       {min:3,max:4,pool:[{type:"dog",w:38},{type:"wolf",w:30},{type:"lion",w:16},{type:"ghost",w:8},{type:"spider",w:8}]},
-      {min:5,max:8,pool:[{type:"wolf",w:32},{type:"lion",w:22},{type:"ghost",w:10},{type:"zombie",w:12},{type:"spider",w:7},{type:"rain",w:5},{type:"skull",w:5},{type:"mimic",w:2}]},
-      {min:9,max:12,pool:[{type:"wolf",w:20},{type:"lion",w:24},{type:"dragon",w:15},{type:"ghost",w:8},{type:"zombie",w:13},{type:"spider",w:8},{type:"rain",w:7},{type:"skull",w:12},{type:"mimic",w:3},{type:"chick",w:2}]},
-      {min:13,max:999,pool:[{type:"lion",w:22},{type:"dragon",w:16},{type:"ghost",w:7},{type:"zombie",w:12},{type:"spider",w:8},{type:"rain",w:7},{type:"skull",w:20},{type:"invader",w:15},{type:"mimic",w:4},{type:"chick",w:2}]}
+      {min:5,max:8,pool:[{type:"wolf",w:32},{type:"lion",w:22},{type:"ghost",w:10},{type:"zombie",w:12},{type:"spider",w:7},{type:"rain",w:5},{type:"skull",w:5}]},
+      {min:9,max:12,pool:[{type:"wolf",w:20},{type:"lion",w:24},{type:"dragon",w:15},{type:"ghost",w:8},{type:"zombie",w:13},{type:"spider",w:8},{type:"rain",w:7},{type:"skull",w:12},{type:"chick",w:2}]},
+      {min:13,max:999,pool:[{type:"lion",w:22},{type:"dragon",w:16},{type:"ghost",w:7},{type:"zombie",w:12},{type:"spider",w:8},{type:"rain",w:7},{type:"skull",w:20},{type:"invader",w:15},{type:"chick",w:2}]}
     ];
 
     const SCORE_KILL = {dog:10,wolf:35,lion:60,dragon:120,ghost:70,zombie:45,skull:80,invader:160,spider:30,chick:0,mimic:90,rain:55};
@@ -112,7 +115,7 @@
     projectileLayer.id = "projectile-layer";
 
     const state = {
-      floor:1,map:[],rooms:[],enemies:[],items:[],ladder:{x:0,y:0},logs:[],revealed:false,seen:[],gameOver:false,inputLocked:false,
+      floor:1,map:[],rooms:[],enemies:[],items:[],chests:[],ladder:{x:0,y:0},logs:[],revealed:false,seen:[],gameOver:false,inputLocked:false,
       invSize:5,inventory:[null,null,null,null,null],bestScore:Number(localStorage.getItem("bojirogue_bestScore")||"0"),score:0,turns:0,
       floorHasShield:false,floorHasAxe:false,
       kills:{dog:0,wolf:0,lion:0,dragon:0,ghost:0,zombie:0,skull:0,invader:0,spider:0,chick:0,mimic:0,rain:0},
@@ -181,7 +184,7 @@
 
     function setupFloor(){
       const built = createMap();
-      state.map=built.map; state.rooms=built.rooms; state.items=[]; state.enemies=[]; state.revealed=false;
+      state.map=built.map; state.rooms=built.rooms; state.items=[]; state.enemies=[]; state.chests=[]; state.revealed=false;
       state.seen = Array.from({length:HEIGHT},()=>Array(WIDTH).fill(false));
       state.floorHasShield=false; state.floorHasAxe=false;
       state.player.floorAtkBuff = null; state.player.floorDefBuff = null; state.player.diamondWard = false;
@@ -192,17 +195,20 @@
       state.ladder={x:far.cx,y:far.cy};
       placeEnemies();
       placeExtraLadderRoomEnemy(far);
-      placeItems(); addLog(`第${state.floor}階に降りた。`); render();
+      placeItems();
+      placeTreasureEventObjects();
+      addLog(`第${state.floor}階に降りた。`); render();
     }
 
     const isWalkable = (x,y) => x>=0&&x<WIDTH&&y>=0&&y<HEIGHT&&state.map[y][x]===TILE_FLOOR;
     const enemyAt = (x,y) => state.enemies.find((e)=>e.x===x&&e.y===y);
     const itemAt = (x,y) => state.items.find((i)=>i.x===x&&i.y===y);
+    const chestAt = (x,y) => state.chests.find((c)=>c.x===x&&c.y===y);
 
     function positionFree(x,y){
       if(!isWalkable(x,y)) return false;
       if(state.player.x===x&&state.player.y===y) return false;
-      if(enemyAt(x,y)||itemAt(x,y)) return false;
+      if(enemyAt(x,y)||itemAt(x,y)||chestAt(x,y)) return false;
       if(state.ladder.x===x&&state.ladder.y===y) return false;
       return true;
     }
@@ -279,6 +285,20 @@
       for(const p of pool){ if(placed>=itemCount) break; const type=rollFromTable(FLOOR_ITEM_TABLE); if(placeItemAt(type,p.x,p.y)) placed++; }
     }
 
+    function placeTreasureEventObjects(){
+      if(state.floor % 5 !== 0) return;
+      const total = randInt(1,2);
+      let pool = randomFloorPos().filter((p)=>Math.abs(p.x-state.player.x)+Math.abs(p.y-state.player.y)>=4&&positionFree(p.x,p.y));
+      if(!pool.length) pool = randomFloorPos().filter((p)=>positionFree(p.x,p.y));
+      let placed = 0;
+      for(const p of pool){
+        if(placed>=total) break;
+        if(Math.random()<0.5) state.enemies.push(spawnEnemy("mimic", p.x, p.y));
+        else state.chests.push({x:p.x,y:p.y,char:SPRITES.mimic});
+        placed += 1;
+      }
+    }
+
     function allowedDropTable(table){
       return table.filter((row)=>!(row.type==="shield"&&state.floorHasShield)&&!(row.type==="axe"&&state.floorHasAxe));
     }
@@ -304,6 +324,7 @@
           let ch = state.map[y][x]===TILE_WALL ? SPRITES.wall : SPRITES.floor;
           if(state.ladder.x===x&&state.ladder.y===y) ch=SPRITES.ladder;
           const it=itemAt(x,y); if(it) ch=it.char;
+          const chest=chestAt(x,y); if(chest) ch=chest.char;
           const en=enemyAt(x,y); if(en) ch=en.char;
           if(state.player.x===x&&state.player.y===y) ch=SPRITES.player;
           cells.push(`<div class="cell">${ch}</div>`);
@@ -448,6 +469,17 @@
       state.items = state.items.filter((i)=>i!==it); addLog(`${it.char}を拾った。(${invToString()})`);
     }
 
+    function openChest(){
+      const chest = chestAt(state.player.x,state.player.y);
+      if(!chest) return;
+      state.chests = state.chests.filter((c)=>c!==chest);
+      addLog("🎁宝箱を開けた！");
+      const type = rollFromTable(CHEST_COMMON_DROP_TABLE);
+      const item = {type,char:spriteForType(type)};
+      if(addToInventory(item)) addLog(`${item.char}を手に入れた。(${invToString()})`);
+      else addLog(`持ち物がいっぱいで${item.char}を入れられない。`);
+    }
+
     async function useInventory(slotIndex){
       if(state.gameOver||state.inputLocked||slotIndex<0||slotIndex>=state.invSize) return;
       const slot = state.inventory[slotIndex]; if(!slot){ addLog(`スロット${slotIndex+1}は空だ。`); return; }
@@ -488,7 +520,7 @@
       const nx=state.player.x+dx, ny=state.player.y+dy;
       if(!isWalkable(nx,ny)) return endTurn();
       const foe = enemyAt(nx,ny); if(foe){ playerAttack(foe); return endTurn(); }
-      state.player.x=nx; state.player.y=ny; walkRegen(); pickupItem();
+      state.player.x=nx; state.player.y=ny; walkRegen(); pickupItem(); openChest();
       if(nx===state.ladder.x&&ny===state.ladder.y){ state.floor+=1; addLog("🪜 次の階へ進む！"); setupFloor(); return; }
       endTurn();
     }
