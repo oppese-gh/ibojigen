@@ -507,7 +507,14 @@
       maybeLevelUp();
     }
 
-    function endAsGameOver(msg){ state.player.hp=Math.max(0,state.player.hp); state.gameOver=true; addLog(msg); finalizeScore("GAME OVER"); }
+    function buildDeathMessage(causeInfo={cause:"generic"}){
+      if(state.player.poison) return "あなたは毒に侵されて死んだ…。 Rで再開";
+      if(causeInfo.cause === "enemy" && causeInfo.enemyChar) return `あなたは、${causeInfo.enemyChar}に殺され力尽きた…。 Rで再開`;
+      if(causeInfo.cause === "hunger") return "あなたは飢え、豪華な食事のまぼろしを見ながら倒れた…。 Rで再開";
+      return "あなたは力尽きた…。 Rで再開";
+    }
+
+    function endAsGameOver(causeInfo={cause:"generic"}){ state.player.hp=Math.max(0,state.player.hp); state.gameOver=true; addLog(buildDeathMessage(causeInfo)); finalizeScore("GAME OVER"); }
 
     function enemyAttack(enemy){
       if(enemy.type === "rain"){
@@ -523,7 +530,7 @@
           state.player.hunger = Math.max(0, state.player.hunger - randInt(1, 2));
           addLog("疲れた身体に降り注ぐ雨が、とても苛立つ。");
         }
-        if(state.player.hp<=0) endAsGameOver("あなたは力尽きた…… Rで再開");
+        if(state.player.hp<=0) endAsGameOver({cause:"generic"});
         return;
       }
 
@@ -566,7 +573,7 @@
       if(enemy.type === "invader" && state.player.hp>0 && !state.player.diamondWard && Math.random()<0.1){ state.player.baseDef=Math.max(1,state.player.baseDef-1); addLog("防御力が下がった…"); }
       if(enemy.type === "spider" && state.player.hp>0 && !state.player.diamondWard && Math.random()<0.2){ state.player.poison=true; addLog("毒を受けた！"); }
 
-      if(state.player.hp<=0) endAsGameOver("あなたは力尽きた… Rで再開");
+      if(state.player.hp<=0) endAsGameOver({cause:"enemy", enemyChar:enemy.char});
     }
 
     function pickupItem(){
@@ -822,7 +829,7 @@
       state.starving = state.player.hunger === 0;
       if(state.starving){
         state.player.hp -= 1; addLog("大ピンチ！ 空腹ダメージ1");
-        if(state.player.hp<=0) endAsGameOver("空腹で倒れた… Rで再開");
+        if(state.player.hp<=0) endAsGameOver({cause:"hunger"});
       }
     }
 
