@@ -535,7 +535,11 @@
         state.player.vision = Math.min(state.player.visionMax, state.player.vision + 1);
         addLog("🌤️を使った！ 視界+1");
       }
-      else if(slot.type==="shield"){ state.player.baseDef+=1; addLog("🛡️を装備した！ DEF+1（恒久）"); }
+      else if(slot.type==="shield"){
+        state.player.baseDef+=1;
+        if(state.player.diamondWard){ state.player.floorDefBuff=Math.ceil(state.player.baseDef*1.1+1); }
+        addLog("🛡️を装備した！ DEF+1（恒久）");
+      }
       else if(slot.type==="axe"){ state.player.floorAtkBuff=Math.ceil(playerAtkValue()*1.1+1); addLog("🪓を装備した！ ATK強化（このフロアのみ）"); }
       else if(slot.type==="diamond"){ state.player.floorDefBuff=Math.ceil(state.player.baseDef*1.1+1); state.player.diamondWard=true; addLog("💎を装備した！ DEF強化（このフロアのみ）"); }
       else if(slot.type==="dagger"){ state.player.baseAtk+=1; addLog("🗡️を装備した！ ATK+1（恒久）"); }
