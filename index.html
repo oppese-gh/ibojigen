@@ -389,7 +389,14 @@
     }
 
     function dropItemFromTable(x,y,dropTable){ if(itemAt(x,y)) return; const table=allowedDropTable(dropTable); if(!table.length) return; const type=rollFromTable(table); if(placeItemAt(type,x,y)) addLog(`${spriteForType(type)}が落ちた。`); }
-    function dropItem(x,y){ dropItemFromTable(x,y,ENEMY_DROP_TABLE); }
+    function dropItem(x,y,type){
+      if(type){
+        if(itemAt(x,y)) return;
+        if(placeItemAt(type,x,y)) addLog(`${spriteForType(type)}が落ちた。`);
+        return;
+      }
+      dropItemFromTable(x,y,ENEMY_DROP_TABLE);
+    }
     function removeRandomFoodItem(){
       const foodTypes = ["food","sushi","meat","feast"];
       const indexes = [];
@@ -636,7 +643,11 @@
       try{
         while(true){
           const nx=x+dx, ny=y+dy;
-          if(!isWalkable(nx,ny)) break;
+          if(!isWalkable(nx,ny)){
+            dropItem(x,y,"poop");
+            addLog("💩が壁に当たって落ちた。");
+            break;
+          }
           x=nx; y=ny;
           setProjectilePos(el,x,y);
           const en=enemyAt(x,y);
