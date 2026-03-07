@@ -65,11 +65,11 @@
       dog:{char:SPRITES.dog,hp:6,atk:2,def:0,exp:1},
       wolf:{char:SPRITES.wolf,hp:11,atk:4,def:1,exp:3},
       lion:{char:SPRITES.lion,hp:16,atk:6,def:2,exp:5},
-      dragon:{char:SPRITES.dragon,hp:24,atk:8,def:3,exp:9},
+      dragon:{char:SPRITES.dragon,hp:20,atk:8,def:3,exp:10},
       ghost:{char:SPRITES.ghost,hp:14,atk:5,def:1,exp:6},
       zombie:{char:SPRITES.zombie,hp:15,atk:5,def:2,exp:4},
       skull:{char:SPRITES.skull,hp:17,atk:6,def:2,exp:7},
-      invader:{char:SPRITES.invader,hp:23,atk:9,def:4,exp:12},
+      invader:{char:SPRITES.invader,hp:23,atk:9,def:3,exp:12},
       spider:{char:SPRITES.spider,hp:9,atk:4,def:1,exp:3},
       chick:{char:SPRITES.chick,hp:100,atk:0,def:1,exp:50},
       mimic:{char:SPRITES.mimic,hp:18,atk:6,def:2,exp:8},
@@ -78,10 +78,10 @@
 
     // 床アイテム: 前半の回復・探索を軸に、終盤向けレア装備は低確率で維持。
     const FLOOR_ITEM_TABLE = [
-      {type:"food",rate:0.2},
+      {type:"food",rate:0.16},
       {type:"sushi",rate:0.16},
       {type:"meat",rate:0.11},
-      {type:"potion",rate:0.16},
+      {type:"potion",rate:0.2},
       {type:"map",rate:0.07},
       {type:"sun",rate:0.06},
       {type:"diamond",rate:0.045},
@@ -94,7 +94,7 @@
     ];
     const ENEMY_DROP_CHANCE = 0.2;
     const ENEMY_DROP_TABLE = [
-      {type:"food",rate:0.22},{type:"sushi",rate:0.16},{type:"meat",rate:0.12},{type:"potion",rate:0.13},{type:"map",rate:0.09},{type:"sun",rate:0.06},
+      {type:"food",rate:0.20},{type:"sushi",rate:0.16},{type:"meat",rate:0.12},{type:"potion",rate:0.15},{type:"map",rate:0.09},{type:"sun",rate:0.06},
       {type:"diamond",rate:0.035},{type:"axe",rate:0.055},{type:"dagger",rate:0.035},{type:"shield",rate:0.025},{type:"feast",rate:0.02},{type:"star",rate:0.01},{type:"poop",rate:0.04}
     ];
     const MIMIC_RARE_DROP_TABLE = [
@@ -102,11 +102,11 @@
       {type:"shield",rate:0.20},{type:"feast",rate:0.10},{type:"star",rate:0.05},{type:"poop",rate:0.05}
     ];
     const CHEST_COMMON_DROP_TABLE = [
-      {type:"food",rate:0.28},{type:"sushi",rate:0.22},{type:"meat",rate:0.16},{type:"potion",rate:0.16},{type:"map",rate:0.10},{type:"poop",rate:0.08}
+      {type:"potion",rate:0.50},{type:"map",rate:0.10},{type:"poop",rate:0.40}
     ];
     const STARTER_ITEM_TABLE = [
-      {type:"food",rate:0.22},{type:"sushi",rate:0.18},{type:"meat",rate:0.14},{type:"potion",rate:0.13},{type:"map",rate:0.07},{type:"sun",rate:0.06},
-      {type:"diamond",rate:0.035},{type:"axe",rate:0.035},{type:"dagger",rate:0.035},{type:"shield",rate:0.025},{type:"feast",rate:0.02},{type:"star",rate:0.01},{type:"poop",rate:0.04}
+      {type:"sushi",rate:0.20},{type:"meat",rate:0.20},{type:"potion",rate:0.20},{type:"sun",rate:0.10},
+      {type:"diamond",rate:0.05},{type:"axe",rate:0.05},{type:"dagger",rate:0.05},{type:"shield",rate:0.05},{type:"feast",rate:0.05},{type:"star",rate:0.01},{type:"poop",rate:0.04}
     ];
 
     // 敵テーブル: 1〜9階はほぼ維持、13階以降を 13〜15 / 16+ に分割して
