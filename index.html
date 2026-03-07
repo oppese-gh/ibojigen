@@ -393,7 +393,7 @@
 
     function placeTreasureEventObjects(){
       if(state.floor % 5 !== 0) return;
-      const total = randInt(1,2);
+      const total = randInt(2,3);
       let pool = randomFloorPos().filter((p)=>Math.abs(p.x-state.player.x)+Math.abs(p.y-state.player.y)>=4&&positionFree(p.x,p.y));
       if(!pool.length) pool = randomFloorPos().filter((p)=>positionFree(p.x,p.y));
       let placed = 0;
