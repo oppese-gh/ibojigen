@@ -666,16 +666,24 @@
       }
     }
 
-    function openChest(){
-      const chest = chestAt(state.player.x,state.player.y);
-      if(!chest) return;
-      state.chests = state.chests.filter((c)=>c!==chest);
-      addLog("🎁宝箱を開けた！");
-      const type = rollFromTable(CHEST_COMMON_DROP_TABLE);
-      const item = {type,char:spriteForType(type)};
-      if(addToInventory(item)) addLog(`${item.char}を手に入れた。(${invToString()})`);
-      else addLog(`持ち物がいっぱいで${item.char}を入れられない。`);
-    }
+function openChest(){
+  const chest = chestAt(state.player.x, state.player.y);
+  if(!chest) return;
+
+  if(firstEmptySlot() === -1){
+    addLog("🎁宝箱を開けた！");
+    addLog("これ以上アイテムを持てない。宝箱をそっと閉じた。");
+    return;
+  }
+
+  const type = rollFromTable(CHEST_COMMON_DROP_TABLE);
+  const item = {type, char:spriteForType(type)};
+
+  state.chests = state.chests.filter((c)=>c!==chest);
+  addToInventory(item);
+  addLog("🎁宝箱を開けた！");
+  addLog(`${item.char}を手に入れた。(${invToString()})`);
+}
 
     // ===== Items =====
     async function useInventory(slotIndex){
