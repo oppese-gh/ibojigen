@@ -155,7 +155,7 @@
 
     function enemyDefByKey(key){ return ENEMY_DEF_BY_KEY[key] || null; }
     function enemyDefById(id){ return ENEMY_DEF_BY_ID[id] || null; }
-    function enemyDefFromInstance(enemy){ return enemyDefByKey(enemy?.key || enemy?.type || ""); }
+    function enemyDefFromInstance(enemy){ return enemyDefByKey(enemy?.key || ""); }
     function buildEmptyKillMap(){ return Object.fromEntries(ENEMY_KILL_KEYS.map((key)=>[key,0])); }
     function enemyDropRule(defOrKey){
       const def = typeof defOrKey === "string" ? enemyDefByKey(defOrKey) : defOrKey;
@@ -165,40 +165,33 @@
       return ENEMY_DEFAULT_DROP_RULE;
     }
 
-    // 既存関数との互換用エイリアス
-    const FLOOR_ITEM_TABLE = DROP_PROFILES.floorCommon;
-    const ENEMY_DROP_TABLE = DROP_PROFILES.enemyCommon;
-    const MIMIC_RARE_DROP_TABLE = DROP_PROFILES.mimicRare;
-    const CHEST_COMMON_DROP_TABLE = DROP_PROFILES.chestCommon;
-    const STARTER_ITEM_TABLE = DROP_PROFILES.starter;
-
     // 敵テーブル: 1〜9階はほぼ維持、13階以降を 13〜15 / 16+ に分割して
     // 後半の理不尽な尖りを抑えつつ終盤の圧は残す。
     const FLOOR_ENEMY_TABLES = [
-      {min:1,max:2,pool:[{enemy:"dog",w:60},{enemy:"wolf",w:28},{enemy:"ghost",w:12}]},
-      {min:3,max:4,pool:[{enemy:"dog",w:38},{enemy:"wolf",w:30},{enemy:"lion",w:16},{enemy:"ghost",w:8},{enemy:"spider",w:8}]},
-      {min:5,max:8,pool:[{enemy:"wolf",w:32},{enemy:"lion",w:22},{enemy:"ghost",w:10},{enemy:"zombie",w:12},{enemy:"spider",w:7},{enemy:"rain",w:5},{enemy:"skull",w:5}]},
-      {min:9,max:12,pool:[{enemy:"wolf",w:24},{enemy:"lion",w:26},{enemy:"dragon",w:10},{enemy:"ghost",w:8},{enemy:"zombie",w:14},{enemy:"spider",w:8},{enemy:"rain",w:6},{enemy:"skull",w:4}]},
+      {min:1,max:2,pool:[{enemyKey:"dog",w:60},{enemyKey:"wolf",w:28},{enemyKey:"ghost",w:12}]},
+      {min:3,max:4,pool:[{enemyKey:"dog",w:38},{enemyKey:"wolf",w:30},{enemyKey:"lion",w:16},{enemyKey:"ghost",w:8},{enemyKey:"spider",w:8}]},
+      {min:5,max:8,pool:[{enemyKey:"wolf",w:32},{enemyKey:"lion",w:22},{enemyKey:"ghost",w:10},{enemyKey:"zombie",w:12},{enemyKey:"spider",w:7},{enemyKey:"rain",w:5},{enemyKey:"skull",w:5}]},
+      {min:9,max:12,pool:[{enemyKey:"wolf",w:24},{enemyKey:"lion",w:26},{enemyKey:"dragon",w:10},{enemyKey:"ghost",w:8},{enemyKey:"zombie",w:14},{enemyKey:"spider",w:8},{enemyKey:"rain",w:6},{enemyKey:"skull",w:4}]},
       {min:13,max:15,pool:[
-        {enemy:"lion",w:24},
-        {enemy:"dragon",w:12},
-        {enemy:"ghost",w:8},
-        {enemy:"zombie",w:14},
-        {enemy:"spider",w:10},
-        {enemy:"rain",w:8},
-        {enemy:"skull",w:10},
-        {enemy:"chick",w:2}
+        {enemyKey:"lion",w:24},
+        {enemyKey:"dragon",w:12},
+        {enemyKey:"ghost",w:8},
+        {enemyKey:"zombie",w:14},
+        {enemyKey:"spider",w:10},
+        {enemyKey:"rain",w:8},
+        {enemyKey:"skull",w:10},
+        {enemyKey:"chick",w:2}
       ]},
       {min:16,max:999,pool:[
-        {enemy:"lion",w:22},
-        {enemy:"dragon",w:14},
-        {enemy:"ghost",w:7},
-        {enemy:"zombie",w:12},
-        {enemy:"spider",w:8},
-        {enemy:"rain",w:7},
-        {enemy:"skull",w:14},
-        {enemy:"invader",w:8},
-        {enemy:"chick",w:2}
+        {enemyKey:"lion",w:22},
+        {enemyKey:"dragon",w:14},
+        {enemyKey:"ghost",w:7},
+        {enemyKey:"zombie",w:12},
+        {enemyKey:"spider",w:8},
+        {enemyKey:"rain",w:7},
+        {enemyKey:"skull",w:14},
+        {enemyKey:"invader",w:8},
+        {enemyKey:"chick",w:2}
       ]}
     ];
 
@@ -359,26 +352,26 @@
       const row = weightedPick(table);
       return itemKeyFromDropEntry(row);
     }
-    function weightedEnemyKey(pool){ const total=pool.reduce((s,r)=>s+r.w,0); let roll=Math.random()*total; for(const row of pool){ roll-=row.w; if(roll<=0) return row.enemy; } return pool[pool.length-1].enemy; }
-    const spriteForType = (type) => {
-      const def = itemDefByKey(type);
+    function weightedEnemyKey(pool){ const total=pool.reduce((s,r)=>s+r.w,0); let roll=Math.random()*total; for(const row of pool){ roll-=row.w; if(roll<=0) return row.enemyKey; } return pool[pool.length-1].enemyKey; }
+    const spriteForItemKey = (itemKey) => {
+      const def = itemDefByKey(itemKey);
       if(def) return def.char;
-      return SPRITES[type] || SPRITES.star;
+      return SPRITES[itemKey] || SPRITES.star;
     };
 
-    function createItem(type){
-      const def = itemDefByKey(type);
-      if(!def) return {type, char:spriteForType(type)};
-      return {id:def.id, key:def.key, type:def.key, char:def.char, category:def.category, rarity:def.rarity, effectKey:def.effectKey};
+    function createItem(itemKey){
+      const def = itemDefByKey(itemKey);
+      if(!def) return {key:itemKey, char:spriteForItemKey(itemKey)};
+      return {id:def.id, key:def.key, char:def.char, category:def.category, rarity:def.rarity, effectKey:def.effectKey};
     }
 
-    function placeItemAt(type,x,y){
-      if(type==="shield" && state.floorHasShield) return false;
-      if(type==="axe" && state.floorHasAxe) return false;
+    function placeItemAt(itemKey,x,y){
+      if(itemKey==="shield" && state.floorHasShield) return false;
+      if(itemKey==="axe" && state.floorHasAxe) return false;
       if(!positionFree(x,y)) return false;
-      state.items.push({x,y,...createItem(type)});
-      if(type==="shield") state.floorHasShield=true;
-      if(type==="axe") state.floorHasAxe=true;
+      state.items.push({x,y,...createItem(itemKey)});
+      if(itemKey==="shield") state.floorHasShield=true;
+      if(itemKey==="axe") state.floorHasAxe=true;
       return true;
     }
 
@@ -398,7 +391,7 @@
     function spawnEnemy(type,x,y){
       const enemyKey = typeof type === "string" ? type : type?.key;
       const def = enemyDefByKey(enemyKey);
-      if(!def) throw new Error(`Unknown enemy type: ${String(enemyKey)}`);
+      if(!def) throw new Error(`Unknown enemy key: ${String(enemyKey)}`);
       const tier = floorPowerTier();
 
       // 後半のATK急上昇を抑える。
@@ -413,7 +406,6 @@
         y,
         id:def.id,
         key:def.key,
-        type:def.key,
         char:def.char,
         exp:def.exp,
         score:def.score,
@@ -533,6 +525,7 @@
       dropItemFromRule(asahiyama.x, asahiyama.y, FLOOR_ITEM_RULE);
     }
 
+    // ===== Drop resolution =====
     function isItemPlacable(type){
       return !(type==="shield"&&state.floorHasShield) && !(type==="axe"&&state.floorHasAxe);
     }
@@ -615,11 +608,12 @@
         <div class="row">イボ(${state.player.ibo}/${state.player.iboMax}) ITEM ${invToString()}</div>`;
     }
 
+    // ===== Inventory =====
     function firstEmptySlot(){ return state.inventory.findIndex((s)=>s===null); }
     function addToInventory(item){
       const idx=firstEmptySlot();
       if(idx===-1) return false;
-      state.inventory[idx]=createItem(item.type || item.key);
+      state.inventory[idx]=createItem(item.key);
       return true;
     }
     function grantStarterItem(){
@@ -645,7 +639,7 @@
     }
 
     function activateMimic(enemy){
-      const enemyKey = enemy.key || enemy.type;
+      const enemyKey = enemy.key;
       if(enemyKey === "mimic" && !enemy.active) enemy.active = true;
     }
 
@@ -684,7 +678,7 @@
       if(itemAt(x,y)) return;
       const type = resolveDropType(rule);
       if(!type) return;
-      if(placeItemAt(type,x,y)) addLog(`${spriteForType(type)}が落ちた。`);
+      if(placeItemAt(type,x,y)) addLog(`${spriteForItemKey(type)}が落ちた。`);
     }
     function dropItemFromTable(x,y,dropTable){
       dropItemFromRule(x,y,{mode:DROP_MODE.POOL, pool:dropTable});
@@ -692,7 +686,7 @@
     function dropItem(x,y,type){
       if(type){
         if(itemAt(x,y)) return;
-        if(placeItemAt(type,x,y)) addLog(`${spriteForType(type)}が落ちた。`);
+        if(placeItemAt(type,x,y)) addLog(`${spriteForItemKey(type)}が落ちた。`);
         return;
       }
       dropItemFromRule(x,y,ENEMY_DEFAULT_DROP_RULE);
@@ -700,7 +694,7 @@
     function removeRandomFoodItem(){
       const foodTypes = ["food","sushi","meat","feast"];
       const indexes = [];
-      for(let i=0;i<state.inventory.length;i++) if(state.inventory[i] && foodTypes.includes(state.inventory[i].type)) indexes.push(i);
+      for(let i=0;i<state.inventory.length;i++) if(state.inventory[i] && foodTypes.includes(state.inventory[i].key)) indexes.push(i);
       if(!indexes.length) return false;
       const lostIndex = indexes[randInt(0,indexes.length-1)];
       state.inventory[lostIndex] = null;
@@ -710,7 +704,7 @@
     function killEnemy(enemy){
       state.enemies = state.enemies.filter((e)=>e!==enemy);
       const def = enemyDefFromInstance(enemy);
-      const enemyKey = def?.key || enemy.key || enemy.type;
+      const enemyKey = def?.key || enemy.key;
       if(enemyKey === "chick") addLog("🐥「たくましい子…」");
       else addLog(`${enemy.char}をたおした！`);
       if(state.kills[enemyKey]!==undefined) state.kills[enemyKey] += 1;
@@ -729,7 +723,7 @@
     function endAsGameOver(causeInfo={cause:"generic"}){ state.player.hp=Math.max(0,state.player.hp); state.gameOver=true; addLog(buildDeathMessage(causeInfo)); finalizeScore("GAME OVER"); }
 
     function enemyAttack(enemy){
-      const enemyKey = enemy.key || enemy.type;
+      const enemyKey = enemy.key;
       if(enemyKey === "rain"){
         const roll = Math.random();
         if(roll < 0.06){
@@ -793,7 +787,7 @@
       const it = itemAt(state.player.x,state.player.y); if(!it) return;
       if(!addToInventory(it)){ addLog("持ち物がいっぱいだ。"); return; }
       state.items = state.items.filter((i)=>i!==it);
-      if(it.type === "poop" || it.char === "💩"){
+      if(it.key === "poop" || it.char === "💩"){
         addLog("💩を拾った。");
         addLog("…これは、『かりんとう』というお菓子だ…");
       }else{
@@ -870,7 +864,7 @@ function openChest(){
     async function useInventory(slotIndex){
       if(state.gameOver||state.inputLocked||slotIndex<0||slotIndex>=state.invSize) return;
       const slot = state.inventory[slotIndex]; if(!slot){ addLog(`スロット${slotIndex+1}は空だ。`); return; }
-      const def = itemDefByKey(slot.type || slot.key);
+      const def = itemDefByKey(slot.key);
       const effect = def ? ITEM_EFFECTS[def.effectKey] : null;
       if(!effect){ addLog(`${slot.char}は使えない。`); return; }
       const result = await effect(slot, slotIndex);
@@ -1003,6 +997,7 @@ function openChest(){
       return true;
     }
 
+    // ===== Enemy pathfinding =====
     const canSeePlayer = (ex,ey)=>Math.abs(ex-state.player.x)+Math.abs(ey-state.player.y)<=12;
 
     function bfsStep(startX,startY,goalX,goalY){
@@ -1025,7 +1020,7 @@ function openChest(){
     // ===== Enemy AI =====
     function enemyTurn(){
       for(const en of state.enemies){
-        const enemyKey = en.key || en.type;
+        const enemyKey = en.key;
         if(enemyKey === "mimic" && !en.active) continue;
         if(Math.abs(en.x-state.player.x)+Math.abs(en.y-state.player.y)===1){
           if(enemyKey === "chick"){
@@ -1081,7 +1076,7 @@ function openChest(){
       state.seen=[]; state.visibleNow=[];
       state.kills=buildEmptyKillMap();
       const starterItemType = grantStarterItem();
-      addLog(`ぼじろーぐ開始！ 初期アイテム: ${spriteForType(starterItemType)}`); setupFloor();
+      addLog(`ぼじろーぐ開始！ 初期アイテム: ${spriteForItemKey(starterItemType)}`); setupFloor();
     }
 
     window.addEventListener("keydown", (e)=>{
