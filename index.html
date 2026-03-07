@@ -521,7 +521,7 @@
         const roll = Math.random();
         if(roll < 0.06){
           state.player.vision = Math.max(state.player.visionMin, state.player.vision - 1);
-          addLog("雨雲につつまれた。");
+          addLog("暗い雲につつまれた。");
         }
         else if(roll < 0.12){
           if(removeRandomFoodItem()) addLog("食料が豪雨に流された。");
