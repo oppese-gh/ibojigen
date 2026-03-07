@@ -58,22 +58,22 @@
     const SPRITES = {
       player:"🧔", wall:"🧱", floor:".", ladder:"🪜", orb:"🟣", starBeam:"✨",
       dog:"🐕", wolf:"🐺", lion:"🦁", dragon:"🐉", ghost:"👻", zombie:"🧟", skull:"☠️", invader:"👾", spider:"🕷️", chick:"🐥", mimic:"🎁", rain:"🌧️",
-      food:"🍙", sushi:"🍣", meat:"🥩", feast:"🍖", potion:"🧪", map:"👁", shield:"🛡️", axe:"🪓", diamond:"💎", dagger:"🗡️", star:"🌟", sun:"🌤️", poop:"💩", asahiyama:"🏔️"
+      food:"🍙", sushi:"🍣", meat:"🥩", feast:"🍖", potion:"🧪", map:"👁", shield:"🛡️", axe:"🪓", diamond:"💎", dagger:"🗡️", star:"🌟", sun:"🌤️", poop:"💩", bean:"🫘", asahiyama:"🏔️"
     };
 
     const ENEMY_ARCHETYPES = {
       dog:{char:SPRITES.dog,hp:6,atk:2,def:0,exp:1},
-      wolf:{char:SPRITES.wolf,hp:11,atk:4,def:1,exp:3},
-      lion:{char:SPRITES.lion,hp:16,atk:6,def:2,exp:5},
-      dragon:{char:SPRITES.dragon,hp:20,atk:8,def:3,exp:10},
-      ghost:{char:SPRITES.ghost,hp:14,atk:5,def:1,exp:6},
-      zombie:{char:SPRITES.zombie,hp:15,atk:5,def:2,exp:4},
-      skull:{char:SPRITES.skull,hp:17,atk:6,def:2,exp:7},
-      invader:{char:SPRITES.invader,hp:23,atk:9,def:3,exp:12},
-      spider:{char:SPRITES.spider,hp:9,atk:4,def:1,exp:3},
+      wolf:{char:SPRITES.wolf,hp:10,atk:4,def:1,exp:3},
+      lion:{char:SPRITES.lion,hp:14,atk:5,def:2,exp:5},
+      dragon:{char:SPRITES.dragon,hp:20,atk:7,def:3,exp:9},
+      ghost:{char:SPRITES.ghost,hp:12,atk:4,def:1,exp:6},
+      zombie:{char:SPRITES.zombie,hp:13,atk:4,def:1,exp:4},
+      skull:{char:SPRITES.skull,hp:15,atk:5,def:1,exp:7},
+      invader:{char:SPRITES.invader,hp:19,atk:7,def:3,exp:12},
+      spider:{char:SPRITES.spider,hp:8,atk:3,def:1,exp:3},
       chick:{char:SPRITES.chick,hp:100,atk:0,def:1,exp:50},
-      mimic:{char:SPRITES.mimic,hp:18,atk:6,def:2,exp:8},
-      rain:{char:SPRITES.rain,hp:12,atk:0,def:1,exp:5}
+      mimic:{char:SPRITES.mimic,hp:16,atk:5,def:2,exp:8},
+      rain:{char:SPRITES.rain,hp:10,atk:0,def:1,exp:5}
     };
 
     // 床アイテム: 前半の回復・探索を軸に、終盤向けレア装備は低確率で維持。
@@ -99,7 +99,7 @@
     ];
     const MIMIC_RARE_DROP_TABLE = [
       {type:"potion",rate:0.10},{type:"diamond",rate:0.15},{type:"axe",rate:0.15},{type:"dagger",rate:0.20},
-      {type:"shield",rate:0.20},{type:"feast",rate:0.10},{type:"star",rate:0.05},{type:"poop",rate:0.05}
+      {type:"shield",rate:0.20},{type:"feast",rate:0.10},{type:"star",rate:0.05},{type:"poop",rate:0.05},{type:"bean",rate:0.04}
     ];
     const CHEST_COMMON_DROP_TABLE = [
       {type:"potion",rate:0.50},{type:"map",rate:0.10},{type:"poop",rate:0.40}
@@ -155,7 +155,7 @@
       invSize:5,inventory:[null,null,null,null,null],bestScore:Number(localStorage.getItem("bojirogue_bestScore")||"0"),score:0,turns:0,
       floorHasShield:false,floorHasAxe:false,
       kills:{dog:0,wolf:0,lion:0,dragon:0,ghost:0,zombie:0,skull:0,invader:0,spider:0,chick:0,mimic:0,rain:0},
-      player:{x:1,y:1,hp:20,maxHp:20,baseAtk:4,baseDef:2,hunger:500,hungerMax:500,ibo:0,iboMax:5,level:1,exp:0,walkCount:0,poison:false,diamondWard:false,floorAtkBuff:0,floorDefBuff:0,vision:6,visionMax:10,visionMin:3},
+      player:{x:1,y:1,hp:20,maxHp:20,baseAtk:4,baseDef:2,hunger:500,hungerMax:500,ibo:0,iboMax:5,iboMaxCap:10,iboChanceDenom:100,iboChanceDenomMin:40,level:1,exp:0,walkCount:0,poison:false,diamondWard:false,floorAtkBuff:0,floorDefBuff:0,vision:6,visionMax:10,visionMin:3},
       iboCooldown:0,starving:false
     };
 
@@ -532,10 +532,25 @@
 
     function maybeLevelUp(){
       while(state.player.exp >= expToNextLevel()){
-        state.player.exp -= expToNextLevel(); state.player.level += 1;
-        const atkUp = randInt(0,1), defUp = randInt(0,1), hpUp = randInt(2,3);
-        state.player.baseAtk += atkUp; state.player.baseDef += defUp; state.player.maxHp += hpUp; state.player.hp = state.player.maxHp;
-        addLog(`レベルアップ！ ATK+${atkUp} DEF+${defUp} MAXHP+${hpUp}`);
+        state.player.exp -= expToNextLevel();
+        state.player.level += 1;
+        let atkUp = randInt(0,1);
+        let defUp = randInt(0,1);
+        const hpUp = randInt(2,3);
+        if(atkUp + defUp === 0){
+          if(Math.random() < 0.5) atkUp = 1;
+          else defUp = 1;
+        }
+        const iboRateUp = randInt(1,2);
+        state.player.baseAtk += atkUp;
+        state.player.baseDef += defUp;
+        state.player.maxHp += hpUp;
+        state.player.hp = state.player.maxHp;
+        state.player.iboChanceDenom = Math.max(
+          state.player.iboChanceDenomMin,
+          state.player.iboChanceDenom - iboRateUp
+        );
+        addLog(`レベルアップ！ ATK+${atkUp} DEF+${defUp} MAXHP+${hpUp} イボ率 1/${state.player.iboChanceDenom}`);
       }
     }
 
@@ -701,6 +716,16 @@
       else if(slot.type==="poop"){
         const didFire = await poopShot();
         if(!didFire) return;
+      }
+      else if(slot.type==="bean"){
+        if(state.player.iboMax>=state.player.iboMaxCap){
+          consumed=false;
+          addLog("🫘これ以上イボは増やせない");
+        }
+        else{
+          state.player.iboMax++;
+          addLog("🫘イボ最大値+1");
+        }
       }
       else { consumed=false; addLog(`${slot.char}は使えない。`); }
       if(!consumed) return;
@@ -898,13 +923,13 @@
     function iboTurn(){
       if(state.iboCooldown>0) state.iboCooldown -= 1;
       if(state.player.hunger<=0||state.player.ibo>=state.player.iboMax||state.iboCooldown!==0) return;
-      if(Math.random()<0.01){ state.player.ibo += 1; state.iboCooldown = 10; addLog("【イボがはえた！】"); }
+      if(Math.random()<1/state.player.iboChanceDenom){ state.player.ibo += 1; state.iboCooldown = 10; addLog("【イボがはえた！】"); }
     }
 
     function endTurn(){ state.turns+=1; enemyTurn(); if(state.gameOver) return render(); hungerTurn(); if(state.gameOver) return render(); iboTurn(); render(); }
 
     function restartGame(){
-      state.floor=1; state.player={x:1,y:1,hp:20,maxHp:20,baseAtk:4,baseDef:2,hunger:500,hungerMax:500,ibo:0,iboMax:5,level:1,exp:0,walkCount:0,poison:false,diamondWard:false,floorAtkBuff:0,floorDefBuff:0,vision:6,visionMax:10,visionMin:3};
+      state.floor=1; state.player={x:1,y:1,hp:20,maxHp:20,baseAtk:4,baseDef:2,hunger:500,hungerMax:500,ibo:0,iboMax:5,iboMaxCap:10,iboChanceDenom:100,iboChanceDenomMin:40,level:1,exp:0,walkCount:0,poison:false,diamondWard:false,floorAtkBuff:0,floorDefBuff:0,vision:6,visionMax:10,visionMin:3};
       state.inventory=[null,null,null,null,null]; state.score=0; state.turns=0; state.logs=[]; state.gameOver=false; state.starving=false; state.asahiyama=null; state.floorEventType="normal";
       state.seen=[]; state.visibleNow=[];
       state.kills={dog:0,wolf:0,lion:0,dragon:0,ghost:0,zombie:0,skull:0,invader:0,spider:0,chick:0,mimic:0,rain:0};
