@@ -76,38 +76,89 @@
       rain:{char:SPRITES.rain,hp:10,atk:0,def:1,exp:5}
     };
 
-    // 床アイテム: 前半の回復・探索を軸に、終盤向けレア装備は低確率で維持。
-    const FLOOR_ITEM_TABLE = [
-      {type:"food",rate:0.15},
-      {type:"meat",rate:0.14},
-      {type:"sushi",rate:0.13},
-      {type:"potion",rate:0.18},
-      {type:"map",rate:0.07},
-      {type:"sun",rate:0.06},
-      {type:"diamond",rate:0.05},
-      {type:"axe",rate:0.05},
-      {type:"dagger",rate:0.05},
-      {type:"shield",rate:0.05},
-      {type:"feast",rate:0.02},
-      {type:"star",rate:0.01},
-      {type:"poop",rate:0.04}
+    const ITEM_DEFS = [
+      {id:1,key:"food",char:SPRITES.food,category:"food",rarity:1,effectKey:"food"},
+      {id:2,key:"meat",char:SPRITES.meat,category:"food",rarity:1,effectKey:"meat"},
+      {id:3,key:"sushi",char:SPRITES.sushi,category:"food",rarity:2,effectKey:"sushi"},
+      {id:4,key:"feast",char:SPRITES.feast,category:"food",rarity:4,effectKey:"feast"},
+      {id:5,key:"potion",char:SPRITES.potion,category:"heal",rarity:1,effectKey:"potion"},
+      {id:6,key:"map",char:SPRITES.map,category:"utility",rarity:2,effectKey:"map"},
+      {id:7,key:"sun",char:SPRITES.sun,category:"utility",rarity:2,effectKey:"sun"},
+      {id:8,key:"shield",char:SPRITES.shield,category:"armor",rarity:3,effectKey:"shield"},
+      {id:9,key:"axe",char:SPRITES.axe,category:"weapon",rarity:3,effectKey:"axe"},
+      {id:10,key:"diamond",char:SPRITES.diamond,category:"armor",rarity:3,effectKey:"diamond"},
+      {id:11,key:"dagger",char:SPRITES.dagger,category:"weapon",rarity:3,effectKey:"dagger"},
+      {id:12,key:"star",char:SPRITES.star,category:"utility",rarity:5,effectKey:"star"},
+      {id:13,key:"poop",char:SPRITES.poop,category:"junk",rarity:2,effectKey:"poop"},
+      {id:14,key:"bean",char:SPRITES.bean,category:"growth",rarity:4,effectKey:"bean"}
     ];
+    const ITEM_DEF_BY_KEY = Object.fromEntries(ITEM_DEFS.map((d)=>[d.key,d]));
+    const ITEM_DEF_BY_ID = Object.fromEntries(ITEM_DEFS.map((d)=>[d.id,d]));
+
+    function itemDefByKey(key){ return ITEM_DEF_BY_KEY[key] || null; }
+    function itemDefById(id){ return ITEM_DEF_BY_ID[id] || null; }
+    function itemKeyFromDropEntry(entry){
+      if(!entry) return null;
+      if(entry.key) return entry.key;
+      if(entry.type) return entry.type;
+      if(entry.id !== undefined){
+        const byId = itemDefById(entry.id);
+        return byId ? byId.key : null;
+      }
+      return null;
+    }
+    function normalizeDropPool(pool=[]){
+      return pool
+        .map((entry)=>({key:itemKeyFromDropEntry(entry), weight:entry.weight ?? entry.rate ?? entry.w ?? 0}))
+        .filter((entry)=>entry.key && entry.weight>0);
+    }
+
+    const DROP_MODE = {PROFILE:"profile", FIXED:"fixed", POOL:"pool", NONE:"none"};
+
+    const DROP_PROFILES = {
+      // 旧テーブルをそのまま移植。重みは旧rate相当。
+      floorCommon: normalizeDropPool([
+        {key:"food",weight:0.15}, {key:"meat",weight:0.14}, {key:"sushi",weight:0.13}, {key:"potion",weight:0.18},
+        {key:"map",weight:0.07}, {key:"sun",weight:0.06}, {key:"diamond",weight:0.05}, {key:"axe",weight:0.05},
+        {key:"dagger",weight:0.05}, {key:"shield",weight:0.05}, {key:"feast",weight:0.02}, {key:"star",weight:0.01},
+        {key:"poop",weight:0.04}
+      ]),
+      enemyCommon: normalizeDropPool([
+        {key:"food",weight:0.13}, {key:"meat",weight:0.12}, {key:"sushi",weight:0.16}, {key:"potion",weight:0.22},
+        {key:"map",weight:0.09}, {key:"sun",weight:0.06}, {key:"diamond",weight:0.035}, {key:"axe",weight:0.055},
+        {key:"dagger",weight:0.035}, {key:"shield",weight:0.025}, {key:"feast",weight:0.02}, {key:"star",weight:0.01},
+        {key:"poop",weight:0.04}
+      ]),
+      mimicRare: normalizeDropPool([
+        {key:"potion",weight:0.06}, {key:"diamond",weight:0.15}, {key:"axe",weight:0.15}, {key:"dagger",weight:0.20},
+        {key:"shield",weight:0.20}, {key:"feast",weight:0.10}, {key:"star",weight:0.05}, {key:"poop",weight:0.05}, {key:"bean",weight:0.04}
+      ]),
+      chestCommon: normalizeDropPool([
+        {key:"potion",weight:0.45}, {key:"feast",weight:0.05}, {key:"map",weight:0.10}, {key:"sun",weight:0.10}, {key:"poop",weight:0.30}
+      ]),
+      starter: normalizeDropPool([
+        {key:"meat",weight:0.20}, {key:"sushi",weight:0.20}, {key:"potion",weight:0.20}, {key:"diamond",weight:0.05},
+        {key:"axe",weight:0.05}, {key:"dagger",weight:0.05}, {key:"shield",weight:0.05}, {key:"feast",weight:0.05},
+        {key:"star",weight:0.01}, {key:"poop",weight:0.04}
+      ])
+    };
+
+    const FLOOR_ITEM_RULE = {mode:DROP_MODE.PROFILE, ref:"floorCommon"};
     const ENEMY_DROP_CHANCE = 0.22;
-    const ENEMY_DROP_TABLE = [
-      {type:"food",rate:0.13},{type:"meat",rate:0.12},{type:"sushi",rate:0.16},{type:"potion",rate:0.22},{type:"map",rate:0.09},{type:"sun",rate:0.06},
-      {type:"diamond",rate:0.035},{type:"axe",rate:0.055},{type:"dagger",rate:0.035},{type:"shield",rate:0.025},{type:"feast",rate:0.02},{type:"star",rate:0.01},{type:"poop",rate:0.04}
-    ];
-    const MIMIC_RARE_DROP_TABLE = [
-      {type:"potion",rate:0.06},{type:"diamond",rate:0.15},{type:"axe",rate:0.15},{type:"dagger",rate:0.20},
-      {type:"shield",rate:0.20},{type:"feast",rate:0.10},{type:"star",rate:0.05},{type:"poop",rate:0.05},{type:"bean",rate:0.04}
-    ];
-    const CHEST_COMMON_DROP_TABLE = [
-      {type:"potion",rate:0.45},{type:"feast",rate:0.05},{type:"map",rate:0.10},{type:"sun",rate:0.10},{type:"poop",rate:0.30}
-    ];
-    const STARTER_ITEM_TABLE = [
-      {type:"meat",rate:0.20},{type:"sushi",rate:0.20},{type:"potion",rate:0.20},
-      {type:"diamond",rate:0.05},{type:"axe",rate:0.05},{type:"dagger",rate:0.05},{type:"shield",rate:0.05},{type:"feast",rate:0.05},{type:"star",rate:0.01},{type:"poop",rate:0.04}
-    ];
+    const ENEMY_DEFAULT_DROP_RULE = {mode:DROP_MODE.PROFILE, ref:"enemyCommon", chance:ENEMY_DROP_CHANCE};
+    const ENEMY_DROP_RULES = {
+      chick:{mode:DROP_MODE.NONE},
+      mimic:{mode:DROP_MODE.POOL, pool:DROP_PROFILES.mimicRare}
+    };
+    const CHEST_DROP_RULE = {mode:DROP_MODE.PROFILE, ref:"chestCommon"};
+    const STARTER_DROP_RULE = {mode:DROP_MODE.PROFILE, ref:"starter"};
+
+    // 既存関数との互換用エイリアス
+    const FLOOR_ITEM_TABLE = DROP_PROFILES.floorCommon;
+    const ENEMY_DROP_TABLE = DROP_PROFILES.enemyCommon;
+    const MIMIC_RARE_DROP_TABLE = DROP_PROFILES.mimicRare;
+    const CHEST_COMMON_DROP_TABLE = DROP_PROFILES.chestCommon;
+    const STARTER_ITEM_TABLE = DROP_PROFILES.starter;
 
     // 敵テーブル: 1〜9階はほぼ維持、13階以降を 13〜15 / 16+ に分割して
     // 後半の理不尽な尖りを抑えつつ終盤の圧は残す。
@@ -283,15 +334,39 @@
       return shuffle(cells);
     }
 
-    function rollFromTable(table){ const total=table.reduce((s,r)=>s+r.rate,0); let roll=Math.random()*(total||1); for(const row of table){ roll-=row.rate; if(roll<=0) return row.type; } return table[table.length-1].type; }
+    function weightedPick(pool){
+      if(!pool || !pool.length) return null;
+      const total = pool.reduce((s,r)=>s + (r.weight ?? r.rate ?? r.w ?? 0),0);
+      if(total<=0) return null;
+      let roll = Math.random()*total;
+      for(const row of pool){
+        roll -= (row.weight ?? row.rate ?? row.w ?? 0);
+        if(roll<=0) return row;
+      }
+      return pool[pool.length-1];
+    }
+    function rollFromTable(table){
+      const row = weightedPick(table);
+      return itemKeyFromDropEntry(row);
+    }
     function weightedEnemyType(pool){ const total=pool.reduce((s,r)=>s+r.w,0); let roll=Math.random()*total; for(const row of pool){ roll-=row.w; if(roll<=0) return row.type; } return pool[pool.length-1].type; }
-    const spriteForType = (type) => SPRITES[type] || SPRITES.star;
+    const spriteForType = (type) => {
+      const def = itemDefByKey(type);
+      if(def) return def.char;
+      return SPRITES[type] || SPRITES.star;
+    };
+
+    function createItem(type){
+      const def = itemDefByKey(type);
+      if(!def) return {type, char:spriteForType(type)};
+      return {id:def.id, key:def.key, type:def.key, char:def.char, category:def.category, rarity:def.rarity, effectKey:def.effectKey};
+    }
 
     function placeItemAt(type,x,y){
       if(type==="shield" && state.floorHasShield) return false;
       if(type==="axe" && state.floorHasAxe) return false;
       if(!positionFree(x,y)) return false;
-      state.items.push({x,y,type,char:spriteForType(type)});
+      state.items.push({x,y,...createItem(type)});
       if(type==="shield") state.floorHasShield=true;
       if(type==="axe") state.floorHasAxe=true;
       return true;
@@ -388,7 +463,12 @@
 
     function placeItems(itemCountOverride=null){
       const pool=randomFloorPos(); const itemCount=itemCountOverride ?? randInt(1,3); let placed=0;
-      for(const p of pool){ if(placed>=itemCount) break; const type=rollFromTable(FLOOR_ITEM_TABLE); if(placeItemAt(type,p.x,p.y)) placed++; }
+      for(const p of pool){
+        if(placed>=itemCount) break;
+        const type=resolveDropType(FLOOR_ITEM_RULE);
+        if(!type) continue;
+        if(placeItemAt(type,p.x,p.y)) placed++;
+      }
     }
 
     function placeTreasureEventObjects(){
@@ -439,11 +519,34 @@
       addLog("あさひやまに登ると、身体に力がみなぎった。…あさひやまは静かに消え去った。");
 
       state.asahiyama = null;
-      dropItemFromTable(asahiyama.x, asahiyama.y, FLOOR_ITEM_TABLE);
+      dropItemFromRule(asahiyama.x, asahiyama.y, FLOOR_ITEM_RULE);
+    }
+
+    function isItemPlacable(type){
+      return !(type==="shield"&&state.floorHasShield) && !(type==="axe"&&state.floorHasAxe);
     }
 
     function allowedDropTable(table){
-      return table.filter((row)=>!(row.type==="shield"&&state.floorHasShield)&&!(row.type==="axe"&&state.floorHasAxe));
+      return (table || []).filter((row)=>isItemPlacable(itemKeyFromDropEntry(row)));
+    }
+
+    function resolveDropType(rule){
+      if(!rule || rule.mode===DROP_MODE.NONE) return null;
+      if(rule.chance !== undefined && Math.random() >= rule.chance) return null;
+
+      if(rule.mode === DROP_MODE.FIXED) return isItemPlacable(rule.item) ? rule.item : null;
+
+      if(rule.mode === DROP_MODE.PROFILE){
+        const profilePool = allowedDropTable(DROP_PROFILES[rule.ref] || []);
+        return rollFromTable(profilePool);
+      }
+
+      if(rule.mode === DROP_MODE.POOL){
+        const pool = allowedDropTable(normalizeDropPool(rule.pool || []));
+        return rollFromTable(pool);
+      }
+
+      return null;
     }
 
     function updateSeen(){
@@ -502,8 +605,18 @@
     }
 
     function firstEmptySlot(){ return state.inventory.findIndex((s)=>s===null); }
-    function addToInventory(item){ const idx=firstEmptySlot(); if(idx===-1) return false; state.inventory[idx]={type:item.type,char:item.char}; return true; }
-    function grantStarterItem(){ const type=rollFromTable(STARTER_ITEM_TABLE); addToInventory({type,char:spriteForType(type)}); return type; }
+    function addToInventory(item){
+      const idx=firstEmptySlot();
+      if(idx===-1) return false;
+      state.inventory[idx]=createItem(item.type || item.key);
+      return true;
+    }
+    function grantStarterItem(){
+      const type = resolveDropType(STARTER_DROP_RULE);
+      if(!type) return null;
+      addToInventory(createItem(type));
+      return type;
+    }
 
     // ===== Battle / damage =====
     function applyDamage(target, amount, name=""){ target.hp -= amount; if(name) addLog(`${name}に${amount}ダメージ！`); }
@@ -555,14 +668,22 @@
       }
     }
 
-    function dropItemFromTable(x,y,dropTable){ if(itemAt(x,y)) return; const table=allowedDropTable(dropTable); if(!table.length) return; const type=rollFromTable(table); if(placeItemAt(type,x,y)) addLog(`${spriteForType(type)}が落ちた。`); }
+    function dropItemFromRule(x,y,rule){
+      if(itemAt(x,y)) return;
+      const type = resolveDropType(rule);
+      if(!type) return;
+      if(placeItemAt(type,x,y)) addLog(`${spriteForType(type)}が落ちた。`);
+    }
+    function dropItemFromTable(x,y,dropTable){
+      dropItemFromRule(x,y,{mode:DROP_MODE.POOL, pool:dropTable});
+    }
     function dropItem(x,y,type){
       if(type){
         if(itemAt(x,y)) return;
         if(placeItemAt(type,x,y)) addLog(`${spriteForType(type)}が落ちた。`);
         return;
       }
-      dropItemFromTable(x,y,ENEMY_DROP_TABLE);
+      dropItemFromRule(x,y,ENEMY_DEFAULT_DROP_RULE);
     }
     function removeRandomFoodItem(){
       const foodTypes = ["food","sushi","meat","feast"];
@@ -580,8 +701,8 @@
       else addLog(`${enemy.char}をたおした！`);
       if(state.kills[enemy.type]!==undefined) state.kills[enemy.type] += 1;
       state.player.exp += enemy.exp;
-      if(enemy.type === "mimic") dropItemFromTable(enemy.x, enemy.y, MIMIC_RARE_DROP_TABLE);
-      else if(enemy.type !== "chick" && Math.random()<ENEMY_DROP_CHANCE) dropItem(enemy.x, enemy.y);
+      const dropRule = ENEMY_DROP_RULES[enemy.type] || ENEMY_DEFAULT_DROP_RULE;
+      dropItemFromRule(enemy.x, enemy.y, dropRule);
       maybeLevelUp();
     }
 
@@ -676,8 +797,9 @@ function openChest(){
     return;
   }
 
-  const type = rollFromTable(CHEST_COMMON_DROP_TABLE);
-  const item = {type, char:spriteForType(type)};
+  const type = resolveDropType(CHEST_DROP_RULE);
+  if(!type) return;
+  const item = createItem(type);
 
   state.chests = state.chests.filter((c)=>c!==chest);
   addToInventory(item);
@@ -686,58 +808,59 @@ function openChest(){
 }
 
     // ===== Items =====
-    async function useInventory(slotIndex){
-      if(state.gameOver||state.inputLocked||slotIndex<0||slotIndex>=state.invSize) return;
-      const slot = state.inventory[slotIndex]; if(!slot){ addLog(`スロット${slotIndex+1}は空だ。`); return; }
-      let consumed=true;
-      if(slot.type==="food"){ state.player.hunger=Math.min(state.player.hungerMax,state.player.hunger+50); addLog("🍙を食べた！ 空腹+50"); }
-      else if(slot.type==="meat"){ state.player.hunger=Math.min(state.player.hungerMax,state.player.hunger+100); addLog("🥩を食べた！ 空腹+100"); } 
-      else if(slot.type==="sushi"){
+    const ITEM_EFFECTS = {
+      food: async ()=>{ state.player.hunger=Math.min(state.player.hungerMax,state.player.hunger+50); addLog("🍙を食べた！ 空腹+50"); return {consumed:true,endTurn:true}; },
+      meat: async ()=>{ state.player.hunger=Math.min(state.player.hungerMax,state.player.hunger+100); addLog("🥩を食べた！ 空腹+100"); return {consumed:true,endTurn:true}; },
+      sushi: async ()=>{
         state.player.hunger=Math.min(state.player.hungerMax,state.player.hunger+120);
         const healHp=Math.ceil((state.player.maxHp-state.player.hp)/3);
         state.player.hp=Math.min(state.player.maxHp,state.player.hp+healHp);
         addLog(`🍣を食べた！ 空腹+120 / HP+${healHp}`);
-      }
-      else if(slot.type==="feast"){
+        return {consumed:true,endTurn:true};
+      },
+      feast: async ()=>{
         state.player.maxHp+=1;
         state.player.hungerMax+=25;
         state.player.hunger=Math.min(state.player.hungerMax,state.player.hunger+200);
         const healHp=Math.ceil((state.player.maxHp-state.player.hp)/1.5);
         state.player.hp=Math.min(state.player.maxHp,state.player.hp+healHp);
         addLog(`🍖を食べた！ 最大HP+1 & 最大空腹+25 & 空腹+200 / HP+${healHp}`);
-      }
-      else if(slot.type==="potion"){
+        return {consumed:true,endTurn:true};
+      },
+      potion: async ()=>{
         const heal = Math.ceil(state.player.maxHp * 0.1 + 10 + randInt(-2,2));
         state.player.hp=Math.min(state.player.maxHp,state.player.hp+heal);
         addLog(`🧪を使った！ HP+${heal}`);
         if(state.player.poison){ state.player.poison=false; addLog("解毒した。"); }
-      }
-      else if(slot.type==="map"){ state.revealed=true; addLog("👁 地図を見通した！"); }
-      else if(slot.type==="sun"){
-        state.player.vision = Math.min(state.player.visionMax, state.player.vision + 1);
-        addLog("🌤️を使った！ 視界+1");
-      }
-      else if(slot.type==="shield"){ state.player.baseDef+=1; addLog("🛡️を装備した！ DEF+1（恒久）"); }
-      else if(slot.type==="axe"){ applyFloorAtkBuffFromFinal(Math.ceil(playerAtkValue()*1.1+1)); addLog("🪓を装備した！ ATK強化（このフロアのみ）"); }
-      else if(slot.type==="diamond"){ applyFloorDefBuffFromFinal(Math.ceil(playerDefValue()*1.1+1)); state.player.diamondWard=true; addLog("💎を装備した！ DEF強化（このフロアのみ）"); }
-      else if(slot.type==="dagger"){ state.player.baseAtk+=1; addLog("🗡️を装備した！ ATK+1（恒久）"); }
-      else if(slot.type==="star"){ state.inventory[slotIndex]=null; await starBurst(); return; }
-      else if(slot.type==="poop"){
-        const didFire = await poopShot();
-        if(!didFire) return;
-      }
-      else if(slot.type==="bean"){
+        return {consumed:true,endTurn:true};
+      },
+      map: async ()=>{ state.revealed=true; addLog("👁 地図を見通した！"); return {consumed:true,endTurn:true}; },
+      sun: async ()=>{ state.player.vision = Math.min(state.player.visionMax, state.player.vision + 1); addLog("🌤️を使った！ 視界+1"); return {consumed:true,endTurn:true}; },
+      shield: async ()=>{ state.player.baseDef+=1; addLog("🛡️を装備した！ DEF+1（恒久）"); return {consumed:true,endTurn:true}; },
+      axe: async ()=>{ applyFloorAtkBuffFromFinal(Math.ceil(playerAtkValue()*1.1+1)); addLog("🪓を装備した！ ATK強化（このフロアのみ）"); return {consumed:true,endTurn:true}; },
+      diamond: async ()=>{ applyFloorDefBuffFromFinal(Math.ceil(playerDefValue()*1.1+1)); state.player.diamondWard=true; addLog("💎を装備した！ DEF強化（このフロアのみ）"); return {consumed:true,endTurn:true}; },
+      dagger: async ()=>{ state.player.baseAtk+=1; addLog("🗡️を装備した！ ATK+1（恒久）"); return {consumed:true,endTurn:true}; },
+      star: async (_item, slotIndex)=>{ state.inventory[slotIndex]=null; await starBurst(); return {consumed:false,endTurn:false}; },
+      poop: async ()=>{ const didFire = await poopShot(); return {consumed:didFire,endTurn:didFire}; },
+      bean: async ()=>{
         if(state.player.iboMax>=state.player.iboMaxCap){
-          consumed=false;
           addLog("🫘これ以上イボは増やせない");
+          return {consumed:false,endTurn:false};
         }
-        else{
-          state.player.iboMax++;
-          addLog("🫘イボ最大値+1");
-        }
+        state.player.iboMax++;
+        addLog("🫘イボ最大値+1");
+        return {consumed:true,endTurn:true};
       }
-      else { consumed=false; addLog(`${slot.char}は使えない。`); }
-      if(!consumed) return;
+    };
+
+    async function useInventory(slotIndex){
+      if(state.gameOver||state.inputLocked||slotIndex<0||slotIndex>=state.invSize) return;
+      const slot = state.inventory[slotIndex]; if(!slot){ addLog(`スロット${slotIndex+1}は空だ。`); return; }
+      const def = itemDefByKey(slot.type || slot.key);
+      const effect = def ? ITEM_EFFECTS[def.effectKey] : null;
+      if(!effect){ addLog(`${slot.char}は使えない。`); return; }
+      const result = await effect(slot, slotIndex);
+      if(!result?.consumed) return;
       state.inventory[slotIndex]=null; endTurn();
     }
 
