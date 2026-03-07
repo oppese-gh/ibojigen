@@ -76,9 +76,21 @@
       rain:{char:SPRITES.rain,hp:12,atk:0,def:1,exp:5}
     };
 
+    // 床アイテム: 前半の回復・探索を軸に、終盤向けレア装備は低確率で維持。
     const FLOOR_ITEM_TABLE = [
-      {type:"food",rate:0.2},{type:"sushi",rate:0.16},{type:"meat",rate:0.11},{type:"potion",rate:0.16},{type:"map",rate:0.07},{type:"sun",rate:0.06},
-      {type:"diamond",rate:0.045},{type:"axe",rate:0.045},{type:"dagger",rate:0.035},{type:"shield",rate:0.045},{type:"feast",rate:0.02},{type:"star",rate:0.01},{type:"poop",rate:0.04}
+      {type:"food",rate:0.2},
+      {type:"sushi",rate:0.16},
+      {type:"meat",rate:0.11},
+      {type:"potion",rate:0.16},
+      {type:"map",rate:0.07},
+      {type:"sun",rate:0.06},
+      {type:"diamond",rate:0.045},
+      {type:"axe",rate:0.045},
+      {type:"dagger",rate:0.035},
+      {type:"shield",rate:0.045},
+      {type:"feast",rate:0.02},
+      {type:"star",rate:0.01},
+      {type:"poop",rate:0.04}
     ];
     const ENEMY_DROP_CHANCE = 0.2;
     const ENEMY_DROP_TABLE = [
@@ -97,12 +109,34 @@
       {type:"diamond",rate:0.035},{type:"axe",rate:0.035},{type:"dagger",rate:0.035},{type:"shield",rate:0.025},{type:"feast",rate:0.02},{type:"star",rate:0.01},{type:"poop",rate:0.04}
     ];
 
+    // 敵テーブル: 1〜9階はほぼ維持、13階以降を 13〜15 / 16+ に分割して
+    // 後半の理不尽な尖りを抑えつつ終盤の圧は残す。
     const FLOOR_ENEMY_TABLES = [
       {min:1,max:2,pool:[{type:"dog",w:60},{type:"wolf",w:28},{type:"ghost",w:12}]},
       {min:3,max:4,pool:[{type:"dog",w:38},{type:"wolf",w:30},{type:"lion",w:16},{type:"ghost",w:8},{type:"spider",w:8}]},
       {min:5,max:8,pool:[{type:"wolf",w:32},{type:"lion",w:22},{type:"ghost",w:10},{type:"zombie",w:12},{type:"spider",w:7},{type:"rain",w:5},{type:"skull",w:5}]},
-      {min:9,max:12,pool:[{type:"wolf",w:20},{type:"lion",w:24},{type:"dragon",w:15},{type:"ghost",w:8},{type:"zombie",w:13},{type:"spider",w:8},{type:"rain",w:7},{type:"skull",w:12},{type:"chick",w:2}]},
-      {min:13,max:999,pool:[{type:"lion",w:22},{type:"dragon",w:16},{type:"ghost",w:7},{type:"zombie",w:12},{type:"spider",w:8},{type:"rain",w:7},{type:"skull",w:20},{type:"invader",w:15},{type:"chick",w:2}]}
+      {min:9,max:12,pool:[{type:"wolf",w:24},{type:"lion",w:26},{type:"dragon",w:10},{type:"ghost",w:8},{type:"zombie",w:14},{type:"spider",w:8},{type:"rain",w:6},{type:"skull",w:4}]},
+      {min:13,max:15,pool:[
+        {type:"lion",w:24},
+        {type:"dragon",w:12},
+        {type:"ghost",w:8},
+        {type:"zombie",w:14},
+        {type:"spider",w:10},
+        {type:"rain",w:8},
+        {type:"skull",w:10},
+        {type:"chick",w:2}
+      ]},
+      {min:16,max:999,pool:[
+        {type:"lion",w:22},
+        {type:"dragon",w:14},
+        {type:"ghost",w:7},
+        {type:"zombie",w:12},
+        {type:"spider",w:8},
+        {type:"rain",w:7},
+        {type:"skull",w:14},
+        {type:"invader",w:8},
+        {type:"chick",w:2}
+      ]}
     ];
 
     const SCORE_KILL = {dog:10,wolf:35,lion:60,dragon:120,ghost:70,zombie:45,skull:80,invader:160,spider:30,chick:0,mimic:90,rain:55};
@@ -277,23 +311,51 @@
     function enemyPoolForFloor(){ return FLOOR_ENEMY_TABLES.find((row)=>state.floor>=row.min&&state.floor<=row.max).pool; }
 
     function spawnEnemy(type,x,y){
-      const base = ENEMY_ARCHETYPES[type]; const tier = floorPowerTier();
-      const lateAtkBonus = Math.max(0, Math.floor((state.floor - 11) / 3) + 1);
-      return { x,y,type,char:base.char,exp:base.exp, hp:base.hp+tier*2+Math.floor(Math.max(0,state.floor-6)/3), atk:base.atk+Math.floor((tier+1)/2)+lateAtkBonus, def:base.def+Math.floor(tier/3), active:type!=="mimic" };
+      const base = ENEMY_ARCHETYPES[type];
+      const tier = floorPowerTier();
+
+      // 後半のATK急上昇を抑える。
+      // 以前は11階から実質的に強くなりすぎていたので、
+      // 16階以降から緩やかに追加補正する。
+      const lateAtkBonus = state.floor >= 16
+        ? Math.floor((state.floor - 16) / 4) + 1
+        : 0;
+
+      return {
+        x,
+        y,
+        type,
+        char:base.char,
+        exp:base.exp,
+        hp: base.hp + tier * 2 + Math.floor(Math.max(0, state.floor - 8) / 4),
+        atk: base.atk + Math.floor(tier / 2) + lateAtkBonus,
+        def: base.def + Math.floor(tier / 4),
+        active:type!=="mimic"
+      };
     }
 
     function placeEnemies(multiplier=1){
-      const pool=randomFloorPos();
-      const count=(randInt(2,3)+Math.floor((state.floor-1)*0.55))*multiplier;
+      const pool = randomFloorPos();
+
+      // 前半はほぼ現状維持、10階以降の増加を緩やかにする。
+      const baseCount = randInt(2,3);
+      const floorBonus = state.floor <= 10
+        ? Math.floor((state.floor - 1) * 0.5)
+        : 4 + Math.floor((state.floor - 10) * 0.3);
+
+      const count = (baseCount + floorBonus) * multiplier;
       const enemyPool = enemyPoolForFloor();
-      let placed=0;
+      let placed = 0;
+
       for(const p of pool){
-        if(placed>=count) break;
-        if(Math.abs(p.x-state.player.x)+Math.abs(p.y-state.player.y)<4) continue;
-        if(p.x===state.ladder.x&&p.y===state.ladder.y) continue;
+        if(placed >= count) break;
+        if(Math.abs(p.x-state.player.x)+Math.abs(p.y-state.player.y) < 4) continue;
+        if(p.x===state.ladder.x && p.y===state.ladder.y) continue;
+
         const type = weightedEnemyType(enemyPool);
-        if(type==="invader" && state.floor<13) continue;
+        if(type==="invader" && state.floor<16) continue;
         if(type==="chick" && state.floor<10) continue;
+
         state.enemies.push(spawnEnemy(type,p.x,p.y));
         placed++;
       }
@@ -317,7 +379,7 @@
       for(const picked of shuffled){
         if(placed >= multiplier) break;
         const type = weightedEnemyType(enemyPool);
-        if(type==="invader" && state.floor<13) continue;
+        if(type==="invader" && state.floor<16) continue;
         if(type==="chick" && state.floor<10) continue;
         state.enemies.push(spawnEnemy(type,picked.x,picked.y));
         placed += 1;
