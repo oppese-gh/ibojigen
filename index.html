@@ -77,20 +77,20 @@
     ];
 
     const ITEM_DEFS = [
-      {id:1,key:"food",char:SPRITES.food,category:"food",rarity:1,effectKey:"food"},
-      {id:2,key:"meat",char:SPRITES.meat,category:"food",rarity:1,effectKey:"meat"},
-      {id:3,key:"sushi",char:SPRITES.sushi,category:"food",rarity:2,effectKey:"sushi"},
-      {id:4,key:"feast",char:SPRITES.feast,category:"food",rarity:4,effectKey:"feast"},
-      {id:5,key:"potion",char:SPRITES.potion,category:"heal",rarity:1,effectKey:"potion"},
-      {id:6,key:"map",char:SPRITES.map,category:"utility",rarity:2,effectKey:"map"},
-      {id:7,key:"sun",char:SPRITES.sun,category:"utility",rarity:2,effectKey:"sun"},
-      {id:8,key:"shield",char:SPRITES.shield,category:"armor",rarity:3,effectKey:"shield"},
-      {id:9,key:"axe",char:SPRITES.axe,category:"weapon",rarity:3,effectKey:"axe"},
-      {id:10,key:"diamond",char:SPRITES.diamond,category:"armor",rarity:3,effectKey:"diamond"},
-      {id:11,key:"dagger",char:SPRITES.dagger,category:"weapon",rarity:3,effectKey:"dagger"},
-      {id:12,key:"star",char:SPRITES.star,category:"utility",rarity:5,effectKey:"star"},
-      {id:13,key:"poop",char:SPRITES.poop,category:"junk",rarity:2,effectKey:"poop"},
-      {id:14,key:"bean",char:SPRITES.bean,category:"growth",rarity:4,effectKey:"bean"}
+      {id:1,key:"food",char:SPRITES.food,category:"food",rarity:1,effectKey:"food",pickupMode:"inventory"},
+      {id:2,key:"meat",char:SPRITES.meat,category:"food",rarity:1,effectKey:"meat",pickupMode:"inventory"},
+      {id:3,key:"sushi",char:SPRITES.sushi,category:"food",rarity:2,effectKey:"sushi",pickupMode:"inventory"},
+      {id:4,key:"feast",char:SPRITES.feast,category:"food",rarity:4,effectKey:"feast",pickupMode:"inventory"},
+      {id:5,key:"potion",char:SPRITES.potion,category:"heal",rarity:1,effectKey:"potion",pickupMode:"inventory"},
+      {id:6,key:"map",char:SPRITES.map,category:"utility",rarity:2,effectKey:"map",pickupMode:"inventory"},
+      {id:7,key:"sun",char:SPRITES.sun,category:"utility",rarity:2,effectKey:"sun",pickupMode:"instant"},
+      {id:8,key:"shield",char:SPRITES.shield,category:"armor",rarity:3,effectKey:"shield",pickupMode:"instant"},
+      {id:9,key:"axe",char:SPRITES.axe,category:"weapon",rarity:3,effectKey:"axe",pickupMode:"inventory"},
+      {id:10,key:"diamond",char:SPRITES.diamond,category:"armor",rarity:3,effectKey:"diamond",pickupMode:"inventory"},
+      {id:11,key:"dagger",char:SPRITES.dagger,category:"weapon",rarity:3,effectKey:"dagger",pickupMode:"instant"},
+      {id:12,key:"star",char:SPRITES.star,category:"utility",rarity:5,effectKey:"star",pickupMode:"inventory"},
+      {id:13,key:"poop",char:SPRITES.poop,category:"junk",rarity:2,effectKey:"poop",pickupMode:"inventory"},
+      {id:14,key:"bean",char:SPRITES.bean,category:"growth",rarity:4,effectKey:"bean",pickupMode:"instant"}
     ];
     const ITEM_DEF_BY_KEY = Object.fromEntries(ITEM_DEFS.map((d)=>[d.key,d]));
     const ITEM_DEF_BY_ID = Object.fromEntries(ITEM_DEFS.map((d)=>[d.id,d]));
@@ -237,6 +237,13 @@
     const statusTone = (value,pct) => value <= 0 ? "tone-red" : (pct < 25 ? "tone-orange" : "tone-yellow");
 
     function addLog(message){ state.logs.unshift(message); if(state.logs.length>MAX_LOG) state.logs.pop(); logEl.innerHTML=state.logs.map((m)=>`<div class="line">${m}</div>`).join(""); }
+    const ITEM_PICKUP_MODE = {INVENTORY:"inventory", INSTANT:"instant"};
+
+    function instantPickupLog(itemChar, detail){
+      const edge = '<span style="color:#ff4d4f;font-weight:700;">◆</span>';
+      const body = `${itemChar}を手に入れた。(${detail})`;
+      addLog(`${edge} <span style="color:#ffd9d9;font-weight:700;">${body}</span> ${edge}`);
+    }
 
     function gaugeHtml(label, value, max) {
       const pct = meterPercent(value, max);
@@ -362,7 +369,7 @@
     function createItem(itemKey){
       const def = itemDefByKey(itemKey);
       if(!def) return {key:itemKey, char:spriteForItemKey(itemKey)};
-      return {id:def.id, key:def.key, char:def.char, category:def.category, rarity:def.rarity, effectKey:def.effectKey};
+      return {id:def.id, key:def.key, char:def.char, category:def.category, rarity:def.rarity, effectKey:def.effectKey, pickupMode:def.pickupMode || "inventory"};
     }
 
     function placeItemAt(itemKey,x,y){
@@ -783,8 +790,18 @@
       if(state.player.hp<=0) endAsGameOver({cause:"enemy", enemyChar:enemy.char});
     }
 
-    function pickupItem(){
+    async function pickupItem(){
       const it = itemAt(state.player.x,state.player.y); if(!it) return;
+      const def = itemDefByKey(it.key);
+      const pickupMode = def?.pickupMode || ITEM_PICKUP_MODE.INVENTORY;
+      const effect = def ? ITEM_EFFECTS[def.effectKey] : null;
+
+      if(pickupMode === ITEM_PICKUP_MODE.INSTANT){
+        state.items = state.items.filter((i)=>i!==it);
+        if(effect) await effect(it, -1, {source:"pickup"});
+        return;
+      }
+
       if(!addToInventory(it)){ addLog("持ち物がいっぱいだ。"); return; }
       state.items = state.items.filter((i)=>i!==it);
       if(it.key === "poop" || it.char === "💩"){
@@ -843,20 +860,22 @@ function openChest(){
         return {consumed:true,endTurn:true};
       },
       map: async ()=>{ state.revealed=true; addLog("👁 地図を見通した！"); return {consumed:true,endTurn:true}; },
-      sun: async ()=>{ state.player.vision = Math.min(state.player.visionMax, state.player.vision + 1); addLog("🌤️を使った！ 視界+1"); return {consumed:true,endTurn:true}; },
-      shield: async ()=>{ state.player.baseDef+=1; addLog("🛡️を装備した！ DEF+1（恒久）"); return {consumed:true,endTurn:true}; },
+      sun: async (_item, _slotIndex, ctx={})=>{ state.player.vision = Math.min(state.player.visionMax, state.player.vision + 1); if(ctx.source==="pickup") instantPickupLog("🌤️", "視界+1"); else addLog("🌤️を使った！ 視界+1"); return {consumed:true,endTurn:true}; },
+      shield: async (_item, _slotIndex, ctx={})=>{ state.player.baseDef+=1; if(ctx.source==="pickup") instantPickupLog("🛡️", "DEF+1"); else addLog("🛡️を装備した！ DEF+1（恒久）"); return {consumed:true,endTurn:true}; },
       axe: async ()=>{ applyFloorAtkBuffFromFinal(Math.ceil(playerAtkValue()*1.1+1)); addLog("🪓を装備した！ ATK強化（このフロアのみ）"); return {consumed:true,endTurn:true}; },
       diamond: async ()=>{ applyFloorDefBuffFromFinal(Math.ceil(playerDefValue()*1.1+1)); state.player.diamondWard=true; addLog("💎を装備した！ DEF強化（このフロアのみ）"); return {consumed:true,endTurn:true}; },
-      dagger: async ()=>{ state.player.baseAtk+=1; addLog("🗡️を装備した！ ATK+1（恒久）"); return {consumed:true,endTurn:true}; },
+      dagger: async (_item, _slotIndex, ctx={})=>{ state.player.baseAtk+=1; if(ctx.source==="pickup") instantPickupLog("🗡️", "ATK+1"); else addLog("🗡️を装備した！ ATK+1（恒久）"); return {consumed:true,endTurn:true}; },
       star: async (_item, slotIndex)=>{ state.inventory[slotIndex]=null; await starBurst(); return {consumed:false,endTurn:false}; },
       poop: async ()=>{ const didFire = await poopShot(); return {consumed:didFire,endTurn:didFire}; },
-      bean: async ()=>{
+      bean: async (_item, _slotIndex, ctx={})=>{
         if(state.player.iboMax>=state.player.iboMaxCap){
-          addLog("🫘これ以上イボは増やせない");
-          return {consumed:false,endTurn:false};
+          if(ctx.source==="pickup") instantPickupLog("🫘", "これ以上イボは増やせない");
+          else addLog("🫘これ以上イボは増やせない");
+          return {consumed:true,endTurn:true};
         }
         state.player.iboMax++;
-        addLog("🫘イボ最大値+1");
+        if(ctx.source==="pickup") instantPickupLog("🫘", "イボ最大値+1");
+        else addLog("🫘イボ最大値+1");
         return {consumed:true,endTurn:true};
       }
     };
@@ -867,7 +886,7 @@ function openChest(){
       const def = itemDefByKey(slot.key);
       const effect = def ? ITEM_EFFECTS[def.effectKey] : null;
       if(!effect){ addLog(`${slot.char}は使えない。`); return; }
-      const result = await effect(slot, slotIndex);
+      const result = await effect(slot, slotIndex, {source:"inventory"});
       if(!result?.consumed) return;
       state.inventory[slotIndex]=null; endTurn();
     }
@@ -875,7 +894,7 @@ function openChest(){
     function walkRegen(){ state.player.walkCount+=1; if(state.player.walkCount%20!==0||state.starving||state.player.hp>=state.player.maxHp) return; state.player.hp=Math.min(state.player.maxHp,state.player.hp+1); addLog("歩いて体勢を立て直した。HP+1"); }
 
     // ===== Player action / turn =====
-    function movePlayer(dx,dy){
+    async function movePlayer(dx,dy){
       if(state.gameOver||state.inputLocked) return;
       const nx=state.player.x+dx, ny=state.player.y+dy;
       if(!isWalkable(nx,ny)) return endTurn();
@@ -883,7 +902,7 @@ function openChest(){
       state.player.x=nx; state.player.y=ny; walkRegen();
       const asahiyama = asahiyamaAt(nx,ny);
       if(asahiyama) triggerAsahiyama(asahiyama);
-      pickupItem(); openChest();
+      await pickupItem(); openChest();
       if(nx===state.ladder.x&&ny===state.ladder.y){ state.floor+=1; addLog("🪜 次の階へ進む！"); setupFloor(); return; }
       endTurn();
     }
