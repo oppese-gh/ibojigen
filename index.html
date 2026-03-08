@@ -260,7 +260,7 @@
     const initialPlayerName = typeof savedProfile?.playerName === "string" && savedProfile.playerName.length > 0 ? savedProfile.playerName : DEFAULT_PLAYER_NAME;
 
     const state = {
-      floor:1,map:[],rooms:[],enemies:[],items:[],chests:[],asahiyama:null,floorEventType:"normal",ladder:{x:0,y:0},logs:[],revealed:false,seen:[],visibleNow:[],gameOver:false,inputLocked:false,
+      floor:1,map:[],rooms:[],enemies:[],items:[],floorObjects:[],floorEventType:"normal",ladder:{x:0,y:0},logs:[],revealed:false,seen:[],visibleNow:[],gameOver:false,inputLocked:false,
       invSize:5,inventory:[...EMPTY_INVENTORY],bestScore:initialBestScore,bestName:initialBestName,playerName:initialPlayerName,editingName:false,nameInput:initialPlayerName,nameInputError:"",isComposingName:false,score:0,turns:0,
       floorHasShield:false,floorHasAxe:false,
       kills:buildEmptyKillMap(),
@@ -437,7 +437,7 @@
 
     function setupFloor(){
       const built = createMap();
-      state.map=built.map; state.rooms=built.rooms; state.items=[]; state.enemies=[]; state.chests=[]; state.asahiyama=null; state.revealed=false;
+      state.map=built.map; state.rooms=built.rooms; state.items=[]; state.enemies=[]; state.floorObjects=[]; state.revealed=false;
       state.seen = createVisibilityGrid();
       state.visibleNow = createVisibilityGrid();
       state.floorHasShield=false; state.floorHasAxe=false;
@@ -463,13 +463,12 @@
     const isWalkable = (x,y) => x>=0&&x<WIDTH&&y>=0&&y<HEIGHT&&state.map[y][x]===TILE_FLOOR;
     const enemyAt = (x,y) => state.enemies.find((e)=>e.x===x&&e.y===y);
     const itemAt = (x,y) => state.items.find((i)=>i.x===x&&i.y===y);
-    const chestAt = (x,y) => state.chests.find((c)=>c.x===x&&c.y===y);
-    const asahiyamaAt = (x,y) => state.asahiyama && state.asahiyama.x===x && state.asahiyama.y===y ? state.asahiyama : null;
+    const objectAt = (x,y) => state.floorObjects.find((o)=>o.x===x&&o.y===y);
 
     function positionFree(x,y){
       if(!isWalkable(x,y)) return false;
       if(state.player.x===x&&state.player.y===y) return false;
-      if(enemyAt(x,y)||itemAt(x,y)||chestAt(x,y)||asahiyamaAt(x,y)) return false;
+      if(enemyAt(x,y)||itemAt(x,y)||objectAt(x,y)) return false;
       if(state.ladder.x===x&&state.ladder.y===y) return false;
       return true;
     }
@@ -626,7 +625,7 @@
       for(const p of pool){
         if(placed>=total) break;
         if(Math.random()<0.5) state.enemies.push(spawnEnemy("mimic", p.x, p.y));
-        else state.chests.push({x:p.x,y:p.y,char:SPRITES.mimic});
+        else state.floorObjects.push({x:p.x,y:p.y,key:"chest",char:SPRITES.mimic,trigger:"step",oneShot:true});
         placed += 1;
       }
     }
@@ -638,12 +637,12 @@
       let pool = randomFloorPos().filter((p)=>positionFree(p.x,p.y));
       if(!pool.length) return;
       const picked = pool[randInt(0, pool.length-1)];
-      state.asahiyama = {x:picked.x, y:picked.y, type:"asahiyama", char:SPRITES.asahiyama};
+      state.floorObjects.push({x:picked.x,y:picked.y,key:"asahiyama",char:SPRITES.asahiyama,trigger:"step",oneShot:true});
     }
 
-    function triggerAsahiyama(asahiyama){
+    function triggerAsahiyama(floorObject){
     
-      if(!asahiyama) return;
+      if(!floorObject) return;
       const beforeHp = state.player.hp;
       const beforeMaxHp = state.player.maxHp;
       const targetHp = Math.min(beforeMaxHp, Math.ceil((beforeHp + beforeMaxHp) / 2));
@@ -664,8 +663,7 @@
       addLog(`『おもいやり』HP回復${hpGain}　『進んで学習』EXP${expGain}　『たくましい』最大HP+${maxHpGain}`);
       addLog("あさひやまに登ると、身体に力がみなぎった。…あさひやまは静かに消え去った。");
 
-      state.asahiyama = null;
-      dropItemFromRule(asahiyama.x, asahiyama.y, FLOOR_ITEM_RULE);
+      dropItemFromRule(floorObject.x, floorObject.y, FLOOR_ITEM_RULE);
     }
 
     // ===== Drop resolution =====
@@ -734,8 +732,7 @@
           if(visibleNow){
             if(state.ladder.x===x&&state.ladder.y===y) ch=SPRITES.ladder;
             const it=itemAt(x,y); if(it) ch=it.char;
-            const chest=chestAt(x,y); if(chest) ch=chest.char;
-            const asahiyama=asahiyamaAt(x,y); if(asahiyama) ch=asahiyama.char;
+            const floorObject=objectAt(x,y); if(floorObject) ch=floorObject.char;
             const en=enemyAt(x,y); if(en) ch=en.char;
           }
           if(state.player.x===x&&state.player.y===y) ch=SPRITES.player;
@@ -989,9 +986,8 @@
       }
     }
 
-function openChest(){
-  const chest = chestAt(state.player.x, state.player.y);
-  if(!chest) return;
+async function openChest(floorObject){
+  if(!floorObject || floorObject.key!=="chest") return;
 
   const type = resolveDropType(CHEST_DROP_RULE);
   if(!type) return;
@@ -1000,11 +996,10 @@ function openChest(){
   const pickupMode = def?.pickupMode || ITEM_PICKUP_MODE.INVENTORY;
   const effect = def ? ITEM_EFFECTS[def.effectKey] : null;
 
-  state.chests = state.chests.filter((c)=>c!==chest);
   addLog("🎁宝箱を開けた！");
 
   if(pickupMode === ITEM_PICKUP_MODE.INSTANT){
-    if(effect) effect(item, -1, {source:"pickup"});
+    if(effect) await effect(item, -1, {source:"pickup"});
     return;
   }
 
@@ -1015,6 +1010,18 @@ function openChest(){
 
   if(placeItemAt(item.key, state.player.x, state.player.y)) addLog(`持ち物がいっぱいだ。${item.char}が落ちた。`);
 }
+
+    async function triggerFloorObject(){
+      const floorObject = objectAt(state.player.x,state.player.y);
+      if(!floorObject || floorObject.trigger!=="step") return;
+
+      if(floorObject.key === "asahiyama") triggerAsahiyama(floorObject);
+      if(floorObject.key === "chest") await openChest(floorObject);
+
+      if(floorObject.oneShot){
+        state.floorObjects = state.floorObjects.filter((o)=>o!==floorObject);
+      }
+    }
 
     // ===== Items =====
     const ITEM_EFFECTS = {
@@ -1086,9 +1093,8 @@ function openChest(){
       if(!isWalkable(nx,ny)) return endTurn();
       const foe = enemyAt(nx,ny); if(foe){ playerAttack(foe); return endTurn(); }
       state.player.x=nx; state.player.y=ny; walkRegen();
-      const asahiyama = asahiyamaAt(nx,ny);
-      if(asahiyama) triggerAsahiyama(asahiyama);
-      await pickupItem(); openChest();
+      await triggerFloorObject();
+      await pickupItem();
       if(nx===state.ladder.x&&ny===state.ladder.y){ state.floor+=1; addLog("🪜 次の階へ進む！"); setupFloor(); return; }
       endTurn();
     }
@@ -1286,8 +1292,8 @@ function openChest(){
       state.gameOver = false;
       state.starving = false;
       state.hungerLowNotified = false;
-      state.asahiyama = null;
       state.floorEventType = "normal";
+      state.floorObjects = [];
       state.seen = createVisibilityGrid();
       state.visibleNow = createVisibilityGrid();
       state.kills = buildEmptyKillMap();
