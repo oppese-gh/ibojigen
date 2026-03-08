@@ -674,8 +674,11 @@
       if(state.invSize >= ASAHIYAMA_INV_SIZE) return;
       state.invSize = ASAHIYAMA_INV_SIZE;
       normalizeInventorySize();
+      state.player.hp = state.player.maxHp;
+      state.player.hunger = state.player.hungerMax;
+      updateHungerWarning();
       addLog("『あさひやま効果』アイテムスロットが 1 増えた！（5→6）");
-      addLog("あさひやまに登ると、身体に力がみなぎった。…あさひやまは静かに消え去った。");
+      addLog("あさひやまの恵みで HP と満腹度が全回復した！");
 
       const type = resolveDropType(FLOOR_ITEM_RULE);
       if(type && placeItemAtPlayerTile(type, floorObject.x, floorObject.y)){
