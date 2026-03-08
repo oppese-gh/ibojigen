@@ -534,7 +534,7 @@
     function determineFloorEvent(){
       const hpLow = state.player.hp <= state.player.maxHp / 2;
       const hungerLow = state.player.hunger <= state.player.hungerMax / 2;
-      if((hpLow || hungerLow || state.player.poison) && Math.random() < 0.9) return "asahiyama";
+      if((hpLow || hungerLow || state.player.poison) && Math.random() < 0.5) return "asahiyama";
       const inventoryFull = state.inventory.every(Boolean);
       if(inventoryFull && Math.random() < 0.2) return "monsterHouse";
       return "normal";
@@ -666,7 +666,7 @@
       state.player.exp += expGain;
 
       const usedSlots = state.inventory.filter(Boolean).length;
-      const maxHpGain = Math.max(0, state.invSize - usedSlots);
+      const maxHpGain = Math.max(1, state.invSize - usedSlots);
       state.player.maxHp += maxHpGain;
 
       if(state.player.vision <= 5) state.player.vision = 6;
