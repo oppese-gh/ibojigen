@@ -689,7 +689,7 @@
         damage = Math.ceil(normal * 2.5);
         const from = attackerName || "こうげき";
         const to = targetName || "あいて";
-        addLog(`💥<span style="color:#ffd6d6;font-weight:800;background:#7a0010;padding:0 4px;">【きゅうしょ！】${from}→${to}に ${damage}ダメージ！！</span>💥`);
+        addLog(`💥<span style="color:#ffd6d6;font-weight:800;background:#7a0010;padding:0 4px;">【きゅうしょに　あたった！】${from}→${to}に ${damage}ダメージ！！</span>💥`);
       }
       if(isEnemyAttack && Math.random() < 0.5) damage += 1;
       return { damage, isCritical };
