@@ -720,8 +720,14 @@
       if(enemyKey === "mimic"){
         const type = resolveDropType(dropRule);
         if(type){
-          if(addToInventory(createItem(type))) addLog(`${spriteForItemKey(type)}を手に入れた。(${invToString()})`);
-          else if(placeItemAt(type, enemy.x, enemy.y)) addLog(`持ち物がいっぱいだ。${spriteForItemKey(type)}が落ちた。`);
+          const item = createItem(type);
+          const itemDef = itemDefByKey(item.key);
+          const pickupMode = itemDef?.pickupMode || ITEM_PICKUP_MODE.INVENTORY;
+          const effect = itemDef ? ITEM_EFFECTS[itemDef.effectKey] : null;
+          if(pickupMode === ITEM_PICKUP_MODE.INSTANT){
+            if(effect) effect(item, -1, {source:"pickup"});
+          }else if(addToInventory(item)) addLog(`${item.char}を手に入れた。(${invToString()})`);
+          else if(placeItemAt(type, enemy.x, enemy.y)) addLog(`持ち物がいっぱいだ。${item.char}が落ちた。`);
         }
       }else{
         dropItemFromRule(enemy.x, enemy.y, dropRule);
@@ -825,20 +831,27 @@ function openChest(){
   const chest = chestAt(state.player.x, state.player.y);
   if(!chest) return;
 
-  if(firstEmptySlot() === -1){
-    addLog("🎁宝箱を開けた！");
-    addLog("これ以上アイテムを持てない。宝箱をそっと閉じた。");
-    return;
-  }
-
   const type = resolveDropType(CHEST_DROP_RULE);
   if(!type) return;
   const item = createItem(type);
+  const def = itemDefByKey(item.key);
+  const pickupMode = def?.pickupMode || ITEM_PICKUP_MODE.INVENTORY;
+  const effect = def ? ITEM_EFFECTS[def.effectKey] : null;
 
   state.chests = state.chests.filter((c)=>c!==chest);
-  addToInventory(item);
   addLog("🎁宝箱を開けた！");
-  addLog(`${item.char}を手に入れた。(${invToString()})`);
+
+  if(pickupMode === ITEM_PICKUP_MODE.INSTANT){
+    if(effect) effect(item, -1, {source:"pickup"});
+    return;
+  }
+
+  if(addToInventory(item)){
+    addLog(`${item.char}を手に入れた。(${invToString()})`);
+    return;
+  }
+
+  if(placeItemAt(item.key, state.player.x, state.player.y)) addLog(`持ち物がいっぱいだ。${item.char}が落ちた。`);
 }
 
     // ===== Items =====
