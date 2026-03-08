@@ -203,13 +203,29 @@
     if (versionEl) versionEl.textContent = APP_VERSION;
     projectileLayer.id = "projectile-layer";
 
+    const INITIAL_PLAYER_PARAMS = Object.freeze({
+      x:1,y:1,
+      hp:20,maxHp:20,
+      baseAtk:4,baseDef:2,
+      hunger:500,hungerMax:500,
+      ibo:0,iboMax:5,iboMaxCap:10,
+      iboChanceDenom:100,iboChanceDenomMin:40,
+      level:1,exp:0,walkCount:0,
+      poison:false,diamondWard:false,
+      floorAtkBuff:0,floorDefBuff:0,
+      vision:6,visionMax:10,visionMin:3
+    });
+
+    const EMPTY_INVENTORY = [null,null,null,null,null];
+    const createInitialPlayer = () => ({...INITIAL_PLAYER_PARAMS});
+
     // ===== Game state =====
     const state = {
       floor:1,map:[],rooms:[],enemies:[],items:[],chests:[],asahiyama:null,floorEventType:"normal",ladder:{x:0,y:0},logs:[],revealed:false,seen:[],visibleNow:[],gameOver:false,inputLocked:false,
-      invSize:5,inventory:[null,null,null,null,null],bestScore:Number(localStorage.getItem("bojirogue_bestScore")||"0"),score:0,turns:0,
+      invSize:5,inventory:[...EMPTY_INVENTORY],bestScore:Number(localStorage.getItem("bojirogue_bestScore")||"0"),score:0,turns:0,
       floorHasShield:false,floorHasAxe:false,
       kills:buildEmptyKillMap(),
-      player:{x:1,y:1,hp:20,maxHp:20,baseAtk:4,baseDef:2,hunger:500,hungerMax:500,ibo:0,iboMax:5,iboMaxCap:10,iboChanceDenom:100,iboChanceDenomMin:40,level:1,exp:0,walkCount:0,poison:false,diamondWard:false,floorAtkBuff:0,floorDefBuff:0,vision:6,visionMax:10,visionMin:3},
+      player:createInitialPlayer(),
       iboCooldown:0,starving:false
     };
 
@@ -1111,11 +1127,24 @@ function openChest(){
 
     function endTurn(){ state.turns+=1; enemyTurn(); if(state.gameOver) return render(); hungerTurn(); if(state.gameOver) return render(); iboTurn(); render(); }
 
+    function initializeRunState(){
+      state.floor = 1;
+      state.player = createInitialPlayer();
+      state.inventory = [...EMPTY_INVENTORY];
+      state.score = 0;
+      state.turns = 0;
+      state.logs = [];
+      state.gameOver = false;
+      state.starving = false;
+      state.asahiyama = null;
+      state.floorEventType = "normal";
+      state.seen = [];
+      state.visibleNow = [];
+      state.kills = buildEmptyKillMap();
+    }
+
     function restartGame(){
-      state.floor=1; state.player={x:1,y:1,hp:20,maxHp:20,baseAtk:4,baseDef:2,hunger:500,hungerMax:500,ibo:0,iboMax:5,iboMaxCap:10,iboChanceDenom:100,iboChanceDenomMin:40,level:1,exp:0,walkCount:0,poison:false,diamondWard:false,floorAtkBuff:0,floorDefBuff:0,vision:6,visionMax:10,visionMin:3};
-      state.inventory=[null,null,null,null,null]; state.score=0; state.turns=0; state.logs=[]; state.gameOver=false; state.starving=false; state.asahiyama=null; state.floorEventType="normal";
-      state.seen=[]; state.visibleNow=[];
-      state.kills=buildEmptyKillMap();
+      initializeRunState();
       const starterItemType = grantStarterItem();
       addLog(`ぼじろーぐ開始！ 初期アイテム: ${spriteForItemKey(starterItemType)}`); setupFloor();
     }
