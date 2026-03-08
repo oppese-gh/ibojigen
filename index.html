@@ -387,8 +387,21 @@
       return `<div class="stat ${tone}"><span class="label">${label}</span><div class="meter ${value<=0?"tone-red":""}"><div class="fill" style="width:${pct}%"></div></div><span class="num">${value}/${max}</span></div>`;
     }
 
-    function invToString(){ return state.inventory.map((slot)=>slot?slot.char:"▢").join(" "); }
-    function isInventoryFull(){ return state.inventory.every(Boolean); }
+    function normalizeInventorySize(){
+      if(state.inventory.length > state.invSize){
+        state.inventory = state.inventory.slice(0, state.invSize);
+      }
+      while(state.inventory.length < state.invSize) state.inventory.push(null);
+    }
+
+    function invToString(){
+      normalizeInventorySize();
+      return state.inventory.map((slot)=>slot?slot.char:"▢").join(" ");
+    }
+    function isInventoryFull(){
+      normalizeInventorySize();
+      return state.inventory.every((slot)=>slot!==null);
+    }
 
     function calcScore(){
       const killScore = Object.entries(state.kills).reduce((sum,[k,count])=>sum + count * (enemyDefByKey(k)?.score || 0),0);
@@ -658,8 +671,8 @@
     function triggerAsahiyama(floorObject){
       if(!floorObject) return;
       if(state.invSize >= ASAHIYAMA_INV_SIZE) return;
-      state.inventory.push(null);
       state.invSize = ASAHIYAMA_INV_SIZE;
+      normalizeInventorySize();
       addLog("『あさひやま効果』アイテムスロットが 1 増えた！（5→6）");
       addLog("あさひやまに登ると、身体に力がみなぎった。…あさひやまは静かに消え去った。");
 
@@ -761,7 +774,7 @@
     }
 
     // ===== Inventory =====
-    function firstEmptySlot(){ return state.inventory.findIndex((s)=>s===null); }
+    function firstEmptySlot(){ normalizeInventorySize(); return state.inventory.findIndex((s)=>s===null); }
     function addToInventory(item){
       const idx=firstEmptySlot();
       if(idx===-1) return false;
@@ -771,7 +784,7 @@
     function grantStarterItem(){
       const type = resolveDropType(STARTER_DROP_RULE);
       if(!type) return null;
-      addToInventory(createItem(type));
+      if(!addToInventory(createItem(type))) return null;
       return type;
     }
 
@@ -1290,6 +1303,7 @@ async function openChest(floorObject){
       state.player = createInitialPlayer();
       state.invSize = INITIAL_INV_SIZE;
       state.inventory = createEmptyInventory(INITIAL_INV_SIZE);
+      normalizeInventorySize();
       state.score = 0;
       state.turns = 0;
       state.logs = [];
