@@ -832,7 +832,7 @@
       }
 
       if(enemyKey === "ghost" && state.player.hp > 0 && Math.random() < 0.30){
-        // 空腹を98%に（切り上げ）
+        // 満腹を98%に（切り上げ）
         const beforeHunger = state.player.hunger;
         state.player.hunger = Math.ceil(state.player.hunger * 0.98);
         updateHungerWarning();
@@ -841,14 +841,14 @@
         const extraHp = randInt(1, 2);
         state.player.hp -= extraHp;
 
-        addLog(`${enemy.char}の冷気！ 空腹${beforeHunger}→${state.player.hunger} & 追加${extraHp}ダメージ！`);
+        addLog(`${enemy.char}の冷気！ 満腹${beforeHunger}→${state.player.hunger} & 追加${extraHp}ダメージ！`);
       }
       if(enemyKey === "dragon" && state.player.hp>0 && Math.random()<0.5){
         const flame = Math.max(1, Math.ceil(state.player.hp * 0.12) - Math.floor(playerDefValue() / 3));
         state.player.hp -= flame;
         addLog(`${enemy.char}の炎！ 追加${flame}ダメージ！`);
       }
-      if(enemyKey === "zombie" && state.player.hp>0 && !state.player.diamondWard){ const corrosion = Math.max(0, Math.min(damage * 3, 10) - randInt(0,3)); if(corrosion>0){ state.player.hungerMax=Math.max(1,state.player.hungerMax-corrosion); if(state.player.hunger>state.player.hungerMax) state.player.hunger=state.player.hungerMax; updateHungerWarning(); addLog(`${enemy.char}の腐食！ 最大空腹-${corrosion}`);} }
+      if(enemyKey === "zombie" && state.player.hp>0 && !state.player.diamondWard){ const corrosion = Math.max(0, Math.min(damage * 3, 10) - randInt(0,3)); if(corrosion>0){ state.player.hungerMax=Math.max(1,state.player.hungerMax-corrosion); if(state.player.hunger>state.player.hungerMax) state.player.hunger=state.player.hungerMax; updateHungerWarning(); addLog(`${enemy.char}の腐食！ 最大満腹-${corrosion}`);} }
       if(enemyKey === "invader" && state.player.hp>0 && !state.player.diamondWard && Math.random()<0.1){ state.player.baseDef=Math.max(1,state.player.baseDef-1); addLog("防御力が下がった…"); }
       if(enemyKey === "spider" && state.player.hp>0 && !state.player.diamondWard && Math.random()<0.2){ state.player.poison=true; addLog("毒を受けた！"); }
 
@@ -906,14 +906,14 @@ function openChest(){
 
     // ===== Items =====
     const ITEM_EFFECTS = {
-      food: async ()=>{ state.player.hunger=Math.min(state.player.hungerMax,state.player.hunger+50); updateHungerWarning(); addLog("🍙を食べた！ 空腹+50"); return {consumed:true,endTurn:true}; },
-      meat: async ()=>{ state.player.hunger=Math.min(state.player.hungerMax,state.player.hunger+100); updateHungerWarning(); addLog("🥩を食べた！ 空腹+100"); return {consumed:true,endTurn:true}; },
+      food: async ()=>{ state.player.hunger=Math.min(state.player.hungerMax,state.player.hunger+50); updateHungerWarning(); addLog("🍙を食べた！ 満腹+50"); return {consumed:true,endTurn:true}; },
+      meat: async ()=>{ state.player.hunger=Math.min(state.player.hungerMax,state.player.hunger+100); updateHungerWarning(); addLog("🥩を食べた！ 満腹+100"); return {consumed:true,endTurn:true}; },
       sushi: async ()=>{
         state.player.hunger=Math.min(state.player.hungerMax,state.player.hunger+120);
         updateHungerWarning();
         const healHp=Math.ceil((state.player.maxHp-state.player.hp)/3);
         state.player.hp=Math.min(state.player.maxHp,state.player.hp+healHp);
-        addLog(`🍣を食べた！ 空腹+120 / HP+${healHp}`);
+        addLog(`🍣を食べた！ 満腹+120 / HP+${healHp}`);
         return {consumed:true,endTurn:true};
       },
       feast: async ()=>{
@@ -923,7 +923,7 @@ function openChest(){
         updateHungerWarning();
         const healHp=Math.ceil((state.player.maxHp-state.player.hp)/1.5);
         state.player.hp=Math.min(state.player.maxHp,state.player.hp+healHp);
-        addLog(`🍖を食べた！ 最大HP+1 & 最大空腹+25 & 空腹+200 / HP+${healHp}`);
+        addLog(`🍖を食べた！ 最大HP+1 & 最大満腹+25 & 満腹+200 / HP+${healHp}`);
         return {consumed:true,endTurn:true};
       },
       potion: async ()=>{
@@ -982,7 +982,7 @@ function openChest(){
     }
 
     function waitTurn(){ if(state.gameOver||state.inputLocked) return; addLog("その場で待機した。"); endTurn(); }
-    function eatIbo(){ if(state.gameOver||state.inputLocked) return; if(state.player.ibo<1){ addLog("イボがない！"); return; } state.player.ibo-=1; state.player.hunger=Math.min(state.player.hungerMax,state.player.hunger+60); updateHungerWarning(); addLog("イボをたべた！ 空腹+60"); endTurn(); }
+    function eatIbo(){ if(state.gameOver||state.inputLocked) return; if(state.player.ibo<1){ addLog("イボがない！"); return; } state.player.ibo-=1; state.player.hunger=Math.min(state.player.hungerMax,state.player.hunger+60); updateHungerWarning(); addLog("イボをたべた！ 満腹+60"); endTurn(); }
     const sleep = (ms)=>new Promise((resolve)=>setTimeout(resolve,ms));
     function setProjectilePos(el,x,y){ el.style.left=`${GRID_PADDING + x*CELL_SIZE}px`; el.style.top=`${GRID_PADDING + y*CELL_SIZE}px`; }
 
@@ -1151,7 +1151,7 @@ function openChest(){
       updateHungerWarning();
       state.starving = state.player.hunger === 0;
       if(state.starving){
-        state.player.hp -= 1; addLog("大ピンチ！ 空腹ダメージ1");
+        state.player.hp -= 1; addLog("大ピンチ！ 満腹ダメージ1");
         if(state.player.hp<=0) endAsGameOver({cause:"hunger"});
       }
     }
