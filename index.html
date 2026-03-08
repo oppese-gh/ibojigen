@@ -649,13 +649,16 @@
     // ===== Battle / damage =====
     function applyDamage(target, amount, name=""){ target.hp -= amount; if(name) addLog(`${name}に${amount}ダメージ！`); }
 
-    function resolveAttackDamage(atk, def, isEnemyAttack, critMultiplier=1){
+    function resolveAttackDamage(atk, def, isEnemyAttack, critMultiplier=1, attackerName="", targetName=""){
       const normal = calcDamage(atk, def);
       let damage = normal;
-      const critChance = clamp01(((atk - def) / 100) * critMultiplier);
+      const baseCritChance = isEnemyAttack ? 0.07 : (state.floorHasAxe ? 0.12 : 0.07);
+      const critChance = clamp01(baseCritChance * critMultiplier);
       if(Math.random() < critChance){
-        damage = normal * 2;
-        addLog(`きゅうしょを攻撃！${damage}ダメージ！！`);
+        damage = Math.ceil(normal * 2.5);
+        const from = attackerName || "こうげき";
+        const to = targetName || "あいて";
+        addLog(`💥<span style="color:#ffd6d6;font-weight:800;background:#7a0010;padding:0 4px;">【きゅうしょ！】${from}→${to}に ${damage}ダメージ！！</span>💥`);
       }
       if(isEnemyAttack && Math.random() < 0.5) damage += 1;
       return damage;
@@ -667,7 +670,7 @@
     }
 
     function playerAttack(enemy){
-      const damage = resolveAttackDamage(playerAtkValue(), enemy.def, false);
+      const damage = resolveAttackDamage(playerAtkValue(), enemy.def, false, 1, "プレイヤー", enemy.char);
       activateMimic(enemy);
       applyDamage(enemy, damage, enemy.char);
       if(enemy.hp<=0) killEnemy(enemy);
@@ -779,11 +782,11 @@
         return;
       }
 
-      const damage = resolveAttackDamage(enemy.atk, playerDefValue(), true, enemyKey === "mimic" ? 2 : 1);
+      const damage = resolveAttackDamage(enemy.atk, playerDefValue(), true, enemyKey === "mimic" ? 2 : 1, enemy.char, "プレイヤー");
       applyDamage(state.player, damage, "プレイヤー");
 
       if(enemyKey === "lion" && state.player.hp > 0 && Math.random() < 0.15){
-        const extraDamage = resolveAttackDamage(enemy.atk, playerDefValue(), true);
+        const extraDamage = resolveAttackDamage(enemy.atk, playerDefValue(), true, 1, enemy.char, "プレイヤー");
         state.player.hp -= extraDamage;
         addLog(`すばやい追撃をうけた！${extraDamage}ダメージ！！`);
       }
