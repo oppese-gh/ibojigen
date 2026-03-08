@@ -240,7 +240,7 @@
     const randInt = (min,max) => Math.floor(Math.random()*(max-min+1))+min;
     function shuffle(arr){for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]];}return arr;}
     const expToNextLevel = (level = state.player.level) => level * 3;
-    const calcDamage = (atk,def) => Math.max(1, atk - Math.floor(def * 0.6));
+    const calcDamage = (atk,def) => Math.max(1, atk - Math.floor(def * 0.6) + randInt(-1,1));
     // base + floor buff を最終ステータスとして扱う
     const playerAtkValue = () => state.player.baseAtk + state.player.floorAtkBuff;
     const playerDefValue = () => state.player.baseDef + state.player.floorDefBuff;
@@ -1072,7 +1072,7 @@ function openChest(){
           setProjectilePos(el,x,y);
           const en=enemyAt(x,y);
           if(en){
-            const damage = Math.max(1, calcDamage(playerAtkValue()*5, en.def));
+            const damage = calcDamage(playerAtkValue()*5, en.def);
             activateMimic(en);
             applyDamage(en, damage, en.char);
             addLog(`💩が突きささる！ ${damage}ダメージ！`);
