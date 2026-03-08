@@ -267,7 +267,8 @@
       floorHasShield:false,floorHasAxe:false,
       kills:buildEmptyKillMap(),
       player:createInitialPlayer(),
-      iboCooldown:0,starving:false,hungerLowNotified:false
+      iboCooldown:0,starving:false,hungerLowNotified:false,
+      blockedWallMoveKey:null
     };
 
     function saveProfile(){
@@ -1103,11 +1104,15 @@ async function openChest(floorObject){
     function walkRegen(){ state.player.walkCount+=1; if(state.player.walkCount%20!==0||state.starving||state.player.hp>=state.player.maxHp) return; state.player.hp=Math.min(state.player.maxHp,state.player.hp+1); addLog("歩いて体勢を立て直した。HP+1"); }
 
     // ===== Player action / turn =====
-    async function movePlayer(dx,dy){
+    async function movePlayer(dx,dy,moveKey){
       if(state.gameOver||state.inputLocked) return;
       const nx=state.player.x+dx, ny=state.player.y+dy;
-      if(!isWalkable(nx,ny)) return endTurn();
+      if(!isWalkable(nx,ny)){
+        state.blockedWallMoveKey = moveKey;
+        return endTurn();
+      }
       const foe = enemyAt(nx,ny); if(foe){ playerAttack(foe); return endTurn(); }
+      state.blockedWallMoveKey = null;
       state.player.x=nx; state.player.y=ny; walkRegen();
       await triggerFloorObject();
       await pickupItem();
@@ -1319,6 +1324,7 @@ async function openChest(floorObject){
       state.nameInput = playerName();
       state.nameInputError = "";
       state.isComposingName = false;
+      state.blockedWallMoveKey = null;
     }
 
     function restartGame(){
@@ -1369,6 +1375,7 @@ async function openChest(floorObject){
         if(nameImeInputEl && document.activeElement !== nameImeInputEl) syncNameInputElement();
         return;
       }
+      if(state.blockedWallMoveKey && key!==state.blockedWallMoveKey) state.blockedWallMoveKey = null;
       if(key === "Delete"){
         e.preventDefault();
         resetBestScore();
@@ -1378,10 +1385,22 @@ async function openChest(floorObject){
       if((key==="n"||key==="N") && (state.turns===0 || state.gameOver)) return beginNameInputMode();
       if(key==="r"||key==="R") return restartGame();
       if(state.gameOver||state.inputLocked) return;
-      if(key==="ArrowUp") movePlayer(0,-1);
-      else if(key==="ArrowDown") movePlayer(0,1);
-      else if(key==="ArrowLeft") movePlayer(-1,0);
-      else if(key==="ArrowRight") movePlayer(1,0);
+      if(key==="ArrowUp"){
+        if(state.blockedWallMoveKey===key) return;
+        movePlayer(0,-1,key);
+      }
+      else if(key==="ArrowDown"){
+        if(state.blockedWallMoveKey===key) return;
+        movePlayer(0,1,key);
+      }
+      else if(key==="ArrowLeft"){
+        if(state.blockedWallMoveKey===key) return;
+        movePlayer(-1,0,key);
+      }
+      else if(key==="ArrowRight"){
+        if(state.blockedWallMoveKey===key) return;
+        movePlayer(1,0,key);
+      }
       else if(key===" ") waitTurn();
       else if(key==="a"||key==="A") iboBeam();
       else if(key==="b"||key==="B") eatIbo();
