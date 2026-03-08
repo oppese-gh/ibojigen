@@ -31,6 +31,17 @@ Primary goals:
 
 ## Language / UI Policy
 
+このプロジェクトでは日本語を使用します。
+
+以下はすべて日本語で記述してください。
+
+- コードコメント
+- ゲーム内ログ
+- GitHub PRサマリー
+- AI生成の説明
+
+特別な理由がない限り英語は使用しないでください。
+
 ### Display language
 - In-game text is primarily Japanese.
 - Common game labels may remain in English:
@@ -206,4 +217,5 @@ This project works best when requirements are explicit.
 - framework migration
 - multi-file modularization by default
 - overengineering
+
 - replacing the Unicode identity of the game
