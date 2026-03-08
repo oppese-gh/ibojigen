@@ -1058,7 +1058,7 @@ async function openChest(floorObject){
         return {consumed:true,endTurn:true};
       },
       potion: async ()=>{
-        const heal = Math.ceil(state.player.maxHp * 0.1 + 10 + randInt(-2,2));
+        const heal = Math.ceil(state.player.maxHp * 0.12 + 10 + randInt(-2,2));
         state.player.hp=Math.min(state.player.maxHp,state.player.hp+heal);
         addLog(`🧪を使った！ HP+${heal}`);
         if(state.player.poison){ state.player.poison=false; addLog("解毒した。"); }
