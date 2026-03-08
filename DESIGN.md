@@ -1,50 +1,42 @@
 # ぼじろーぐ DESIGN
 
-## Overview
-ぼじろーぐ is a single-file, turn-based Unicode roguelike game.
-The implementation is intentionally kept simple and compact.
+## 概要
+ぼじろーぐ は、単一ファイルで実装するターン制 Unicode ローグライクゲームです。  
+実装は、理解しやすさ・修正しやすさ・ゲームの読みやすさを重視します。
 
-Primary goals:
-- keep the project easy to understand
-- keep the project easy to modify with AI assistance
-- preserve gameplay clarity over architectural purity
-
----
-
-## Project Structure Policy
-
-### Single-file policy
-- The main game implementation must stay in a single `index.html` file.
-- Do not split core gameplay logic into multiple JS files or modules unless explicitly requested.
-- Do not introduce frameworks, build tools, or bundlers.
-- Small support files such as images or markdown docs are allowed.
-- If data is separated, keep it minimal and only when explicitly requested.
-
-### Change policy
-- Prefer the smallest possible change.
-- Preserve existing behavior unless the requested task explicitly changes it.
-- Do not perform broad refactors without explicit approval.
-- Do not rename major functions or variables unless necessary.
-- Do not change key bindings unless explicitly requested.
+主な目標：
+- 理解しやすいこと
+- AI支援で修正しやすいこと
+- 過度な設計美より、ゲームとしての明快さを優先すること
 
 ---
 
-## Language / UI Policy
+## 構成方針
 
-このプロジェクトでは日本語を使用します。
+### 単一ファイル方針
+- メイン実装は `index.html` 1ファイルに保つ
+- 明示的な要望がない限り、JSファイル分割・モジュール化はしない
+- フレームワーク、ビルドツール、バンドラは導入しない
+- 補助的な markdown 等は可
 
-以下はすべて日本語で記述してください。
+### 変更方針
+- 変更はできるだけ小さく行う
+- 明示的な依頼がない限り、既存挙動を維持する
+- 大規模リファクタは行わない
+- 主要な関数名・変数名・キー操作は、必要がない限り変えない
 
-- コードコメント
-- ゲーム内ログ
-- GitHub PRサマリー
-- AI生成の説明
+---
 
-特別な理由がない限り英語は使用しないでください。
+## 言語・UI方針
 
-### Display language
-- In-game text is primarily Japanese.
-- Common game labels may remain in English:
+### 言語
+- プレイヤー向け表示、ゲーム内ログ、説明文は日本語を基本とする
+- 既存コードの識別子、一般的なUIラベル、既存の構造名は英語のままでよい
+- AI生成の説明やPR要約も、日本語を優先する
+
+### 表示
+- ゲーム内表示は日本語中心とする
+- ただし以下のような一般的なラベルは英語のままでよい
   - HP
   - ATK
   - DEF
@@ -53,169 +45,164 @@ Primary goals:
   - Lv
   - BEST
 
-### UI style
-- Keep the UI simple and readable.
-- Preserve the current Unicode-based presentation.
-- Do not replace the Unicode aesthetic with image-based UI unless explicitly requested.
-- Keep status readability high.
-- Important combat results should be visible and easy to understand.
+### UI方針
+- UIはシンプルで読みやすく保つ
+- Unicodeベースの見た目を維持する
+- 明示的な依頼がない限り、画像ベースUIには置き換えない
+- 戦闘結果や被ダメージ対象は、ひと目で分かるようにする
 
 ---
 
-## Core Game Rules
+## ゲームの基本ルール
 
-### Game style
-- Turn-based roguelike
-- Grid movement
-- Random rooms and corridors
-- Player acts first, then turn progresses
+### ゲーム形式
+- ターン制ローグライク
+- グリッド移動
+- ランダムな部屋＋通路
+- プレイヤー行動後にターンが進行する
 
-### Turn flow
-A normal turn is based on `endTurn()`.
+### 基本ターン進行
+通常ターンは `endTurn()` を基準とし、基本順序は以下とする。
 
-Typical order:
-1. player action
-2. enemy turn
-3. hunger processing
-4. ibo processing
-5. render
+1. プレイヤー行動
+2. 敵行動
+3. 満腹度処理
+4. イボ処理
+5. 描画
 
-Do not change this order unless explicitly requested.
+明示的な要望がない限り、この順序は変えない。
 
-### Game state
-- Major mutable game state should remain under `state`
-- `state.player` contains player-related stats
-- floor-based temporary buffs should reset when entering a new floor
-- game-over and input-lock states must be respected before accepting actions
-
----
-
-## Important Architectural Rules
-
-### State handling
-- Keep major gameplay state centralized in `state`
-- Avoid scattering important state across unrelated globals
-- New persistent gameplay state should usually be added under `state`
-
-### Rendering
-- `render()` should mainly display current state
-- Avoid adding heavy gameplay side effects inside `render()`
-- If possible, gameplay updates should happen before rendering
-
-### Turn safety
-- Any action that consumes a turn should end through `endTurn()`
-- Actions that should not consume a turn must be explicitly designed that way
-- Be careful not to accidentally skip or double-run turn progression
+### 状態管理
+- 主要な可変状態は `state` に集約する
+- プレイヤー関連は `state.player` に持たせる
+- フロア限定バフは階移動でリセットする
+- game over 中や input lock 中は、行動受付を抑止する
 
 ---
 
-## Inventory / Item Rules
+## 描画・安全性
 
-### Inventory basics
-- Inventory uses fixed slots
-- Items are consumed or used according to their existing behavior
-- Do not redesign inventory structure unless explicitly requested
+### 描画
+- `render()` は現在状態の表示を主目的とする
+- 重いゲームロジックや副作用は、できるだけ `render()` に入れない
+- 可能な限り、状態更新のあとに描画する
 
-### Pickup behavior
-Two pickup modes exist:
-- `inventory`: item goes into inventory
-- `instant`: item activates immediately on pickup
-
-This distinction is important and must be preserved.
-
-### Item design principle
-- Keep item behavior easy to understand
-- Prefer clear and game-readable effects
-- Avoid overly abstract item effects unless explicitly requested
+### ターン安全性
+- ターン消費行動は、原則として `endTurn()` を通す
+- ターンを消費しない行動は、明示的にそう設計する
+- 二重進行や進行漏れを起こさないよう注意する
 
 ---
 
-## Enemy / Combat Rules
+## 所持品・アイテム方針
 
-### Combat readability
-- Damage target must always be clear in logs and UI
-- Important combat events should be understandable at a glance
-- Critical hits and special effects should remain easy to notice
+### 所持品
+- 所持品は固定スロット制
+- `inventory` と `instant` の2種類の取得方式を維持する
+- 明示的な要望がない限り、所持品構造は作り直さない
 
-### Enemy design
-- Enemies may have unique effects
-- Do not rewrite all enemy behavior into a new abstraction unless explicitly requested
-- Prefer minimal additions to existing logic structure
+### 効果方針
+- 効果は分かりやすさを優先する
+- 抽象的すぎる効果は避ける
+- 恒久効果とフロア限定効果を混同しない
 
-### Balance principle
-- Avoid sudden extreme scaling unless intentionally designed
-- Early floors should remain understandable and fair
-- Late floors may become harder, but progression should still feel readable
-
----
-
-## Floor / Event Rules
-
-### Floor progression
-- Reaching the ladder advances to the next floor
-- Floor transition resets floor-only buffs and regenerates floor content
-
-### Events
-Special floor events may exist, such as:
-- monster house
-- asahiyama
-
-When adding events, always define:
-1. trigger condition
-2. object or marker
-3. gameplay effect
-4. log / message text
-5. whether the event is reusable or one-time
+### 現在の大まかな扱い
+- 恒久強化の例：短剣、盾、豆、ごちそう
+- フロア限定強化の例：斧、ダイヤ
 
 ---
 
-## AI Editing Rules
+## 敵・戦闘方針
 
-When modifying this project, follow these rules:
+### 戦闘の読みやすさ
+- 誰が誰にダメージを与えたかを明確にする
+- クリティカルや特殊効果は目立つようにする
+- ログは短くても意味が分かる形を優先する
 
-- Keep the project as a single-file game unless explicitly instructed otherwise
-- Do not split files
-- Do not introduce JS modules
-- Do not perform broad cleanup or architecture refactors
-- Make the smallest possible change
-- Preserve current gameplay unless change is requested
-- Preserve Japanese UI text style
-- Preserve Unicode-based design
-- Keep logs readable
-- Keep damage targets explicit
+### 敵設計
+- 敵ごとの固有効果は維持してよい
+- 明示的な依頼がない限り、敵全体を新しい抽象構造に置き換えない
+- 追加や修正は、既存ロジックに沿った最小変更を優先する
 
----
-
-## Preferred Request Format for Changes
-
-When implementing a new feature or change, define:
-
-1. purpose
-2. trigger condition
-3. exact effect
-4. exceptions
-5. UI/log message
-6. whether it consumes a turn
-7. whether it is permanent or floor-only
-
-This project works best when requirements are explicit.
+### バランス方針
+- 急激すぎる難度上昇は避ける
+- 序盤は理解しやすく、終盤は厳しくても読める強さにする
+- 理不尽さより、納得感のある強さを優先する
 
 ---
 
-## Current Development Priorities
-- improve gameplay readability
-- improve combat clarity
-- improve balance gradually
-- add interesting but simple events
-- avoid unnecessary complexity
-- preserve easy AI-assisted development
+## フロア・イベント方針
+
+### フロア進行
+- ハシゴ到達で次の階へ進む
+- 階移動時にフロア内容を再生成する
+- フロア限定バフは階移動時にリセットする
+
+### イベント
+特殊イベントは存在してよい。  
+既存例：
+- モンスターハウス
+- あさひやま
+- 5階ごとの宝イベント
+
+イベント追加時は、以下を明確にすること：
+1. 発生条件
+2. 配置物や目印
+3. 効果
+4. ログや表示文
+5. 使い切りか再利用か
 
 ---
 
-## Non-goals
-- large-scale architecture refactor
-- framework migration
-- multi-file modularization by default
-- overengineering
+## 永続データ方針
+- プレイヤー名、ハイスコア、ベスト記録名は保存対象としてよい
+- 永続化は軽量に行い、過剰に複雑化しない
+- 名前入力やスコア周りの仕様変更は、UIとの整合を保つ
 
-- replacing the Unicode identity of the game
+---
+
+## AI修正ルール
+このプロジェクトを修正するときは、以下を守ること。
+
+- 単一ファイル構成を維持する
+- ファイル分割しない
+- JSモジュール化しない
+- 大掃除的な整理を勝手にしない
+- 必要最小限の変更にとどめる
+- 既存ゲーム性を不用意に変えない
+- 日本語UIを維持する
+- Unicodeベースの味を維持する
+- ログの読みやすさを保つ
+- ダメージ対象の明示を保つ
+
+---
+
+## 変更依頼の書き方
+新機能や修正を入れるときは、できるだけ以下を明示する。
+
+1. 目的
+2. 発動条件
+3. 正確な効果
+4. 例外処理
+5. UIやログ文言
+6. ターン消費の有無
+7. 恒久効果かフロア限定か
+
+---
+
+## 現在の開発優先
+- ゲームの読みやすさ向上
+- 戦闘の明快さ向上
+- バランスの段階的調整
+- シンプルで面白いイベント追加
+- 不要な複雑化の回避
+- AIで保守しやすい構造の維持
+
+---
+
+## 非目標
+- 大規模な構造改革
+- フレームワーク移行
+- 標準でのマルチファイル化
+- 過剰設計
+- Unicodeらしさの放棄
