@@ -517,6 +517,18 @@
       return true;
     }
 
+    function placeItemAtPlayerTile(itemKey,x,y){
+      if(itemKey==="shield" && state.floorHasShield) return false;
+      if(itemKey==="axe" && state.floorHasAxe) return false;
+      if(!isWalkable(x,y)) return false;
+      if(enemyAt(x,y)||itemAt(x,y)||objectAt(x,y)) return false;
+      if(state.ladder.x===x&&state.ladder.y===y) return false;
+      state.items.push({x,y,...createItem(itemKey)});
+      if(itemKey==="shield") state.floorHasShield=true;
+      if(itemKey==="axe") state.floorHasAxe=true;
+      return true;
+    }
+
     function floorPowerTier(){ if(state.floor<=2)return 0; if(state.floor<=4)return 1; if(state.floor<=6)return 2; if(state.floor<=8)return 3; if(state.floor<=10)return 4; return 5+Math.floor((state.floor-10)/2); }
 
     function determineFloorEvent(){
@@ -881,7 +893,7 @@
           const pickupMode = itemDef?.pickupMode || ITEM_PICKUP_MODE.INVENTORY;
           const effect = itemDef ? ITEM_EFFECTS[itemDef.effectKey] : null;
           if(pickupMode === ITEM_PICKUP_MODE.INSTANT){
-            if(effect) effect(item, -1, {source:"pickup"});
+            if(effect) effect(item, -1, {source:"pickup"}).catch((error)=>console.error(error));
           }else if(addToInventory(item)) addLog(`${item.char}を手に入れた。(${invToString()})`);
           else if(placeItemAt(type, enemy.x, enemy.y)) addLog(`持ち物がいっぱいだ。${item.char}が落ちた。`);
         }
@@ -925,9 +937,9 @@
       if(!isCritical) addLog(`${enemy.char}は、${playerName()}に${damage}ダメージ！`);
 
       if(enemyKey === "lion" && state.player.hp > 0 && Math.random() < 0.15){
-        const { damage: extraDamage } = resolveAttackDamage(enemy.atk, playerDefValue(), true, 1, enemy.char, "プレイヤー");
+        const { damage: extraDamage, isCritical: extraCritical } = resolveAttackDamage(enemy.atk, playerDefValue(), true, 1, enemy.char, "プレイヤー");
         state.player.hp -= extraDamage;
-        addLog(`すばやい追撃をうけた！${extraDamage}ダメージ！！`);
+        if(!extraCritical) addLog(`すばやい追撃をうけた！${extraDamage}ダメージ！！`);
       }
 
       if(enemyKey === "mimic" && state.player.hp>0 && Math.random()<0.05){
@@ -1008,19 +1020,19 @@ async function openChest(floorObject){
     return;
   }
 
-  if(placeItemAt(item.key, state.player.x, state.player.y)) addLog(`持ち物がいっぱいだ。${item.char}が落ちた。`);
+  if(placeItemAtPlayerTile(item.key, state.player.x, state.player.y)) addLog(`持ち物がいっぱいだ。${item.char}が落ちた。`);
 }
 
     async function triggerFloorObject(){
       const floorObject = objectAt(state.player.x,state.player.y);
       if(!floorObject || floorObject.trigger!=="step") return;
 
-      if(floorObject.key === "asahiyama") triggerAsahiyama(floorObject);
-      if(floorObject.key === "chest") await openChest(floorObject);
-
       if(floorObject.oneShot){
         state.floorObjects = state.floorObjects.filter((o)=>o!==floorObject);
       }
+
+      if(floorObject.key === "asahiyama") triggerAsahiyama(floorObject);
+      if(floorObject.key === "chest") await openChest(floorObject);
     }
 
     // ===== Items =====
