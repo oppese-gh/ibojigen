@@ -668,7 +668,7 @@
     }
 
     // ===== Battle / damage =====
-    function applyDamage(target, amount, name=""){ target.hp -= amount; if(name) addLog(`${name}に${amount}ダメージ！`); }
+    function applyDamage(target, amount, name="", shouldLog=true){ target.hp -= amount; if(shouldLog && name) addLog(`${name}に${amount}ダメージ！`); }
 
     function playerHungerCritBonus(){
       const hungerRatio = state.player.hunger / state.player.hungerMax;
@@ -681,16 +681,18 @@
     function resolveAttackDamage(atk, def, isEnemyAttack, critMultiplier=1, attackerName="", targetName=""){
       const normal = calcDamage(atk, def);
       let damage = normal;
+      let isCritical = false;
       const baseCritChance = isEnemyAttack ? 0.07 : (state.player.floorAtkBuff > 0 ? 0.12 : 0.07) + playerHungerCritBonus();
       const critChance = clamp01(baseCritChance * critMultiplier);
       if(Math.random() < critChance){
+        isCritical = true;
         damage = Math.ceil(normal * 2.5);
         const from = attackerName || "こうげき";
         const to = targetName || "あいて";
         addLog(`💥<span style="color:#ffd6d6;font-weight:800;background:#7a0010;padding:0 4px;">【きゅうしょ！】${from}→${to}に ${damage}ダメージ！！</span>💥`);
       }
       if(isEnemyAttack && Math.random() < 0.5) damage += 1;
-      return damage;
+      return { damage, isCritical };
     }
 
     function activateMimic(enemy){
@@ -699,9 +701,9 @@
     }
 
     function playerAttack(enemy){
-      const damage = resolveAttackDamage(playerAtkValue(), enemy.def, false, 1, "プレイヤー", enemy.char);
+      const { damage, isCritical } = resolveAttackDamage(playerAtkValue(), enemy.def, false, 1, "プレイヤー", enemy.char);
       activateMimic(enemy);
-      applyDamage(enemy, damage, enemy.char);
+      applyDamage(enemy, damage, enemy.char, !isCritical);
       if(enemy.hp<=0) killEnemy(enemy);
     }
 
@@ -812,11 +814,11 @@
         return;
       }
 
-      const damage = resolveAttackDamage(enemy.atk, playerDefValue(), true, enemyKey === "mimic" ? 2 : 1, enemy.char, "プレイヤー");
-      applyDamage(state.player, damage, "プレイヤー");
+      const { damage, isCritical } = resolveAttackDamage(enemy.atk, playerDefValue(), true, enemyKey === "mimic" ? 2 : 1, enemy.char, "プレイヤー");
+      applyDamage(state.player, damage, "プレイヤー", !isCritical);
 
       if(enemyKey === "lion" && state.player.hp > 0 && Math.random() < 0.15){
-        const extraDamage = resolveAttackDamage(enemy.atk, playerDefValue(), true, 1, enemy.char, "プレイヤー");
+        const { damage: extraDamage } = resolveAttackDamage(enemy.atk, playerDefValue(), true, 1, enemy.char, "プレイヤー");
         state.player.hp -= extraDamage;
         addLog(`すばやい追撃をうけた！${extraDamage}ダメージ！！`);
       }
