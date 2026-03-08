@@ -681,7 +681,7 @@
     function resolveAttackDamage(atk, def, isEnemyAttack, critMultiplier=1, attackerName="", targetName=""){
       const normal = calcDamage(atk, def);
       let damage = normal;
-      const baseCritChance = isEnemyAttack ? 0.07 : (state.floorHasAxe ? 0.12 : 0.07) + playerHungerCritBonus();
+      const baseCritChance = isEnemyAttack ? 0.07 : (state.player.floorAtkBuff > 0 ? 0.12 : 0.07) + playerHungerCritBonus();
       const critChance = clamp01(baseCritChance * critMultiplier);
       if(Math.random() < critChance){
         damage = Math.ceil(normal * 2.5);
