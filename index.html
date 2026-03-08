@@ -45,6 +45,7 @@
       <div id="log-history"></div>
     </div>
     <div id="help">操作: ↑↓←→移動 / Space 待機 / A いぼビーム / B イボ食い / 1-5 アイテム使用 / R リスタート / N 名前入力</div>
+    <input id="name-ime-input" type="text" inputmode="text" autocomplete="off" aria-hidden="true" tabindex="-1" style="position:fixed;left:-9999px;top:0;opacity:0;pointer-events:none;" />
   </main>
 
   <script>
@@ -207,6 +208,7 @@
     const statusEl = document.getElementById("status");
     const logLatestEl = document.getElementById("log-latest");
     const logHistoryEl = document.getElementById("log-history");
+    const nameImeInputEl = document.getElementById("name-ime-input");
     const projectileLayer = document.createElement("div");
     if (versionEl) versionEl.textContent = APP_VERSION;
     projectileLayer.id = "projectile-layer";
@@ -264,7 +266,16 @@
       state.nameInput = playerName();
       state.nameInputError = "";
       addLog("名前入力モード: Enterで確定");
+      syncNameInputElement();
       render();
+    }
+
+    function syncNameInputElement(){
+      if(!nameImeInputEl) return;
+      nameImeInputEl.value = state.nameInput;
+      nameImeInputEl.focus({preventScroll:true});
+      const cursorPos = nameImeInputEl.value.length;
+      nameImeInputEl.setSelectionRange(cursorPos, cursorPos);
     }
 
     function normalizePlayerName(raw){
@@ -282,6 +293,7 @@
       state.playerName = nextName;
       state.editingName = false;
       state.nameInputError = "";
+      if(nameImeInputEl) nameImeInputEl.blur();
       saveProfile();
       addLog(`名前を「${state.playerName}」にした。`);
       addLog("スタート画面に戻った。Rで開始");
@@ -1254,6 +1266,19 @@ function openChest(){
       addLog(`ぼじろーぐ開始！ 初期アイテム: ${spriteForItemKey(starterItemType)}`); setupFloor();
     }
 
+    if(nameImeInputEl){
+      nameImeInputEl.addEventListener("input", ()=>{
+        if(!state.editingName) return;
+        state.nameInput = nameImeInputEl.value;
+        state.nameInputError = "";
+        render();
+      });
+      nameImeInputEl.addEventListener("blur", ()=>{
+        if(!state.editingName) return;
+        requestAnimationFrame(syncNameInputElement);
+      });
+    }
+
     window.addEventListener("keydown", (e)=>{
       const key=e.key;
       if(state.editingName){
@@ -1262,19 +1287,7 @@ function openChest(){
           confirmPlayerName();
           return;
         }
-        if(key === "Backspace"){
-          e.preventDefault();
-          state.nameInput = state.nameInput.slice(0, -1);
-          state.nameInputError = "";
-          render();
-          return;
-        }
-        if(key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey){
-          e.preventDefault();
-          state.nameInput += key;
-          state.nameInputError = "";
-          render();
-        }
+        if(nameImeInputEl && document.activeElement !== nameImeInputEl) syncNameInputElement();
         return;
       }
       if(key === "Delete"){
