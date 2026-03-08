@@ -44,7 +44,7 @@
       <div id="log-latest"></div>
       <div id="log-history"></div>
     </div>
-    <div id="help">操作: ↑↓←→移動 / Space 待機 / A いぼビーム / B イボ食い / 1-5 アイテム使用 / R リスタート</div>
+    <div id="help">操作: ↑↓←→移動 / Space 待機 / A いぼビーム / B イボ食い / 1-5 アイテム使用 / R リスタート / N 名前入力</div>
   </main>
 
   <script>
@@ -58,7 +58,9 @@
     const PROJECTILE_STEP_MS = 40;
     const CELL_SIZE = 24;
     const GRID_PADDING = 8;
-    const APP_VERSION = "v1.22";
+    const APP_VERSION = "v1.23";
+    const DEFAULT_PLAYER_NAME = "あさひっこ";
+    const MAX_PLAYER_NAME_LENGTH = 10;
 
     const SPRITES = {
       player:"🧔", wall:"🧱", floor:".", ladder:"🪜", orb:"🟣", starBeam:"✨",
@@ -226,14 +228,65 @@
     const createInitialPlayer = () => ({...INITIAL_PLAYER_PARAMS});
 
     // ===== Game state =====
+    const savedProfileRaw = localStorage.getItem("bojirogue_profile");
+    let savedProfile = null;
+    try {
+      savedProfile = savedProfileRaw ? JSON.parse(savedProfileRaw) : null;
+    } catch {
+      savedProfile = null;
+    }
+    const initialBestScore = Number(savedProfile?.bestScore ?? localStorage.getItem("bojirogue_bestScore") ?? "0");
+    const initialBestName = typeof savedProfile?.bestName === "string" && savedProfile.bestName.length > 0 ? savedProfile.bestName : DEFAULT_PLAYER_NAME;
+    const initialPlayerName = typeof savedProfile?.playerName === "string" && savedProfile.playerName.length > 0 ? savedProfile.playerName : DEFAULT_PLAYER_NAME;
+
     const state = {
       floor:1,map:[],rooms:[],enemies:[],items:[],chests:[],asahiyama:null,floorEventType:"normal",ladder:{x:0,y:0},logs:[],revealed:false,seen:[],visibleNow:[],gameOver:false,inputLocked:false,
-      invSize:5,inventory:[...EMPTY_INVENTORY],bestScore:Number(localStorage.getItem("bojirogue_bestScore")||"0"),score:0,turns:0,
+      invSize:5,inventory:[...EMPTY_INVENTORY],bestScore:initialBestScore,bestName:initialBestName,playerName:initialPlayerName,editingName:false,nameInput:initialPlayerName,nameInputError:"",score:0,turns:0,
       floorHasShield:false,floorHasAxe:false,
       kills:buildEmptyKillMap(),
       player:createInitialPlayer(),
       iboCooldown:0,starving:false,hungerLowNotified:false
     };
+
+    function saveProfile(){
+      localStorage.setItem("bojirogue_profile", JSON.stringify({
+        bestScore: state.bestScore,
+        bestName: state.bestName,
+        playerName: state.playerName
+      }));
+      localStorage.setItem("bojirogue_bestScore", String(state.bestScore));
+    }
+
+    function playerName(){ return state.playerName || DEFAULT_PLAYER_NAME; }
+
+    function beginNameInputMode(){
+      state.editingName = true;
+      state.nameInput = playerName();
+      state.nameInputError = "";
+      addLog("名前入力モード: Enterで確定");
+      render();
+    }
+
+    function normalizePlayerName(raw){
+      const name = raw.trim();
+      return name || DEFAULT_PLAYER_NAME;
+    }
+
+    function confirmPlayerName(){
+      const nextName = normalizePlayerName(state.nameInput);
+      if(Array.from(nextName).length > MAX_PLAYER_NAME_LENGTH){
+        state.nameInputError = "10文字以内にしてください";
+        render();
+        return;
+      }
+      state.playerName = nextName;
+      state.editingName = false;
+      state.nameInputError = "";
+      saveProfile();
+      addLog(`名前を「${state.playerName}」にした。`);
+      addLog("スタート画面に戻った。Rで開始");
+      render();
+    }
 
     // ===== Core utilities =====
     const clamp01 = (v) => Math.max(0, Math.min(1, v));
@@ -297,13 +350,15 @@
 
     function finalizeScore(reasonText=""){
       state.score = calcScore();
-      if(state.score > state.bestScore){ state.bestScore = state.score; localStorage.setItem("bojirogue_bestScore", String(state.bestScore)); addLog(`新記録！ BEST ${state.bestScore} (${reasonText})`); }
+      if(state.score > state.bestScore){ state.bestScore = state.score; state.bestName = playerName(); saveProfile(); addLog(`新記録！ BEST ${state.bestScore} (${reasonText})`); }
       else addLog(`SCORE ${state.score} / BEST ${state.bestScore} (${reasonText})`);
     }
 
     function resetBestScore(){
       if(state.turns===0 || state.gameOver===true){
         state.bestScore = 0;
+        state.bestName = DEFAULT_PLAYER_NAME;
+        saveProfile();
         localStorage.removeItem("bojirogue_bestScore");
         addLog("ハイスコアをリセットした。");
       }else{
@@ -646,10 +701,14 @@
       const monsterAlert = state.floorEventType === "monsterHouse" ? "<span class=\"monster-alert\">❗️❗️❗️モンスターハウス❗️❗️❗️</span>" : "";
       const atkText = formatBuffStat("ATK", state.player.baseAtk, playerAtkValue(), "🪓");
       const defText = formatBuffStat("DEF", state.player.baseDef, playerDefValue(), "💎");
+      const bestText = `${state.bestScore}(${state.bestName})`;
+      const nameInputGuide = state.editingName
+        ? `<div class="row">名前入力中: ${state.nameInput || ""}<span style="opacity:.8;">|</span> Enterで確定 / Backspaceで削除${state.nameInputError ? ` / <span style="color:#ff8a8a;">${state.nameInputError}</span>` : ""}</div>`
+        : "";
       statusEl.innerHTML = `
+        <div class="row">${playerName()} / 階 ${state.floor} / Lv ${state.player.level} / EXP ${state.player.exp}/${expToNextLevel()} / 視界 ${state.player.vision}/${state.player.visionMax} / ${atkText} / ${defText} / SCORE ${state.score} / BEST ${bestText} ${status} ${monsterAlert}</div>
         <div class="row">${gaugeHtml("HP", state.player.hp, state.player.maxHp)} ${gaugeHtml("満腹度", state.player.hunger, state.player.hungerMax)}</div>
-        <div class="row">階 ${state.floor} Lv ${state.player.level} EXP ${state.player.exp}/${expToNextLevel()} 視界 ${state.player.vision}/${state.player.visionMax} ${atkText} ${defText} SCORE ${state.score} BEST ${state.bestScore} ${status} ${monsterAlert}</div>
-        <div class="row">イボ(${state.player.ibo}/${state.player.iboMax}) ITEM ${invToString()}</div>`;
+        <div class="row">イボ(${state.player.ibo}/${state.player.iboMax}) ITEM ${invToString()}</div>${nameInputGuide}`;
     }
 
     // ===== Inventory =====
@@ -703,7 +762,8 @@
     function playerAttack(enemy){
       const { damage, isCritical } = resolveAttackDamage(playerAtkValue(), enemy.def, false, 1, "プレイヤー", enemy.char);
       activateMimic(enemy);
-      applyDamage(enemy, damage, enemy.char, !isCritical);
+      applyDamage(enemy, damage, "", false);
+      if(!isCritical) addLog(`${playerName()}は、${enemy.char}に${damage}ダメージ！`);
       if(enemy.hp<=0) killEnemy(enemy);
     }
 
@@ -816,7 +876,7 @@
 
       const { damage, isCritical } = resolveAttackDamage(enemy.atk, playerDefValue(), true, enemyKey === "mimic" ? 2 : 1, enemy.char, "プレイヤー");
       applyDamage(state.player, damage, "", false);
-      if(!isCritical) addLog(`${enemy.char}の攻撃！ ${damage}ダメージ！`);
+      if(!isCritical) addLog(`${enemy.char}は、${playerName()}に${damage}ダメージ！`);
 
       if(enemyKey === "lion" && state.player.hp > 0 && Math.random() < 0.15){
         const { damage: extraDamage } = resolveAttackDamage(enemy.atk, playerDefValue(), true, 1, enemy.char, "プレイヤー");
@@ -1182,9 +1242,13 @@ function openChest(){
       state.seen = [];
       state.visibleNow = [];
       state.kills = buildEmptyKillMap();
+      state.editingName = false;
+      state.nameInput = playerName();
+      state.nameInputError = "";
     }
 
     function restartGame(){
+      if(state.editingName) return;
       initializeRunState();
       const starterItemType = grantStarterItem();
       addLog(`ぼじろーぐ開始！ 初期アイテム: ${spriteForItemKey(starterItemType)}`); setupFloor();
@@ -1192,12 +1256,34 @@ function openChest(){
 
     window.addEventListener("keydown", (e)=>{
       const key=e.key;
+      if(state.editingName){
+        if(key === "Enter"){
+          e.preventDefault();
+          confirmPlayerName();
+          return;
+        }
+        if(key === "Backspace"){
+          e.preventDefault();
+          state.nameInput = state.nameInput.slice(0, -1);
+          state.nameInputError = "";
+          render();
+          return;
+        }
+        if(key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey){
+          e.preventDefault();
+          state.nameInput += key;
+          state.nameInputError = "";
+          render();
+        }
+        return;
+      }
       if(key === "Delete"){
         e.preventDefault();
         resetBestScore();
         return;
       }
-      if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"," ","a","A","b","B","r","R","1","2","3","4","5"].includes(key)) e.preventDefault();
+      if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"," ","a","A","b","B","r","R","n","N","1","2","3","4","5"].includes(key)) e.preventDefault();
+      if((key==="n"||key==="N") && (state.turns===0 || state.gameOver)) return beginNameInputMode();
       if(key==="r"||key==="R") return restartGame();
       if(state.gameOver||state.inputLocked) return;
       if(key==="ArrowUp") movePlayer(0,-1);
@@ -1214,7 +1300,8 @@ function openChest(){
       else if(key==="5") useInventory(4);
     });
 
-    restartGame();
+    addLog("スタート画面: Rで開始 / Nで名前入力");
+    render();
   </script>
 </body>
 </html>
