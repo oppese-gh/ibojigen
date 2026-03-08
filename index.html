@@ -179,6 +179,19 @@
       return ENEMY_DEFAULT_DROP_RULE;
     }
 
+    function createVisibilityGrid(){
+      return Array.from({length:HEIGHT},()=>Array(WIDTH).fill(false));
+    }
+
+    function ensureVisibilityGrid(){
+      if(state.seen.length!==HEIGHT) state.seen = createVisibilityGrid();
+      if(state.visibleNow.length!==HEIGHT) state.visibleNow = createVisibilityGrid();
+      for(let y=0;y<HEIGHT;y++){
+        if(!Array.isArray(state.seen[y]) || state.seen[y].length!==WIDTH) state.seen[y] = Array(WIDTH).fill(false);
+        if(!Array.isArray(state.visibleNow[y]) || state.visibleNow[y].length!==WIDTH) state.visibleNow[y] = Array(WIDTH).fill(false);
+      }
+    }
+
     // 敵テーブル: 1〜9階はほぼ維持、13階以降を 13〜15 / 16+ に分割して
     // 後半の理不尽な尖りを抑えつつ終盤の圧は残す。
     const FLOOR_ENEMY_TABLES = [
@@ -427,8 +440,8 @@
     function setupFloor(){
       const built = createMap();
       state.map=built.map; state.rooms=built.rooms; state.items=[]; state.enemies=[]; state.chests=[]; state.asahiyama=null; state.revealed=false;
-      state.seen = Array.from({length:HEIGHT},()=>Array(WIDTH).fill(false));
-      state.visibleNow = Array.from({length:HEIGHT},()=>Array(WIDTH).fill(false));
+      state.seen = createVisibilityGrid();
+      state.visibleNow = createVisibilityGrid();
       state.floorHasShield=false; state.floorHasAxe=false;
       state.player.floorAtkBuff = 0; state.player.floorDefBuff = 0; state.player.diamondWard = false;
       state.inputLocked=false; state.iboCooldown=0;
@@ -686,6 +699,7 @@
     }
 
     function updateSeen(){
+      ensureVisibilityGrid();
       for(let y=0;y<HEIGHT;y++) for(let x=0;x<WIDTH;x++) state.visibleNow[y][x]=false;
       if(state.revealed){
         for(let y=0;y<HEIGHT;y++){
@@ -711,13 +725,14 @@
     // ===== Render / UI =====
     function render(){
       state.score=calcScore(); updateSeen();
+      const hasMap = state.map.length===HEIGHT;
       const cells=[];
       for(let y=0;y<HEIGHT;y++){
         for(let x=0;x<WIDTH;x++){
           const visibleNow = state.visibleNow[y][x];
           const seen = state.seen[y][x];
           if(!visibleNow && !seen){ cells.push(`<div class="cell"> </div>`); continue; }
-          let ch = state.map[y][x]===TILE_WALL ? SPRITES.wall : SPRITES.floor;
+          let ch = hasMap && state.map[y] && state.map[y][x]===TILE_WALL ? SPRITES.wall : SPRITES.floor;
           if(visibleNow){
             if(state.ladder.x===x&&state.ladder.y===y) ch=SPRITES.ladder;
             const it=itemAt(x,y); if(it) ch=it.char;
@@ -1275,8 +1290,8 @@ function openChest(){
       state.hungerLowNotified = false;
       state.asahiyama = null;
       state.floorEventType = "normal";
-      state.seen = [];
-      state.visibleNow = [];
+      state.seen = createVisibilityGrid();
+      state.visibleNow = createVisibilityGrid();
       state.kills = buildEmptyKillMap();
       state.editingName = false;
       state.nameInput = playerName();
