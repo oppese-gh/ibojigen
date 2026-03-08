@@ -86,7 +86,7 @@
       {id:8,key:"invader",char:SPRITES.invader,baseHp:18,baseAtk:8,baseDef:3,exp:15,score:160,dropRuleRef:"enemyCommon"},
       {id:9,key:"spider",char:SPRITES.spider,baseHp:7,baseAtk:4,baseDef:1,exp:3,score:30,dropRuleRef:"enemyCommon"},
       {id:10,key:"chick",char:SPRITES.chick,baseHp:100,baseAtk:0,baseDef:1,exp:50,score:0,dropRule:{mode:"none"}},
-      {id:11,key:"mimic",char:SPRITES.mimic,baseHp:15,baseAtk:7,baseDef:2,exp:8,score:90,dropRuleRef:"mimicRare",flags:["specialDrop"]},
+      {id:11,key:"mimic",char:SPRITES.mimic,baseHp:15,baseAtk:5,baseDef:2,exp:8,score:90,dropRuleRef:"mimicRare",flags:["specialDrop"]},
       {id:12,key:"rain",char:SPRITES.rain,baseHp:10,baseAtk:0,baseDef:1,exp:5,score:55,dropRuleRef:"enemyCommon"}
     ];
 
@@ -133,27 +133,27 @@
       // 旧テーブルをそのまま移植。重みは旧rate相当。
       floorCommon: normalizeDropPool([
         {key:"food",weight:0.15}, {key:"meat",weight:0.14}, {key:"sushi",weight:0.13}, {key:"potion",weight:0.18},
-        {key:"map",weight:0.07}, {key:"sun",weight:0.06}, {key:"diamond",weight:0.05}, {key:"axe",weight:0.05},
-        {key:"dagger",weight:0.05}, {key:"shield",weight:0.05}, {key:"feast",weight:0.02}, {key:"star",weight:0.01},
+        {key:"map",weight:0.06}, {key:"sun",weight:0.06}, {key:"diamond",weight:0.05}, {key:"axe",weight:0.05},
+        {key:"dagger",weight:0.05}, {key:"shield",weight:0.05}, {key:"feast",weight:0.02}, {key:"star",weight:0.02},
         {key:"poop",weight:0.04}
       ]),
       enemyCommon: normalizeDropPool([
-        {key:"food",weight:0.13}, {key:"meat",weight:0.12}, {key:"sushi",weight:0.16}, {key:"potion",weight:0.22},
-        {key:"map",weight:0.09}, {key:"sun",weight:0.06}, {key:"diamond",weight:0.035}, {key:"axe",weight:0.055},
-        {key:"dagger",weight:0.035}, {key:"shield",weight:0.025}, {key:"feast",weight:0.02}, {key:"star",weight:0.01},
+        {key:"food",weight:0.14}, {key:"meat",weight:0.13}, {key:"sushi",weight:0.16}, {key:"potion",weight:0.20},
+        {key:"map",weight:0.08}, {key:"sun",weight:0.05}, {key:"diamond",weight:0.035}, {key:"axe",weight:0.055},
+        {key:"dagger",weight:0.04}, {key:"shield",weight:0.03}, {key:"feast",weight:0.02}, {key:"star",weight:0.02},
         {key:"poop",weight:0.04}
       ]),
       mimicRare: normalizeDropPool([
-        {key:"potion",weight:0.06}, {key:"diamond",weight:0.15}, {key:"axe",weight:0.15}, {key:"dagger",weight:0.20},
-        {key:"shield",weight:0.20}, {key:"feast",weight:0.10}, {key:"star",weight:0.05}, {key:"poop",weight:0.05}, {key:"bean",weight:0.04}
+        {key:"potion",weight:0.05}, {key:"diamond",weight:0.15}, {key:"axe",weight:0.15}, {key:"dagger",weight:0.20},
+        {key:"shield",weight:0.20}, {key:"feast",weight:0.10}, {key:"star",weight:0.05}, {key:"poop",weight:0.05}, {key:"bean",weight:0.05}
       ]),
       chestCommon: normalizeDropPool([
-        {key:"potion",weight:0.45}, {key:"feast",weight:0.05}, {key:"map",weight:0.10}, {key:"sun",weight:0.10}, {key:"poop",weight:0.30}
+        {key:"potion",weight:0.45}, {key:"feast",weight:0.05}, {key:"map",weight:0.10}, {key:"sun",weight:0.10}, {key:"poop",weight:0.25}, {key:"bean",weight:0.05}
       ]),
       starter: normalizeDropPool([
-        {key:"meat",weight:0.20}, {key:"sushi",weight:0.20}, {key:"potion",weight:0.20}, {key:"diamond",weight:0.05},
-        {key:"axe",weight:0.05}, {key:"dagger",weight:0.05}, {key:"shield",weight:0.05}, {key:"feast",weight:0.05},
-        {key:"star",weight:0.01}, {key:"poop",weight:0.04}
+        {key:"sushi",weight:0.20}, {key:"potion",weight:0.20}, {key:"diamond",weight:0.15},
+        {key:"axe",weight:0.15}, {key:"dagger",weight:0.05}, {key:"shield",weight:0.05}, {key:"feast",weight:0.15},
+        {key:"star",weight:0.02}, {key:"poop",weight:0.02}
       ])
     };
 
