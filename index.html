@@ -716,7 +716,16 @@
       else addLog(`${enemy.char}をたおした！`);
       if(state.kills[enemyKey]!==undefined) state.kills[enemyKey] += 1;
       state.player.exp += enemy.exp;
-      dropItemFromRule(enemy.x, enemy.y, enemy.dropRule || enemyDropRule(def || enemyKey));
+      const dropRule = enemy.dropRule || enemyDropRule(def || enemyKey);
+      if(enemyKey === "mimic"){
+        const type = resolveDropType(dropRule);
+        if(type){
+          if(addToInventory(createItem(type))) addLog(`${spriteForItemKey(type)}を手に入れた。(${invToString()})`);
+          else if(placeItemAt(type, enemy.x, enemy.y)) addLog(`持ち物がいっぱいだ。${spriteForItemKey(type)}が落ちた。`);
+        }
+      }else{
+        dropItemFromRule(enemy.x, enemy.y, dropRule);
+      }
       maybeLevelUp();
     }
 
