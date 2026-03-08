@@ -815,7 +815,8 @@
       }
 
       const { damage, isCritical } = resolveAttackDamage(enemy.atk, playerDefValue(), true, enemyKey === "mimic" ? 2 : 1, enemy.char, "プレイヤー");
-      applyDamage(state.player, damage, "プレイヤー", !isCritical);
+      applyDamage(state.player, damage, "", false);
+      if(!isCritical) addLog(`${enemy.char}の攻撃！ ${damage}ダメージ！`);
 
       if(enemyKey === "lion" && state.player.hp > 0 && Math.random() < 0.15){
         const { damage: extraDamage } = resolveAttackDamage(enemy.atk, playerDefValue(), true, 1, enemy.char, "プレイヤー");
