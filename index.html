@@ -32,6 +32,9 @@
     #log-latest { min-height:40px; border-bottom:1px solid #2f2f2f; margin-bottom:6px; padding-bottom:4px; }
     #log-history { max-height:160px; overflow-y:auto; }
     #help { margin-top:8px; color:#ccc; font-size:13px; }
+    #name-input-wrap { margin-top:8px; display:none; }
+    #name-input-wrap.show { display:block; }
+    #name-ime-input { width:min(100%, 280px); font-size:16px; padding:6px 8px; border:1px solid #555; border-radius:4px; background:#0f0f0f; color:var(--text); }
     .line { margin-bottom:3px; }
   </style>
 </head>
@@ -45,7 +48,10 @@
       <div id="log-history"></div>
     </div>
     <div id="help">操作: ↑↓←→移動 / Space 待機 / A いぼビーム / B イボ食い / 1-5 アイテム使用 / R リスタート / N 名前入力</div>
-    <input id="name-ime-input" type="text" inputmode="text" autocomplete="off" aria-hidden="true" tabindex="-1" style="position:fixed;left:-9999px;top:0;opacity:0;pointer-events:none;" />
+    <div id="name-input-wrap" aria-live="polite">
+      <label for="name-ime-input">名前入力</label>
+      <input id="name-ime-input" type="text" inputmode="text" autocomplete="off" />
+    </div>
   </main>
 
   <script>
@@ -209,6 +215,7 @@
     const logLatestEl = document.getElementById("log-latest");
     const logHistoryEl = document.getElementById("log-history");
     const nameImeInputEl = document.getElementById("name-ime-input");
+    const nameInputWrapEl = document.getElementById("name-input-wrap");
     const projectileLayer = document.createElement("div");
     if (versionEl) versionEl.textContent = APP_VERSION;
     projectileLayer.id = "projectile-layer";
@@ -243,7 +250,7 @@
 
     const state = {
       floor:1,map:[],rooms:[],enemies:[],items:[],chests:[],asahiyama:null,floorEventType:"normal",ladder:{x:0,y:0},logs:[],revealed:false,seen:[],visibleNow:[],gameOver:false,inputLocked:false,
-      invSize:5,inventory:[...EMPTY_INVENTORY],bestScore:initialBestScore,bestName:initialBestName,playerName:initialPlayerName,editingName:false,nameInput:initialPlayerName,nameInputError:"",score:0,turns:0,
+      invSize:5,inventory:[...EMPTY_INVENTORY],bestScore:initialBestScore,bestName:initialBestName,playerName:initialPlayerName,editingName:false,nameInput:initialPlayerName,nameInputError:"",isComposingName:false,score:0,turns:0,
       floorHasShield:false,floorHasAxe:false,
       kills:buildEmptyKillMap(),
       player:createInitialPlayer(),
@@ -265,9 +272,21 @@
       state.editingName = true;
       state.nameInput = playerName();
       state.nameInputError = "";
+      state.isComposingName = false;
       addLog("名前入力モード: Enterで確定");
-      syncNameInputElement();
       render();
+      syncNameInputElement();
+    }
+
+    function cancelNameInputMode(){
+      state.editingName = false;
+      state.nameInput = playerName();
+      state.nameInputError = "";
+      state.isComposingName = false;
+      if(nameImeInputEl) nameImeInputEl.blur();
+      addLog("名前入力をキャンセルした。");
+      render();
+      window.focus();
     }
 
     function syncNameInputElement(){
@@ -293,11 +312,13 @@
       state.playerName = nextName;
       state.editingName = false;
       state.nameInputError = "";
+      state.isComposingName = false;
       if(nameImeInputEl) nameImeInputEl.blur();
       saveProfile();
       addLog(`名前を「${state.playerName}」にした。`);
       addLog("スタート画面に戻った。Rで開始");
       render();
+      window.focus();
     }
 
     // ===== Core utilities =====
@@ -715,12 +736,15 @@
       const defText = formatBuffStat("DEF", state.player.baseDef, playerDefValue(), "💎");
       const bestText = `${state.bestScore}(${state.bestName})`;
       const nameInputGuide = state.editingName
-        ? `<div class="row">名前入力中: ${state.nameInput || ""}<span style="opacity:.8;">|</span> Enterで確定 / Backspaceで削除${state.nameInputError ? ` / <span style="color:#ff8a8a;">${state.nameInputError}</span>` : ""}</div>`
+        ? `<div class="row">名前入力中: ${state.nameInput || ""}<span style="opacity:.8;">|</span> Enterで確定 / Escでキャンセル${state.nameInputError ? ` / <span style="color:#ff8a8a;">${state.nameInputError}</span>` : ""}</div>`
         : "";
       statusEl.innerHTML = `
         <div class="row">${playerName()} / 階 ${state.floor} / Lv ${state.player.level} / EXP ${state.player.exp}/${expToNextLevel()} / 視界 ${state.player.vision}/${state.player.visionMax} / ${atkText} / ${defText} / SCORE ${state.score} / BEST ${bestText} ${status} ${monsterAlert}</div>
         <div class="row">${gaugeHtml("HP", state.player.hp, state.player.maxHp)} ${gaugeHtml("満腹度", state.player.hunger, state.player.hungerMax)}</div>
         <div class="row">イボ(${state.player.ibo}/${state.player.iboMax}) ITEM ${invToString()}</div>${nameInputGuide}`;
+      if(nameInputWrapEl){
+        nameInputWrapEl.classList.toggle("show", state.editingName);
+      }
     }
 
     // ===== Inventory =====
@@ -1257,6 +1281,7 @@ function openChest(){
       state.editingName = false;
       state.nameInput = playerName();
       state.nameInputError = "";
+      state.isComposingName = false;
     }
 
     function restartGame(){
@@ -1273,6 +1298,17 @@ function openChest(){
         state.nameInputError = "";
         render();
       });
+      nameImeInputEl.addEventListener("compositionstart", ()=>{
+        if(!state.editingName) return;
+        state.isComposingName = true;
+      });
+      nameImeInputEl.addEventListener("compositionend", ()=>{
+        if(!state.editingName) return;
+        state.isComposingName = false;
+        state.nameInput = nameImeInputEl.value;
+        state.nameInputError = "";
+        render();
+      });
       nameImeInputEl.addEventListener("blur", ()=>{
         if(!state.editingName) return;
         requestAnimationFrame(syncNameInputElement);
@@ -1282,7 +1318,13 @@ function openChest(){
     window.addEventListener("keydown", (e)=>{
       const key=e.key;
       if(state.editingName){
+        if(key === "Escape"){
+          e.preventDefault();
+          cancelNameInputMode();
+          return;
+        }
         if(key === "Enter"){
+          if(state.isComposingName || e.isComposing) return;
           e.preventDefault();
           confirmPlayerName();
           return;
