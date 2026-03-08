@@ -675,7 +675,10 @@
       addLog(`『おもいやり』HP回復${hpGain}　『進んで学習』EXP${expGain}　『たくましい』最大HP+${maxHpGain}`);
       addLog("あさひやまに登ると、身体に力がみなぎった。…あさひやまは静かに消え去った。");
 
-      dropItemFromRule(floorObject.x, floorObject.y, FLOOR_ITEM_RULE);
+      const type = resolveDropType(FLOOR_ITEM_RULE);
+      if(type && placeItemAtPlayerTile(type, floorObject.x, floorObject.y)){
+        addLog(`${spriteForItemKey(type)}が落ちた。`);
+      }
     }
 
     // ===== Drop resolution =====
