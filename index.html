@@ -20,11 +20,11 @@
     .stat { display:flex; align-items:center; gap:6px; }
     .label { min-width:2.2em; }
     .meter { width:180px; height:12px; border:1px solid #666; background:#242424; border-radius:3px; overflow:hidden; }
-    .fill { display:block; height:100%; width:0; background:#f1c40f; border-radius:inherit; }
-    .tone-yellow .fill { background:#f1c40f; }
+    .fill { display:block; height:100%; width:0; background:#2ecc71; border-radius:inherit; }
+    .tone-yellow .fill { background:#2ecc71; }
     .tone-orange .fill { background:#ff9800; }
     .tone-red .fill { background:#b53b2f; }
-    .tone-yellow .num { color:#f1c40f; }
+    .tone-yellow .num { color:#2ecc71; }
     .tone-orange .num { color:#ff9800; }
     .tone-red .num { color:#e74c3c; }
     .meter.tone-red { border-color:#e74c3c; }
@@ -626,7 +626,7 @@
       const atkText = formatBuffStat("ATK", state.player.baseAtk, playerAtkValue(), "🪓");
       const defText = formatBuffStat("DEF", state.player.baseDef, playerDefValue(), "💎");
       statusEl.innerHTML = `
-        <div class="row">${gaugeHtml("HP", state.player.hp, state.player.maxHp)} ${gaugeHtml("空腹", state.player.hunger, state.player.hungerMax)}</div>
+        <div class="row">${gaugeHtml("HP", state.player.hp, state.player.maxHp)} ${gaugeHtml("満腹度", state.player.hunger, state.player.hungerMax)}</div>
         <div class="row">階 ${state.floor} Lv ${state.player.level} EXP ${state.player.exp}/${expToNextLevel()} 視界 ${state.player.vision}/${state.player.visionMax} ${atkText} ${defText} SCORE ${state.score} BEST ${state.bestScore} ${status} ${monsterAlert}</div>
         <div class="row">イボ(${state.player.ibo}/${state.player.iboMax}) ITEM ${invToString()}</div>`;
     }
