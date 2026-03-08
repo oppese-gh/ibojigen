@@ -164,11 +164,9 @@
     const STARTER_DROP_RULE = {mode:DROP_MODE.PROFILE, ref:"starter"};
 
     const ENEMY_DEF_BY_KEY = Object.fromEntries(ENEMY_DEFS.map((d)=>[d.key,d]));
-    const ENEMY_DEF_BY_ID = Object.fromEntries(ENEMY_DEFS.map((d)=>[d.id,d]));
     const ENEMY_KILL_KEYS = ENEMY_DEFS.map((d)=>d.key);
 
     function enemyDefByKey(key){ return ENEMY_DEF_BY_KEY[key] || null; }
-    function enemyDefById(id){ return ENEMY_DEF_BY_ID[id] || null; }
     function enemyDefFromInstance(enemy){ return enemyDefByKey(enemy?.key || ""); }
     function buildEmptyKillMap(){ return Object.fromEntries(ENEMY_KILL_KEYS.map((key)=>[key,0])); }
     function enemyDropRule(defOrKey){
@@ -230,7 +228,7 @@
     const nameImeInputEl = document.getElementById("name-ime-input");
     const nameInputWrapEl = document.getElementById("name-input-wrap");
     const projectileLayer = document.createElement("div");
-    if (versionEl) versionEl.textContent = APP_VERSION;
+    if(versionEl) versionEl.textContent = APP_VERSION;
     projectileLayer.id = "projectile-layer";
 
     const INITIAL_PLAYER_PARAMS = Object.freeze({
