@@ -47,7 +47,7 @@
       <div id="log-latest"></div>
       <div id="log-history"></div>
     </div>
-    <div id="help">操作: ↑↓←→移動 / Space 待機 / A いぼビーム / B イボ食い / 1-5 アイテム使用 / R リスタート / N 名前入力</div>
+    <div id="help">操作: ↑↓←→移動 / Space 待機 / A いぼビーム / B イボ食い / 1-6 アイテム使用 / R リスタート / N 名前入力</div>
     <div id="name-input-wrap" aria-live="polite">
       <label for="name-ime-input">名前入力</label>
       <input id="name-ime-input" type="text" inputmode="text" autocomplete="off" />
@@ -68,6 +68,8 @@
     const APP_VERSION = "v1.#71";
     const DEFAULT_PLAYER_NAME = "あさひっこ";
     const MAX_PLAYER_NAME_LENGTH = 10;
+    const INITIAL_INV_SIZE = 5;
+    const ASAHIYAMA_INV_SIZE = 6;
 
     const SPRITES = {
       player:"🧔", wall:"🧱", floor:".", ladder:"🪜", orb:"🟣", starBeam:"✨",
@@ -244,7 +246,7 @@
       vision:6,visionMax:10,visionMin:3
     });
 
-    const EMPTY_INVENTORY = [null,null,null,null,null];
+    const createEmptyInventory = (size = INITIAL_INV_SIZE) => Array.from({length:size}, ()=>null);
     const createInitialPlayer = () => ({...INITIAL_PLAYER_PARAMS});
 
     // ===== Game state =====
@@ -261,7 +263,7 @@
 
     const state = {
       floor:1,map:[],rooms:[],enemies:[],items:[],floorObjects:[],floorEventType:"normal",ladder:{x:0,y:0},logs:[],revealed:false,seen:[],visibleNow:[],gameOver:false,inputLocked:false,
-      invSize:5,inventory:[...EMPTY_INVENTORY],bestScore:initialBestScore,bestName:initialBestName,playerName:initialPlayerName,editingName:false,nameInput:initialPlayerName,nameInputError:"",isComposingName:false,score:0,turns:0,
+      invSize:INITIAL_INV_SIZE,inventory:createEmptyInventory(INITIAL_INV_SIZE),bestScore:initialBestScore,bestName:initialBestName,playerName:initialPlayerName,editingName:false,nameInput:initialPlayerName,nameInputError:"",isComposingName:false,score:0,turns:0,
       floorHasShield:false,floorHasAxe:false,
       kills:buildEmptyKillMap(),
       player:createInitialPlayer(),
@@ -386,6 +388,7 @@
     }
 
     function invToString(){ return state.inventory.map((slot)=>slot?slot.char:"▢").join(" "); }
+    function isInventoryFull(){ return state.inventory.every(Boolean); }
 
     function calcScore(){
       const killScore = Object.entries(state.kills).reduce((sum,[k,count])=>sum + count * (enemyDefByKey(k)?.score || 0),0);
@@ -534,8 +537,8 @@
     function determineFloorEvent(){
       const hpLow = state.player.hp <= state.player.maxHp / 2;
       const hungerLow = state.player.hunger <= state.player.hungerMax / 2;
-      if((hpLow || hungerLow || state.player.poison) && Math.random() < 0.5) return "asahiyama";
-      const inventoryFull = state.inventory.every(Boolean);
+      if(state.invSize < ASAHIYAMA_INV_SIZE && (hpLow || hungerLow || state.player.poison) && Math.random() < 0.5) return "asahiyama";
+      const inventoryFull = isInventoryFull();
       if(inventoryFull && Math.random() < 0.2) return "monsterHouse";
       return "normal";
     }
@@ -653,26 +656,11 @@
     }
 
     function triggerAsahiyama(floorObject){
-    
       if(!floorObject) return;
-      const beforeHp = state.player.hp;
-      const beforeMaxHp = state.player.maxHp;
-      const targetHp = Math.min(beforeMaxHp, Math.ceil((beforeHp + beforeMaxHp) / 2));
-      state.player.hp = targetHp;
-      const hpGain = state.player.hp - beforeHp;
-
-      const expGoal = Math.max(0, expToNextLevel() - 1);
-      const expGain = Math.max(0, expGoal - state.player.exp);
-      state.player.exp += expGain;
-
-      const usedSlots = state.inventory.filter(Boolean).length;
-      const maxHpGain = Math.max(1, state.invSize - usedSlots);
-      state.player.maxHp += maxHpGain;
-
-      if(state.player.vision <= 5) state.player.vision = 6;
-      if(state.player.poison) state.player.poison = false;
-
-      addLog(`『おもいやり』HP回復${hpGain}　『進んで学習』EXP${expGain}　『たくましい』最大HP+${maxHpGain}`);
+      if(state.invSize >= ASAHIYAMA_INV_SIZE) return;
+      state.inventory.push(null);
+      state.invSize = ASAHIYAMA_INV_SIZE;
+      addLog("『あさひやま効果』アイテムスロットが 1 増えた！（5→6）");
       addLog("あさひやまに登ると、身体に力がみなぎった。…あさひやまは静かに消え去った。");
 
       const type = resolveDropType(FLOOR_ITEM_RULE);
@@ -1300,7 +1288,8 @@ async function openChest(floorObject){
     function initializeRunState(){
       state.floor = 1;
       state.player = createInitialPlayer();
-      state.inventory = [...EMPTY_INVENTORY];
+      state.invSize = INITIAL_INV_SIZE;
+      state.inventory = createEmptyInventory(INITIAL_INV_SIZE);
       state.score = 0;
       state.turns = 0;
       state.logs = [];
@@ -1371,7 +1360,7 @@ async function openChest(floorObject){
         resetBestScore();
         return;
       }
-      if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"," ","a","A","b","B","r","R","n","N","1","2","3","4","5"].includes(key)) e.preventDefault();
+      if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"," ","a","A","b","B","r","R","n","N","1","2","3","4","5","6"].includes(key)) e.preventDefault();
       if((key==="n"||key==="N") && (state.turns===0 || state.gameOver)) return beginNameInputMode();
       if(key==="r"||key==="R") return restartGame();
       if(state.gameOver||state.inputLocked) return;
@@ -1387,6 +1376,7 @@ async function openChest(floorObject){
       else if(key==="3") useInventory(2);
       else if(key==="4") useInventory(3);
       else if(key==="5") useInventory(4);
+      else if(key==="6") useInventory(5);
     });
 
     addLog("スタート画面: Rで開始 / Nで名前入力");
