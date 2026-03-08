@@ -28,7 +28,9 @@
     .tone-orange .num { color:#ff9800; }
     .tone-red .num { color:#e74c3c; }
     .meter.tone-red { border-color:#e74c3c; }
-    #log { margin-top:8px; border:1px solid #3b3b3b; background:#101010; min-height:72px; max-height:132px; overflow-y:auto; padding:8px; font-size:14px; line-height:1.35; }
+    #log { margin-top:8px; border:1px solid #3b3b3b; background:#101010; padding:8px; font-size:14px; line-height:1.35; }
+    #log-latest { min-height:40px; border-bottom:1px solid #2f2f2f; margin-bottom:6px; padding-bottom:4px; }
+    #log-history { max-height:160px; overflow-y:auto; }
     #help { margin-top:8px; color:#ccc; font-size:13px; }
     .line { margin-bottom:3px; }
   </style>
@@ -38,7 +40,10 @@
     <h1 id="app-title">ぼじろーぐ <span id="version"></span></h1>
     <div id="grid" aria-label="game map" role="img"></div>
     <div id="status"></div>
-    <div id="log"></div>
+    <div id="log">
+      <div id="log-latest"></div>
+      <div id="log-history"></div>
+    </div>
     <div id="help">操作: ↑↓←→移動 / Space 待機 / A いぼビーム / B イボ食い / 1-5 アイテム使用 / R リスタート</div>
   </main>
 
@@ -47,7 +52,7 @@
 
     const WIDTH = 40;
     const HEIGHT = 25;
-    const MAX_LOG = 6;
+    const MAX_LOG = 100;
     const TILE_WALL = "#";
     const TILE_FLOOR = ".";
     const PROJECTILE_STEP_MS = 40;
@@ -198,7 +203,8 @@
     const mapEl = document.getElementById("grid");
     const versionEl = document.getElementById("version");
     const statusEl = document.getElementById("status");
-    const logEl = document.getElementById("log");
+    const logLatestEl = document.getElementById("log-latest");
+    const logHistoryEl = document.getElementById("log-history");
     const projectileLayer = document.createElement("div");
     if (versionEl) versionEl.textContent = APP_VERSION;
     projectileLayer.id = "projectile-layer";
@@ -252,7 +258,11 @@
     const meterPercent = (value,max) => max <= 0 ? 0 : Math.max(0, Math.min(100, Math.round(value/max*100)));
     const statusTone = (value,pct) => value <= 0 ? "tone-red" : (pct < 25 ? "tone-orange" : "tone-yellow");
 
-    function addLog(message){ state.logs.unshift(message); if(state.logs.length>MAX_LOG) state.logs.pop(); logEl.innerHTML=state.logs.map((m)=>`<div class="line">${m}</div>`).join(""); }
+    function renderLogs(){
+      logLatestEl.innerHTML = state.logs.slice(0,2).map((m)=>`<div class="line">${m}</div>`).join("");
+      logHistoryEl.innerHTML = state.logs.slice(2).map((m)=>`<div class="line">${m}</div>`).join("");
+    }
+    function addLog(message){ state.logs.unshift(message); if(state.logs.length>MAX_LOG) state.logs.pop(); renderLogs(); }
     const ITEM_PICKUP_MODE = {INVENTORY:"inventory", INSTANT:"instant"};
 
     function instantPickupLog(itemChar, detail){
