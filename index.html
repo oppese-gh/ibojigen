@@ -1151,7 +1151,7 @@ function openChest(){
       updateHungerWarning();
       state.starving = state.player.hunger === 0;
       if(state.starving){
-        state.player.hp -= 1; addLog("大ピンチ！ 満腹ダメージ1");
+        state.player.hp -= 1; addLog("大ピンチ！ 空腹ダメージ1");
         if(state.player.hp<=0) endAsGameOver({cause:"hunger"});
       }
     }
