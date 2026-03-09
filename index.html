@@ -18,8 +18,10 @@
     * { box-sizing: border-box; }
     body { margin:0; min-height:100vh; display:grid; place-items:center; background:radial-gradient(circle at 50% 30%, #161616, #101010 70%); color:var(--text); font-family:system-ui,"Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif; padding:clamp(6px,0.9vw,16px); }
     .game-screen { width:min(calc(100vw - clamp(12px,1.6vw,30px)), calc((100vh - clamp(12px,1.6vw,30px)) * 16 / 9)); aspect-ratio:16/9; background:linear-gradient(180deg,#1d1d1d,#161616); border:1px solid #3a3a3a; border-radius:14px; box-shadow:0 12px 36px rgba(0,0,0,.42); display:grid; grid-template-columns:repeat(16,1fr); grid-template-rows:repeat(9,1fr); gap:0; overflow:hidden; }
-    .region { padding:clamp(3px,0.42vw,8px); min-width:0; min-height:0; }
-    .panel { width:100%; height:100%; border:1px solid var(--line); background:var(--panel-inner); padding:clamp(4px,0.5vw,10px); overflow:hidden; box-shadow:var(--panel-shadow); }
+    .region { padding:2px; min-width:0; min-height:0; }
+    .panel { width:100%; height:100%; border:1px solid var(--line); background:var(--panel-inner); padding:clamp(4px,0.4vw,8px); overflow:hidden; box-shadow:var(--panel-shadow); }
+    .game-main-panel { padding:clamp(4px,0.35vw,8px); display:flex; align-items:center; justify-content:center; }
+    #game-main-frame { width:100%; height:100%; aspect-ratio:1 / 1; max-width:100%; max-height:100%; display:flex; align-items:stretch; justify-content:stretch; }
     #region-main { grid-column:1/10; grid-row:1/10; }
     #region-text-top { grid-column:10/17; grid-row:1/2; }
     #region-item-slots { grid-column:10/16; grid-row:2/3; }
@@ -29,10 +31,10 @@
     #region-minimap { grid-column:10/12; grid-row:8/10; }
     #region-help { grid-column:12/17; grid-row:8/9; }
     #region-system { grid-column:12/17; grid-row:9/10; }
-    #grid { position:relative; margin:0; display:grid; grid-template-columns:repeat(13,minmax(0,1fr)); grid-template-rows:repeat(13,minmax(0,1fr)); width:100%; height:100%; background:#0d0d0d; border:1px solid #4f4f4f; padding:0.45%; overflow:hidden; user-select:none; box-shadow:inset 0 0 22px rgba(0,0,0,.45); }
+    #grid { position:relative; margin:0; display:grid; grid-template-columns:repeat(13,minmax(0,1fr)); grid-template-rows:repeat(13,minmax(0,1fr)); width:100%; height:100%; aspect-ratio:1 / 1; background:#0d0d0d; border:1px solid #4f4f4f; padding:0; overflow:hidden; user-select:none; box-shadow:inset 0 0 22px rgba(0,0,0,.45); }
     #projectile-layer { position:absolute; inset:0; pointer-events:none; z-index:2; }
     .projectile { position:absolute; display:flex; align-items:center; justify-content:center; text-align:center; }
-    .cell { display:flex; align-items:center; justify-content:center; text-align:center; font-size:clamp(20px,2.9vmin,46px); line-height:1; }
+    .cell { display:flex; align-items:center; justify-content:center; text-align:center; line-height:1; font-size:var(--cell-font-size,24px); }
     #minimap-wrap { width:100%; height:100%; background:#0d0d0d; border:1px solid #555; padding:clamp(3px,0.4vw,8px); display:flex; align-items:center; justify-content:center; box-shadow:var(--panel-shadow); }
     #minimap { display:block; width:100%; height:100%; max-width:100%; max-height:100%; background:#070707; image-rendering:pixelated; }
     #status { width:100%; height:100%; padding:clamp(4px,0.55vw,10px); background:#141414; border:1px solid var(--line-soft); font-size:clamp(13px,1.58vmin,24px); line-height:1.38; white-space:normal; overflow:auto; box-shadow:var(--panel-shadow); }
@@ -68,7 +70,6 @@
     @media (max-width: 1100px) {
       .region { padding:3px; }
       .panel, #log, #log-top { padding:5px; }
-      .cell { font-size:clamp(16px,2.55vmin,36px); }
       #item-slots { gap:3px; }
     }
     #ending-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.52); display:flex; align-items:center; justify-content:center; opacity:0; pointer-events:none; transition:opacity 1.6s ease; z-index:30; }
@@ -93,8 +94,10 @@
 <body>
   <main class="game-screen">
     <section id="region-main" class="region">
-      <div class="panel">
-        <div id="grid" aria-label="game map" role="img"></div>
+      <div class="panel game-main-panel">
+        <div id="game-main-frame">
+          <div id="grid" aria-label="game map" role="img"></div>
+        </div>
       </div>
     </section>
 
@@ -1307,6 +1310,7 @@ ${kills || "なし"}</div>`;
     function render(){
       state.score=calcScore(); updateSeen();
       mapEl.innerHTML=buildMapHtml();
+      applyGridCellTypography();
       if(!mapEl.contains(projectileLayer)) mapEl.appendChild(projectileLayer);
       renderMiniMap();
       statusEl.innerHTML = buildStatusHtml();
@@ -1840,6 +1844,14 @@ async function openChest(floorObject){
       const cellH = (rect.height - padY * 2) / CAMERA_SIZE;
       const cell = Math.min(cellW, cellH);
       return {padX, padY, cell};
+    }
+
+    function applyGridCellTypography(){
+      if(!mapEl) return;
+      const rect = mapEl.getBoundingClientRect();
+      const cell = rect.width / CAMERA_SIZE;
+      const fontSize = Math.max(18, Math.floor(cell * 0.72));
+      mapEl.style.setProperty("--cell-font-size", `${fontSize}px`);
     }
 
     function setProjectilePos(el,x,y){
@@ -2425,6 +2437,11 @@ async function openChest(floorObject){
         requestAnimationFrame(syncNameInputElement);
       });
     }
+
+    window.addEventListener("resize", () => {
+      applyGridCellTypography();
+      renderMiniMap();
+    });
 
     window.addEventListener("keydown", (e)=>{
       const key=e.key;
