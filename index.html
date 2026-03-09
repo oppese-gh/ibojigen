@@ -65,11 +65,15 @@
     const PROJECTILE_STEP_MS = 40;
     const CELL_SIZE = 24;
     const GRID_PADDING = 8;
-    const APP_VERSION = "build-" + new Date().toISOString();
     const DEFAULT_PLAYER_NAME = "あさひっこ";
     const MAX_PLAYER_NAME_LENGTH = 10;
     const INITIAL_INV_SIZE = 5;
     const ASAHIYAMA_INV_SIZE = 6;
+    const APP_VERSION =
+  "build-" +
+  new Date().toLocaleDateString("ja-JP") +
+  " " +
+  new Date().toLocaleTimeString("ja-JP");
 
     const SPRITES = {
       player:"🧔", wall:"🧱", floor:".", ladder:"🪜", orb:"🟣", starBeam:"✨",
