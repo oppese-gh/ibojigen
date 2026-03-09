@@ -585,9 +585,9 @@
         exp:def.exp,
         score:def.score,
         dropRule:enemyDropRule(def),
-        hp: def.baseHp + tier * 2 + Math.floor(Math.max(0, state.floor - 8) / 4),
-        atk: def.baseAtk + Math.floor(tier / 2) + lateAtkBonus,
-        def: def.baseDef + Math.floor(tier / 4),
+        hp: def.baseHp + tier * 3 + Math.floor(Math.max(0, state.floor - 6) / 3),
+        atk: def.baseAtk + Math.floor((tier + 2) / 2) + lateAtkBonus,
+        def: def.baseDef + Math.floor((tier + 1) / 4),
         active:def.key!=="mimic"
       };
     }
@@ -981,7 +981,7 @@
         state.player.hp -= flame;
         addLog(`${enemy.char}の炎！ 追加${flame}ダメージ！`);
       }
-      if(enemyKey === "zombie" && state.player.hp>0 && !state.player.diamondWard){ const corrosion = Math.max(0, Math.min(damage * 3, 10) - randInt(0,3)); if(corrosion>0){ state.player.hungerMax=Math.max(1,state.player.hungerMax-corrosion); if(state.player.hunger>state.player.hungerMax) state.player.hunger=state.player.hungerMax; updateHungerWarning(); addLog(`${enemy.char}の腐食！ 最大満腹-${corrosion}`);} }
+      if(enemyKey === "zombie" && state.player.hp>0 && !state.player.diamondWard){ const corrosion = Math.max(0, Math.min(damage * 2, 10) - randInt(0,2)); if(corrosion>0){ state.player.hungerMax=Math.max(1,state.player.hungerMax-corrosion); if(state.player.hunger>state.player.hungerMax) state.player.hunger=state.player.hungerMax; updateHungerWarning(); addLog(`${enemy.char}の腐食！ 最大満腹-${corrosion}`);} }
       if(enemyKey === "invader" && state.player.hp>0 && !state.player.diamondWard && Math.random()<0.1){ state.player.baseDef=Math.max(1,state.player.baseDef-1); addLog("防御力が下がった…"); }
       if(enemyKey === "spider" && state.player.hp>0 && !state.player.diamondWard && Math.random()<0.2){ state.player.poison=true; addLog("毒を受けた！"); }
 
