@@ -1698,10 +1698,9 @@ async function openChest(floorObject){
       }
       const dirX = state.player.facing.x;
       const dirY = state.player.facing.y;
-      const maxDistance = randInt(2,5);
       const path = [];
       let hitWall = false;
-      for(let dist=1;dist<=maxDistance;dist++){
+      for(let dist=1;dist<=5;dist++){
         const tx = state.player.x + dirX*dist;
         const ty = state.player.y + dirY*dist;
         if(tx<0||tx>=WIDTH||ty<0||ty>=HEIGHT){
@@ -1712,7 +1711,13 @@ async function openChest(floorObject){
           hitWall = true;
           break;
         }
-        path.push({x:tx,y:ty});
+        if(dist>=2) path.push({x:tx,y:ty});
+      }
+      const hasTarget = path.some((cell)=>enemyAt(cell.x,cell.y));
+      if(!hasTarget){
+        addLog("🪄は今つかう意味がない。");
+        render();
+        return false;
       }
       addLog("🪄から炎が吹き出した🔥");
       playSe("beam");
@@ -1739,8 +1744,9 @@ async function openChest(floorObject){
           if(en && !hitSet.has(en)){
             hitSet.add(en);
             // 満腹度依存: 満腹ほど強く、空腹だとほぼ通らない最低1ダメージ。
+            const effectiveAtk = playerAtkValue() - 4 * hitCount;
             const fullnessRatio = clamp01(state.player.hunger / Math.max(1, state.player.hungerMax));
-            const damage = Math.max(1, Math.floor(playerAtkValue() * fullnessRatio));
+            const damage = Math.max(1, Math.floor(effectiveAtk * fullnessRatio));
             activateMimic(en);
             applyDamage(en, damage, "", false);
             addLog(`🔥が${en.char}を焼いた！ ${damage}ダメージ！`);
@@ -1750,7 +1756,6 @@ async function openChest(floorObject){
           await sleep(Math.max(30, PROJECTILE_STEP_MS - 20));
         }
         if(hitWall) addLog("炎は壁でかき消えた。");
-        if(hitCount===0) addLog("炎は誰にも当たらなかった。");
         for(const en of [...state.enemies]) if(en.hp<=0) killEnemy(en);
       } finally {
         await sleep(80);
