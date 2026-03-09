@@ -539,7 +539,7 @@
       state.enemies = [];
       state.floorObjects = [];
       state.floorEventType = "boss";
-      state.revealed = false;
+      state.revealed = true;
       state.seen = createVisibilityGrid();
       state.visibleNow = createVisibilityGrid();
       state.floorHasShield=false; state.floorHasAxe=false;
@@ -550,13 +550,17 @@
       state.player.y = HEIGHT - 4;
       state.ladder = {x:-1,y:-1};
 
-      const bossDef = enemyDefByKey("bossAsahiyama");
-      if(bossDef){
-        state.enemies.push(createEnemy(bossDef, Math.floor(WIDTH/2), Math.floor(HEIGHT/2)));
-      }
+      const bossX = Math.floor(WIDTH/2);
+      const bossY = Math.floor(HEIGHT/2);
+      state.enemies = state.enemies.filter((enemy)=>enemy.key!=="bossAsahiyama");
+      state.enemies.push(spawnEnemy("bossAsahiyama", bossX, bossY));
 
       addLog("最深部にたどり着いた……");
       addLog("🌋あさひやまが、行く手を阻む！");
+      addLog("[DEBUG] boss floor setup");
+      addLog(`[DEBUG] enemy count: ${state.enemies.length}`);
+      addLog(`[DEBUG] boss pos: ${bossX},${bossY}`);
+      addLog(`[DEBUG] player pos: ${state.player.x},${state.player.y}`);
       render();
     }
 
@@ -1461,6 +1465,7 @@ async function openChest(floorObject){
             if(state.gameOver) return;
             continue;
           }
+          continue;
         }
         if(enemyKey === "wizard"){
           const shot = wizardLightningDir(en);
