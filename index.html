@@ -80,7 +80,7 @@
 
     const SPRITES = {
       player:"🧔", wall:"🧱", floor:".", ladder:"🪜", orb:"🟣", starBeam:"✨",
-      dog:"🐕", wolf:"🐺", lion:"🦁", dragon:"🐉", ghost:"👻", zombie:"🧟", skull:"☠️", invader:"👾", spider:"🕷️", chick:"🐥", mimic:"🎁", rain:"🌧️", wizard:"🧙‍♂️",
+      dog:"🐕", wolf:"🐺", lion:"🦁", dragon:"🐉", ghost:"👻", zombie:"🧟", skull:"☠️", invader:"👾", spider:"🕷️", chick:"🐥", mimic:"🎁", rain:"🌧️", wizard:"🧙‍♂️", bossAsahiyama:"🌋",
       food:"🍙", meat:"🥩", sushi:"🍣", feast:"🍖", potion:"🧪", map:"👁", shield:"🛡️", axe:"🪓", diamond:"💎", dagger:"🗡️", star:"🌟", sun:"🌤️", poop:"💩", bean:"🫘", scroll:"📜", asahiyama:"🏔️"
     };
 
@@ -97,7 +97,8 @@
       {id:10,key:"chick",char:SPRITES.chick,baseHp:100,baseAtk:0,baseDef:1,exp:50,score:0,dropRule:{mode:"none"}},
       {id:11,key:"mimic",char:SPRITES.mimic,baseHp:15,baseAtk:5,baseDef:2,exp:8,score:90,dropRule:{mode:"profile", ref:"mimicRare"},flags:["specialDrop"]},
       {id:12,key:"rain",char:SPRITES.rain,baseHp:10,baseAtk:0,baseDef:1,exp:5,score:55,dropRuleRef:"enemyCommon"},
-      {id:13,key:"wizard",char:SPRITES.wizard,baseHp:12,baseAtk:7,baseDef:1,exp:14,score:150,dropRuleRef:"enemyCommon"}
+      {id:13,key:"wizard",char:SPRITES.wizard,baseHp:12,baseAtk:7,baseDef:1,exp:14,score:150,dropRuleRef:"enemyCommon"},
+      {id:14,key:"bossAsahiyama",char:SPRITES.bossAsahiyama,baseHp:220,baseAtk:12,baseDef:4,exp:100,score:1000,dropRule:{mode:"none"}}
     ];
 
     const ITEM_DEFS = [
@@ -305,7 +306,7 @@
     const initialPlayerName = typeof savedProfile?.playerName === "string" && savedProfile.playerName.length > 0 ? savedProfile.playerName : DEFAULT_PLAYER_NAME;
 
     const state = {
-      floor:1,map:[],rooms:[],enemies:[],items:[],floorObjects:[],floorEventType:"normal",ladder:{x:0,y:0},logs:[],revealed:false,seen:[],visibleNow:[],gameOver:false,inputLocked:false,
+      floor:1,map:[],rooms:[],enemies:[],items:[],floorObjects:[],floorEventType:"normal",ladder:{x:0,y:0},logs:[],revealed:false,seen:[],visibleNow:[],gameOver:false,gameClear:false,inputLocked:false,
       invSize:INITIAL_INV_SIZE,inventory:createEmptyInventory(INITIAL_INV_SIZE),bestScore:initialBestScore,bestName:initialBestName,playerName:initialPlayerName,editingName:false,nameInput:initialPlayerName,nameInputError:"",isComposingName:false,score:0,turns:0,
       floorHasShield:false,floorHasAxe:false,
       kills:buildEmptyKillMap(),
@@ -498,6 +499,10 @@
     }
 
     function setupFloor(){
+      if(state.floor===30){
+        setupBossFloor();
+        return;
+      }
       const built = createMap();
       state.map=built.map; state.rooms=built.rooms; state.items=[]; state.enemies=[]; state.floorObjects=[]; state.revealed=false;
       state.seen = createVisibilityGrid();
@@ -519,6 +524,39 @@
       placeAsahiyama();
       addLog(`第${state.floor}階に降りた。`);
       if(state.floorEventType === "monsterHouse") addLog("！！なんという　まものの気配！！");
+      render();
+    }
+
+    function setupBossFloor(){
+      // 30Fは特別フロア: 外周のみ壁、内側は大部屋
+      const map = Array.from({length:HEIGHT}, (_,y)=>Array.from({length:WIDTH}, (_,x)=>{
+        const isBorder = x===0 || y===0 || x===WIDTH-1 || y===HEIGHT-1;
+        return isBorder ? TILE_WALL : TILE_FLOOR;
+      }));
+      state.map = map;
+      state.rooms = [{x:1,y:1,w:WIDTH-2,h:HEIGHT-2,cx:Math.floor(WIDTH/2),cy:Math.floor(HEIGHT/2)}];
+      state.items = [];
+      state.enemies = [];
+      state.floorObjects = [];
+      state.floorEventType = "boss";
+      state.revealed = false;
+      state.seen = createVisibilityGrid();
+      state.visibleNow = createVisibilityGrid();
+      state.floorHasShield=false; state.floorHasAxe=false;
+      state.player.floorAtkBuff = 0; state.player.floorDefBuff = 0; state.player.diamondWard = false;
+      state.inputLocked=false; state.iboCooldown=0;
+
+      state.player.x = Math.floor(WIDTH/2);
+      state.player.y = HEIGHT - 4;
+      state.ladder = {x:-1,y:-1};
+
+      const bossDef = enemyDefByKey("bossAsahiyama");
+      if(bossDef){
+        state.enemies.push(createEnemy(bossDef, Math.floor(WIDTH/2), Math.floor(HEIGHT/2)));
+      }
+
+      addLog("最深部にたどり着いた……");
+      addLog("🌋あさひやまが、行く手を阻む！");
       render();
     }
 
@@ -807,6 +845,7 @@
       mapEl.innerHTML=cells.join(""); if(!mapEl.contains(projectileLayer)) mapEl.appendChild(projectileLayer);
       const status = state.player.poison ? "☠️POISON" : "";
       const monsterAlert = state.floorEventType === "monsterHouse" ? "<span class=\"monster-alert\">❗️❗️❗️モンスターハウス❗️❗️❗️</span>" : "";
+      const bossAlert = state.floor===30 ? "<span class=\"monster-alert\">🌋 BOSS FLOOR</span>" : "";
       const atkText = formatBuffStat("ATK", state.player.baseAtk, playerAtkValue(), "🪓");
       const defText = formatBuffStat("DEF", state.player.baseDef, playerDefValue(), "💎");
       const bestText = `${state.bestScore}(${state.bestName})`;
@@ -817,7 +856,7 @@
         ? `<div class="row" style="color:#ffd166;">DEBUG_BUILD${state.debugMode ? " / DEBUG MODE ON" : ""}${state.debugFloorBuffer ? ` / JUMP: ${state.debugFloorBuffer}_` : ""}</div>`
         : "";
       statusEl.innerHTML = `
-        <div class="row">${playerName()} / 階 ${state.floor} / Lv ${state.player.level} / EXP ${state.player.exp}/${expToNextLevel()} / 視界 ${state.player.vision}/${state.player.visionMax} / ${atkText} / ${defText} / SCORE ${state.score} / BEST ${bestText} ${status} ${monsterAlert}</div>
+        <div class="row">${playerName()} / 階 ${state.floor} / Lv ${state.player.level} / EXP ${state.player.exp}/${expToNextLevel()} / 視界 ${state.player.vision}/${state.player.visionMax} / ${atkText} / ${defText} / SCORE ${state.score} / BEST ${bestText} ${status} ${monsterAlert} ${bossAlert}</div>
         <div class="row">${gaugeHtml("HP", state.player.hp, state.player.maxHp)} ${gaugeHtml("満腹度", state.player.hunger, state.player.hungerMax)}</div>
         <div class="row">イボ(${state.player.ibo}/${state.player.iboMax}) ITEM ${invToString()}</div>${debugStatus}${nameInputGuide}`;
       if(nameInputWrapEl){
@@ -940,6 +979,11 @@
       else addLog(`${enemy.char}をたおした！`);
       if(state.kills[enemyKey]!==undefined) state.kills[enemyKey] += 1;
       state.player.exp += enemy.exp;
+      if(enemyKey === "bossAsahiyama"){
+        maybeLevelUp();
+        endAsGameClear();
+        return;
+      }
       const dropRule = enemy.dropRule || enemyDropRule(def || enemyKey);
       if(enemyKey === "mimic"){
         const type = resolveDropType(dropRule);
@@ -967,6 +1011,15 @@
     }
 
     function endAsGameOver(causeInfo={cause:"generic"}){ state.player.hp=Math.max(0,state.player.hp); state.gameOver=true; addLog(buildDeathMessage(causeInfo)); finalizeScore("GAME OVER"); }
+    function endAsGameClear(){
+      state.gameClear = true;
+      state.inputLocked = false;
+      addLog("🌋あさひやまを打ち倒した！");
+      addLog("ぼじろーぐ クリア！");
+      finalizeScore("GAME CLEAR");
+      addLog("Rで再スタート");
+      render();
+    }
 
     function enemyAttack(enemy){
       const enemyKey = enemy.key;
@@ -992,6 +1045,8 @@
       let attackPower = enemy.atk;
       if(enemyKey === "wizard"){
         attackPower = Math.max(1, enemy.atk - WIZARD_MELEE_ATK_PENALTY);
+      }else if(enemyKey === "bossAsahiyama"){
+        attackPower = enemy.atk;
       }
 
       const { damage, isCritical } = resolveAttackDamage(attackPower, playerDefValue(), true, enemyKey === "mimic" ? 2 : 1, enemy.char, "プレイヤー");
@@ -1376,6 +1431,23 @@ async function openChest(floorObject){
       for(const en of state.enemies){
         const enemyKey = en.key;
         if(enemyKey === "mimic" && !en.active) continue;
+        if(enemyKey === "bossAsahiyama"){
+          const dist = Math.abs(en.x-state.player.x)+Math.abs(en.y-state.player.y);
+          if(dist===1){
+            enemyAttack(en);
+            if(state.gameOver) return;
+            continue;
+          }
+          // MVP炎攻撃: 射程内で確率発動する単純な固定火力
+          if(dist>=2 && dist<=5 && Math.random()<0.35){
+            const fireDamage = Math.max(1, calcDamage(en.atk + 3, playerDefValue()) + 2);
+            state.player.hp -= fireDamage;
+            addLog(`🌋あさひやまの灼熱弾！ ${playerName()}に${fireDamage}ダメージ！`);
+            if(state.player.hp<=0) endAsGameOver({cause:"enemy", enemyChar:en.char});
+            if(state.gameOver) return;
+            continue;
+          }
+        }
         if(enemyKey === "wizard"){
           const shot = wizardLightningDir(en);
           if(shot && Math.random()<0.5){
@@ -1431,7 +1503,18 @@ async function openChest(floorObject){
       if(Math.random()<1/state.player.iboChanceDenom){ state.player.ibo += 1; state.iboCooldown = 10; addLog("【イボがはえた！】"); }
     }
 
-    async function endTurn(){ state.turns+=1; state.inputLocked=true; await enemyTurn(); if(state.gameOver){ state.inputLocked=false; return render(); } hungerTurn(); if(state.gameOver){ state.inputLocked=false; return render(); } iboTurn(); state.inputLocked=false; render(); }
+    async function endTurn(){
+      if(state.gameOver || state.gameClear) return;
+      state.turns+=1;
+      state.inputLocked=true;
+      await enemyTurn();
+      if(state.gameOver || state.gameClear){ state.inputLocked=false; return render(); }
+      hungerTurn();
+      if(state.gameOver || state.gameClear){ state.inputLocked=false; return render(); }
+      iboTurn();
+      state.inputLocked=false;
+      render();
+    }
 
     function debugAdjustPlayer(label, adjuster){
       const changed = adjuster();
@@ -1454,7 +1537,7 @@ async function openChest(floorObject){
     }
 
     function handleDebugKey(e){
-      if(state.editingName || state.gameOver || state.inputLocked) return false;
+      if(state.editingName || state.gameOver || state.gameClear || state.inputLocked) return false;
       if(e.shiftKey && e.code === "KeyD"){
         state.debugMode = !state.debugMode;
         state.debugFloorBuffer = "";
@@ -1545,6 +1628,7 @@ async function openChest(floorObject){
       state.turns = 0;
       state.logs = [];
       state.gameOver = false;
+      state.gameClear = false;
       state.starving = false;
       state.hungerLowNotified = false;
       state.floorEventType = "normal";
@@ -1620,9 +1704,9 @@ async function openChest(floorObject){
         return;
       }
       if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"," ","a","A","b","B","r","R","n","N","1","2","3","4","5","6"].includes(key)) e.preventDefault();
-      if((key==="n"||key==="N") && (state.turns===0 || state.gameOver)) return beginNameInputMode();
+      if((key==="n"||key==="N") && (state.turns===0 || state.gameOver || state.gameClear)) return beginNameInputMode();
       if(key==="r"||key==="R") return restartGame();
-      if(state.gameOver||state.inputLocked) return;
+      if(state.gameOver||state.gameClear||state.inputLocked) return;
       if(key==="ArrowUp"){
         if(state.blockedWallMoveKey===key) return;
         movePlayer(0,-1,key);
