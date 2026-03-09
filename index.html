@@ -59,7 +59,7 @@
       <div id="log-latest"></div>
       <div id="log-history"></div>
     </div>
-    <div id="help">操作: ↑↓←→移動 / Space 待機 / A いぼビーム / B イボ食い / 1-6 アイテム使用 / R リスタート / N 名前入力</div>
+    <div id="help">操作: ↑↓←→移動 / Space 待機 / A いぼビーム / B イボ食い / 1-6 アイテム使用 / M SE ON/OFF / R リスタート / N 名前入力</div>
     <div id="name-input-wrap" aria-live="polite">
       <label for="name-ime-input">名前入力</label>
       <input id="name-ime-input" type="text" inputmode="text" autocomplete="off" />
@@ -87,6 +87,7 @@
     const INITIAL_INV_SIZE = 5;
     const ASAHIYAMA_INV_SIZE = 6;
     const DEBUG_BUILD = true;
+    const SOUND_STORAGE_KEY = "bojirogue_soundEnabled";
     const APP_VERSION =
   "build-" +
   new Date().toLocaleDateString("ja-JP") +
@@ -334,6 +335,8 @@
     const initialBestScore = Number(savedProfile?.bestScore ?? localStorage.getItem("bojirogue_bestScore") ?? "0");
     const initialBestName = typeof savedProfile?.bestName === "string" && savedProfile.bestName.length > 0 ? savedProfile.bestName : DEFAULT_PLAYER_NAME;
     const initialPlayerName = typeof savedProfile?.playerName === "string" && savedProfile.playerName.length > 0 ? savedProfile.playerName : DEFAULT_PLAYER_NAME;
+    const savedSoundEnabledRaw = savedProfile?.soundEnabled ?? localStorage.getItem(SOUND_STORAGE_KEY);
+    const initialSoundEnabled = savedSoundEnabledRaw === null ? true : savedSoundEnabledRaw !== "0" && savedSoundEnabledRaw !== false;
 
     const state = {
       floor:1,map:[],rooms:[],enemies:[],items:[],floorObjects:[],floorEventType:"normal",ladder:{x:0,y:0},logs:[],revealed:false,seen:[],visibleNow:[],gameOver:false,gameClear:false,inputLocked:false,
@@ -345,16 +348,19 @@
       iboCooldown:0,starving:false,hungerLowNotified:false,
       blockedWallMoveKey:null,
       debugFloorBuffer:"",
-      debugMode:false
+      debugMode:false,
+      soundEnabled:initialSoundEnabled
     };
 
     function saveProfile(){
       localStorage.setItem("bojirogue_profile", JSON.stringify({
         bestScore: state.bestScore,
         bestName: state.bestName,
-        playerName: state.playerName
+        playerName: state.playerName,
+        soundEnabled: state.soundEnabled
       }));
       localStorage.setItem("bojirogue_bestScore", String(state.bestScore));
+      localStorage.setItem(SOUND_STORAGE_KEY, state.soundEnabled ? "1" : "0");
     }
 
     function playerName(){ return state.playerName || DEFAULT_PLAYER_NAME; }
@@ -434,6 +440,80 @@
     }
     const meterPercent = (value,max) => max <= 0 ? 0 : Math.max(0, Math.min(100, Math.round(value/max*100)));
     const statusTone = (value,pct) => value <= 0 ? "tone-red" : (pct < 25 ? "tone-orange" : "tone-yellow");
+
+    let seAudioCtx = null;
+    function ensureAudioContext(){
+      if(seAudioCtx) return seAudioCtx;
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if(!AudioCtx) return null;
+      try { seAudioCtx = new AudioCtx(); }
+      catch { seAudioCtx = null; }
+      return seAudioCtx;
+    }
+
+    function unlockAudioContext(){
+      const ctx = ensureAudioContext();
+      if(!ctx || ctx.state !== "suspended") return;
+      ctx.resume().catch(()=>{});
+    }
+
+    function playSe(type){
+      if(!state.soundEnabled) return;
+      const ctx = ensureAudioContext();
+      if(!ctx) return;
+      if(ctx.state === "suspended") return;
+      const now = ctx.currentTime;
+      const master = ctx.createGain();
+      master.gain.setValueAtTime(0.0001, now);
+      master.connect(ctx.destination);
+
+      const tonesByType = {
+        attack:[{f:460,t:0.05,w:"square",v:0.06}],
+        hit:[{f:180,t:0.08,w:"sawtooth",v:0.065}],
+        item:[{f:660,t:0.04,w:"triangle",v:0.055},{f:880,t:0.05,w:"triangle",v:0.045,d:0.04}],
+        levelup:[{f:520,t:0.05,w:"square",v:0.05},{f:660,t:0.05,w:"square",v:0.045,d:0.05},{f:880,t:0.08,w:"square",v:0.04,d:0.10}],
+        clear:[{f:523,t:0.08,w:"triangle",v:0.05},{f:659,t:0.08,w:"triangle",v:0.045,d:0.08},{f:784,t:0.12,w:"triangle",v:0.04,d:0.16}],
+        gameover:[{f:330,t:0.08,w:"sine",v:0.06},{f:247,t:0.10,w:"sine",v:0.055,d:0.08},{f:196,t:0.14,w:"sine",v:0.05,d:0.18}],
+        beam:[{f:720,t:0.08,w:"square",v:0.05},{f:560,t:0.06,w:"square",v:0.04,d:0.03}],
+        star:[{f:900,t:0.05,w:"triangle",v:0.05},{f:1200,t:0.05,w:"triangle",v:0.04,d:0.05}],
+        poison:[{f:160,t:0.09,w:"sawtooth",v:0.06}],
+        stairs:[{f:520,t:0.04,w:"square",v:0.045},{f:620,t:0.04,w:"square",v:0.04,d:0.04}]
+      };
+      const tones = tonesByType[type] || [];
+      try {
+        for(const tone of tones){
+          const start = now + (tone.d || 0);
+          const end = start + tone.t;
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = tone.w || "square";
+          osc.frequency.setValueAtTime(tone.f, start);
+          gain.gain.setValueAtTime(0.0001, start);
+          gain.gain.linearRampToValueAtTime(tone.v || 0.05, start + 0.008);
+          gain.gain.exponentialRampToValueAtTime(0.0001, end);
+          osc.connect(gain);
+          gain.connect(master);
+          osc.start(start);
+          osc.stop(end + 0.01);
+        }
+      } catch {
+        // 音が鳴らせない環境でもゲーム進行を止めない
+      }
+      const tail = tones.reduce((m,t)=>Math.max(m,(t.d||0)+t.t), 0.1);
+      master.gain.exponentialRampToValueAtTime(0.0001, now + tail + 0.03);
+      setTimeout(()=>{ try { master.disconnect(); } catch {} }, Math.ceil((tail + 0.1) * 1000));
+    }
+
+    function toggleSound(){
+      state.soundEnabled = !state.soundEnabled;
+      saveProfile();
+      addLog(state.soundEnabled ? "効果音 ON" : "効果音 OFF");
+      if(state.soundEnabled){
+        unlockAudioContext();
+        playSe("item");
+      }
+      render();
+    }
 
     function renderLogs(){
       logLatestEl.innerHTML = state.logs.slice(0,2).map((m)=>`<div class="line">${m}</div>`).join("");
@@ -967,7 +1047,7 @@ ${kills || "なし"}</div>`;
         ? `<div class="row" style="color:#ffd166;">DEBUG_BUILD${state.debugMode ? " / DEBUG MODE ON" : ""}${state.debugFloorBuffer ? ` / JUMP: ${state.debugFloorBuffer}_` : ""}</div>`
         : "";
       statusEl.innerHTML = `
-        <div class="row">${playerName()} / 階 ${state.floor} / Lv ${state.player.level} / EXP ${state.player.exp}/${expToNextLevel()} / 視界 ${state.player.vision}/${state.player.visionMax} / ${atkText} / ${defText} / SCORE ${state.score} / BEST ${bestText} ${status} ${monsterAlert} ${bossAlert}</div>
+        <div class="row">${playerName()} / 階 ${state.floor} / Lv ${state.player.level} / EXP ${state.player.exp}/${expToNextLevel()} / 視界 ${state.player.vision}/${state.player.visionMax} / ${atkText} / ${defText} / SCORE ${state.score} / BEST ${bestText} / SE ${state.soundEnabled ? "ON" : "OFF"} ${status} ${monsterAlert} ${bossAlert}</div>
         <div class="row">${gaugeHtml("HP", state.player.hp, state.player.maxHp)} ${gaugeHtml("満腹度", state.player.hunger, state.player.hungerMax)}</div>
         <div class="row">イボ(${state.player.ibo}/${state.player.iboMax}) ITEM ${invToString()}</div>${debugStatus}${nameInputGuide}`;
       if(nameInputWrapEl){
@@ -1026,6 +1106,7 @@ ${kills || "なし"}</div>`;
 
     function playerAttack(enemy){
       const { damage, isCritical } = resolveAttackDamage(playerAtkValue(), enemy.def, false, 1, "プレイヤー", enemy.char);
+      playSe("attack");
       activateMimic(enemy);
       applyDamage(enemy, damage, "", false);
       if(!isCritical) addLog(`${playerName()}は、${enemy.char}に${damage}ダメージ！`);
@@ -1053,6 +1134,7 @@ ${kills || "なし"}</div>`;
           state.player.iboChanceDenom - iboRateUp
         );
         addLog(`レベルアップ！ ATK+${atkUp} DEF+${defUp} MAXHP+${hpUp} イボ率 1/${state.player.iboChanceDenom}`);
+        playSe("levelup");
       }
     }
 
@@ -1125,13 +1207,14 @@ ${kills || "なし"}</div>`;
       return "あなたは力尽きた…。 Rで再開";
     }
 
-    function endAsGameOver(causeInfo={cause:"generic"}){ state.player.hp=Math.max(0,state.player.hp); state.gameOver=true; addLog(buildDeathMessage(causeInfo)); finalizeScore("GAME OVER"); }
+    function endAsGameOver(causeInfo={cause:"generic"}){ state.player.hp=Math.max(0,state.player.hp); state.gameOver=true; addLog(buildDeathMessage(causeInfo)); playSe("gameover"); finalizeScore("GAME OVER"); }
     async function endAsGameClear(){
       if(state.endingStarted) return;
       state.endingStarted = true;
       state.gameClear = true;
       state.inputLocked = true;
       addLog("ぼじろーぐ クリア！");
+      playSe("clear");
       finalizeScore("GAME CLEAR");
       addLog("Rで再スタート");
       state.endingVisible = true;
@@ -1186,6 +1269,7 @@ ${kills || "なし"}</div>`;
 
       const { damage, isCritical } = resolveAttackDamage(attackPower, playerDefValue(), true, enemyKey === "mimic" ? 2 : 1, enemy.char, "プレイヤー");
       applyDamage(state.player, damage, "", false);
+      playSe("hit");
       if(!isCritical) addLog(`${enemy.char}は、${playerName()}に${damage}ダメージ！`);
 
       if(enemyKey === "lion" && state.player.hp > 0 && Math.random() < 0.15){
@@ -1224,7 +1308,7 @@ ${kills || "なし"}</div>`;
       if(enemyKey === "zombie" && state.player.hp>0 && !state.player.diamondWard){ const corrosion = Math.max(0, Math.min(damage * 2, 10) - randInt(0,2)); if(corrosion>0){ state.player.hungerMax=Math.max(1,state.player.hungerMax-corrosion); if(state.player.hunger>state.player.hungerMax) state.player.hunger=state.player.hungerMax; updateHungerWarning(); addLog(`${enemy.char}の腐食！ 最大満腹-${corrosion}`);} }
       if(enemyKey === "invader" && state.player.hp>0 && !state.player.diamondWard && Math.random()<0.1){ state.player.baseDef=Math.max(1,state.player.baseDef-1); addLog("防御力が下がった…"); }
       if((enemyKey === "spider" && Math.random()<0.2) || (enemyKey === "snake" && Math.random()<0.3)){
-        if(state.player.hp>0 && !state.player.diamondWard){ state.player.poison=true; addLog("毒を受けた！"); }
+        if(state.player.hp>0 && !state.player.diamondWard){ state.player.poison=true; addLog("毒を受けた！"); playSe("poison"); }
       }
 
       if(state.player.hp<=0) endAsGameOver({cause:"enemy", enemyChar:enemy.char});
@@ -1238,12 +1322,14 @@ ${kills || "なし"}</div>`;
 
       if(pickupMode === ITEM_PICKUP_MODE.INSTANT){
         state.items = state.items.filter((i)=>i!==it);
+        playSe("item");
         if(effect) await effect(it, -1, {source:"pickup"});
         return;
       }
 
       if(!addToInventory(it)){ addLog("持ち物がいっぱいだ。"); return; }
       state.items = state.items.filter((i)=>i!==it);
+      playSe("item");
       if(it.key === "poop" || it.char === "💩"){
         addLog("💩を拾った。");
         addLog("…これは、『かりんとう』というお菓子だ…");
@@ -1251,6 +1337,7 @@ ${kills || "なし"}</div>`;
         addLog(`${it.char}を拾った。(${invToString()})`);
       }
     }
+
 
 async function openChest(floorObject){
   if(!floorObject || floorObject.key!=="chest") return;
@@ -1263,6 +1350,7 @@ async function openChest(floorObject){
   const effect = def ? ITEM_EFFECTS[def.effectKey] : null;
 
   addLog("🎁宝箱を開けた！");
+  playSe("item");
 
   if(pickupMode === ITEM_PICKUP_MODE.INSTANT){
     if(effect) await effect(item, -1, {source:"pickup"});
@@ -1398,7 +1486,7 @@ async function openChest(floorObject){
           endAsGameClear();
           return;
         }
-        state.floor+=1; addLog("🪜 次の階へ進む！"); setupFloor(); return;
+        state.floor+=1; addLog("🪜 次の階へ進む！"); playSe("stairs"); setupFloor(); return;
       }
       endTurn();
     }
@@ -1411,7 +1499,7 @@ async function openChest(floorObject){
     async function iboBeam(){
       if(state.gameOver||state.inputLocked) return;
       if(state.player.ibo<1){ addLog("イボがない！"); return; }
-      state.inputLocked=true; state.player.ibo-=1; addLog("いぼビーム！");
+      state.inputLocked=true; state.player.ibo-=1; addLog("いぼビーム！"); playSe("beam");
       const dirs=[[0,-1],[0,1],[-1,0],[1,0]]; const hitSet=new Set();
       const bullets=dirs.map(([dx,dy])=>{ const el=document.createElement("div"); el.className="projectile"; el.textContent=SPRITES.orb; setProjectilePos(el,state.player.x,state.player.y); projectileLayer.appendChild(el); return {x:state.player.x,y:state.player.y,dx,dy,el,active:true}; });
       try{
@@ -1440,7 +1528,7 @@ async function openChest(floorObject){
 
     async function starBurst(){
       if(state.gameOver||state.inputLocked) return;
-      state.inputLocked=true; addLog("🌟が弾けた！");
+      state.inputLocked=true; addLog("🌟が弾けた！"); playSe("star");
       const dirs=[[0,-1],[0,1],[-1,0],[1,0]]; const hitSet=new Set();
       const bullets=dirs.map(([dx,dy])=>{ const el=document.createElement("div"); el.className="projectile"; el.textContent=SPRITES.starBeam; setProjectilePos(el,state.player.x,state.player.y); projectileLayer.appendChild(el); return {x:state.player.x,y:state.player.y,dx,dy,el,active:true}; });
       try{
@@ -1864,7 +1952,9 @@ async function openChest(floorObject){
         resetBestScore();
         return;
       }
-      if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"," ","a","A","b","B","r","R","n","N","1","2","3","4","5","6"].includes(key)) e.preventDefault();
+      if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"," ","a","A","b","B","m","M","r","R","n","N","1","2","3","4","5","6"].includes(key)) e.preventDefault();
+      unlockAudioContext();
+      if(key==="m"||key==="M") return toggleSound();
       if((key==="n"||key==="N") && (state.turns===0 || state.gameOver || state.gameClear)) return beginNameInputMode();
       if(key==="r"||key==="R") return restartGame();
       if(state.gameOver||state.gameClear||state.inputLocked) return;
