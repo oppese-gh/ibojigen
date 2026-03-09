@@ -95,7 +95,7 @@
 
     const SPRITES = {
       player:"🧔", wall:"🧱", floor:".", ladder:"🪜", orb:"🟣", starBeam:"✨",
-      dog:"🐕", wolf:"🐺", lion:"🦁", dragon:"🐉", ghost:"👻", zombie:"🧟", skull:"☠️", invader:"👾", spider:"🕷️", chick:"🐥", mimic:"🎁", rain:"🌧️", wizard:"🧙‍♂️", bossAsahiyama:"🌋",
+      dog:"🐕", wolf:"🐺", lion:"🦁", dragon:"🐉", ghost:"👻", zombie:"🧟", skull:"☠️", invader:"👾", spider:"🕷️", bat:"🦇", snake:"🐍", dino:"🦖", chick:"🐥", mimic:"🎁", rain:"🌧️", wizard:"🧙‍♂️", bossAsahiyama:"🌋",
       food:"🍙", meat:"🥩", sushi:"🍣", feast:"🍖", potion:"🧪", map:"👁", shield:"🛡️", axe:"🪓", diamond:"💎", dagger:"🗡️", star:"🌟", sun:"🌤️", poop:"💩", bean:"🫘", scroll:"📜", asahiyama:"🏔️"
     };
 
@@ -113,6 +113,9 @@
       {id:11,key:"mimic",char:SPRITES.mimic,baseHp:15,baseAtk:5,baseDef:2,exp:8,score:90,dropRule:{mode:"profile", ref:"mimicRare"},flags:["specialDrop"]},
       {id:12,key:"rain",char:SPRITES.rain,baseHp:10,baseAtk:0,baseDef:1,exp:5,score:55,dropRuleRef:"enemyCommon"},
       {id:13,key:"wizard",char:SPRITES.wizard,baseHp:12,baseAtk:7,baseDef:1,exp:14,score:150,dropRuleRef:"enemyCommon"},
+      {id:15,key:"bat",char:SPRITES.bat,baseHp:8,baseAtk:3,baseDef:0,exp:2,score:20,dropRuleRef:"enemyCommon"},
+      {id:16,key:"snake",char:SPRITES.snake,baseHp:12,baseAtk:5,baseDef:1,exp:5,score:50,dropRuleRef:"enemyCommon"},
+      {id:17,key:"dino",char:SPRITES.dino,baseHp:19,baseAtk:7,baseDef:2,exp:9,score:105,dropRuleRef:"enemyCommon"},
       {id:14,key:"bossAsahiyama",char:SPRITES.bossAsahiyama,baseHp:220,baseAtk:12,baseDef:4,exp:100,score:1000,dropRule:{mode:"none"}}
     ];
 
@@ -222,45 +225,54 @@
       {min:1,max:2,pool:[
         {enemyKey:"wizard",w:60},
         {enemyKey:"dog",w:60},
+        {enemyKey:"bat",w:24},
         {enemyKey:"wolf",w:28},
         {enemyKey:"ghost",w:12}]},
       {min:3,max:5,pool:[
-        {enemyKey:"dog",w:38},
+        {enemyKey:"dog",w:32},
+        {enemyKey:"bat",w:18},
         {enemyKey:"wolf",w:30},
         {enemyKey:"lion",w:16},
         {enemyKey:"ghost",w:8},
         {enemyKey:"spider",w:8}]},
       {min:6,max:8,pool:[
-        {enemyKey:"wolf",w:32},
+        {enemyKey:"wolf",w:28},
+        {enemyKey:"bat",w:10},
         {enemyKey:"lion",w:22},
         {enemyKey:"ghost",w:10},
         {enemyKey:"zombie",w:12},
+        {enemyKey:"snake",w:12},
         {enemyKey:"spider",w:7},
         {enemyKey:"rain",w:5},
         {enemyKey:"skull",w:5}]},
       {min:9,max:14,pool:[
-        {enemyKey:"wolf",w:24},
-        {enemyKey:"lion",w:26},
+        {enemyKey:"wolf",w:20},
+        {enemyKey:"lion",w:24},
+        {enemyKey:"bat",w:8},
         {enemyKey:"dragon",w:10},
         {enemyKey:"ghost",w:8},
         {enemyKey:"zombie",w:14},
+        {enemyKey:"snake",w:14},
         {enemyKey:"spider",w:8},
         {enemyKey:"rain",w:6},
         {enemyKey:"skull",w:4}]},
       {min:15,max:19,pool:[
-        {enemyKey:"lion",w:24},
+        {enemyKey:"lion",w:22},
         {enemyKey:"dragon",w:12},
         {enemyKey:"ghost",w:8},
         {enemyKey:"zombie",w:14},
+        {enemyKey:"snake",w:12},
         {enemyKey:"spider",w:10},
         {enemyKey:"rain",w:8},
         {enemyKey:"skull",w:10},
         {enemyKey:"chick",w:2}]},
       {min:20,max:24,pool:[
-        {enemyKey:"lion",w:22},
-        {enemyKey:"dragon",w:14},
+        {enemyKey:"lion",w:18},
+        {enemyKey:"dragon",w:13},
+        {enemyKey:"dino",w:10},
         {enemyKey:"ghost",w:7},
         {enemyKey:"zombie",w:12},
+        {enemyKey:"snake",w:10},
         {enemyKey:"spider",w:8},
         {enemyKey:"rain",w:7},
         {enemyKey:"skull",w:14},
@@ -268,10 +280,12 @@
         {enemyKey:"wizard",w:6},
         {enemyKey:"chick",w:2}]},
       {min:25,max:29,pool:[
-        {enemyKey:"lion",w:18},
-        {enemyKey:"dragon",w:16},
+        {enemyKey:"lion",w:14},
+        {enemyKey:"dragon",w:15},
+        {enemyKey:"dino",w:16},
         {enemyKey:"ghost",w:6},
         {enemyKey:"zombie",w:10},
+        {enemyKey:"snake",w:8},
         {enemyKey:"spider",w:6},
         {enemyKey:"rain",w:6},
         {enemyKey:"skull",w:12},
@@ -1209,7 +1223,9 @@ ${kills || "なし"}</div>`;
       }
       if(enemyKey === "zombie" && state.player.hp>0 && !state.player.diamondWard){ const corrosion = Math.max(0, Math.min(damage * 2, 10) - randInt(0,2)); if(corrosion>0){ state.player.hungerMax=Math.max(1,state.player.hungerMax-corrosion); if(state.player.hunger>state.player.hungerMax) state.player.hunger=state.player.hungerMax; updateHungerWarning(); addLog(`${enemy.char}の腐食！ 最大満腹-${corrosion}`);} }
       if(enemyKey === "invader" && state.player.hp>0 && !state.player.diamondWard && Math.random()<0.1){ state.player.baseDef=Math.max(1,state.player.baseDef-1); addLog("防御力が下がった…"); }
-      if(enemyKey === "spider" && state.player.hp>0 && !state.player.diamondWard && Math.random()<0.2){ state.player.poison=true; addLog("毒を受けた！"); }
+      if((enemyKey === "spider" && Math.random()<0.2) || (enemyKey === "snake" && Math.random()<0.3)){
+        if(state.player.hp>0 && !state.player.diamondWard){ state.player.poison=true; addLog("毒を受けた！"); }
+      }
 
       if(state.player.hp<=0) endAsGameOver({cause:"enemy", enemyChar:enemy.char});
     }
