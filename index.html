@@ -200,11 +200,34 @@
     // 敵テーブル: 1〜9階はほぼ維持、13階以降を 13〜15 / 16+ に分割して
     // 後半の理不尽な尖りを抑えつつ終盤の圧は残す。
     const FLOOR_ENEMY_TABLES = [
-      {min:1,max:2,pool:[{enemyKey:"dog",w:60},{enemyKey:"wolf",w:28},{enemyKey:"ghost",w:12}]},
-      {min:3,max:4,pool:[{enemyKey:"dog",w:38},{enemyKey:"wolf",w:30},{enemyKey:"lion",w:16},{enemyKey:"ghost",w:8},{enemyKey:"spider",w:8}]},
-      {min:5,max:8,pool:[{enemyKey:"wolf",w:32},{enemyKey:"lion",w:22},{enemyKey:"ghost",w:10},{enemyKey:"zombie",w:12},{enemyKey:"spider",w:7},{enemyKey:"rain",w:5},{enemyKey:"skull",w:5}]},
-      {min:9,max:12,pool:[{enemyKey:"wolf",w:24},{enemyKey:"lion",w:26},{enemyKey:"dragon",w:10},{enemyKey:"ghost",w:8},{enemyKey:"zombie",w:14},{enemyKey:"spider",w:8},{enemyKey:"rain",w:6},{enemyKey:"skull",w:4}]},
-      {min:13,max:15,pool:[
+      {min:1,max:2,pool:[
+        {enemyKey:"dog",w:60},
+        {enemyKey:"wolf",w:28},
+        {enemyKey:"ghost",w:12}]},
+      {min:3,max:5,pool:[
+        {enemyKey:"dog",w:38},
+        {enemyKey:"wolf",w:30},
+        {enemyKey:"lion",w:16},
+        {enemyKey:"ghost",w:8},
+        {enemyKey:"spider",w:8}]},
+      {min:6,max:8,pool:[
+        {enemyKey:"wolf",w:32},
+        {enemyKey:"lion",w:22},
+        {enemyKey:"ghost",w:10},
+        {enemyKey:"zombie",w:12},
+        {enemyKey:"spider",w:7},
+        {enemyKey:"rain",w:5},
+        {enemyKey:"skull",w:5}]},
+      {min:9,max:14,pool:[
+        {enemyKey:"wolf",w:24},
+        {enemyKey:"lion",w:26},
+        {enemyKey:"dragon",w:10},
+        {enemyKey:"ghost",w:8},
+        {enemyKey:"zombie",w:14},
+        {enemyKey:"spider",w:8},
+        {enemyKey:"rain",w:6},
+        {enemyKey:"skull",w:4}]},
+      {min:15,max:19,pool:[
         {enemyKey:"lion",w:24},
         {enemyKey:"dragon",w:12},
         {enemyKey:"ghost",w:8},
@@ -212,9 +235,8 @@
         {enemyKey:"spider",w:10},
         {enemyKey:"rain",w:8},
         {enemyKey:"skull",w:10},
-        {enemyKey:"chick",w:2}
-      ]},
-      {min:16,max:999,pool:[
+        {enemyKey:"chick",w:2}]},
+      {min:20,max:24,pool:[
         {enemyKey:"lion",w:22},
         {enemyKey:"dragon",w:14},
         {enemyKey:"ghost",w:7},
@@ -223,9 +245,17 @@
         {enemyKey:"rain",w:7},
         {enemyKey:"skull",w:14},
         {enemyKey:"invader",w:8},
-        {enemyKey:"chick",w:2}
-      ]}
-    ];
+        {enemyKey:"chick",w:2}]}];
+      {min:25,max:29,pool:[
+        {enemyKey:"lion",w:22},
+        {enemyKey:"dragon",w:16},
+        {enemyKey:"ghost",w:7},
+        {enemyKey:"zombie",w:12},
+        {enemyKey:"spider",w:8},
+        {enemyKey:"rain",w:7},
+        {enemyKey:"skull",w:14},
+        {enemyKey:"invader",w:6},
+        {enemyKey:"chick",w:2}]}];
 
     const mapEl = document.getElementById("grid");
     const versionEl = document.getElementById("version");
