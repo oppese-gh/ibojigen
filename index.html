@@ -71,6 +71,7 @@
     const MAX_PLAYER_NAME_LENGTH = 10;
     const INITIAL_INV_SIZE = 5;
     const ASAHIYAMA_INV_SIZE = 6;
+    const DEBUG_BUILD = true;
     const APP_VERSION =
   "build-" +
   new Date().toLocaleDateString("ja-JP") +
@@ -310,7 +311,9 @@
       kills:buildEmptyKillMap(),
       player:createInitialPlayer(),
       iboCooldown:0,starving:false,hungerLowNotified:false,
-      blockedWallMoveKey:null
+      blockedWallMoveKey:null,
+      debugFloorBuffer:"",
+      debugMode:false
     };
 
     function saveProfile(){
@@ -810,10 +813,13 @@
       const nameInputGuide = state.editingName
         ? `<div class="row">名前入力中: ${state.nameInput || ""}<span style="opacity:.8;">|</span> Enterで確定 / Escでキャンセル${state.nameInputError ? ` / <span style="color:#ff8a8a;">${state.nameInputError}</span>` : ""}</div>`
         : "";
+      const debugStatus = DEBUG_BUILD
+        ? `<div class="row" style="color:#ffd166;">DEBUG_BUILD${state.debugMode ? " / DEBUG MODE ON" : ""}${state.debugFloorBuffer ? ` / JUMP: ${state.debugFloorBuffer}_` : ""}</div>`
+        : "";
       statusEl.innerHTML = `
         <div class="row">${playerName()} / 階 ${state.floor} / Lv ${state.player.level} / EXP ${state.player.exp}/${expToNextLevel()} / 視界 ${state.player.vision}/${state.player.visionMax} / ${atkText} / ${defText} / SCORE ${state.score} / BEST ${bestText} ${status} ${monsterAlert}</div>
         <div class="row">${gaugeHtml("HP", state.player.hp, state.player.maxHp)} ${gaugeHtml("満腹度", state.player.hunger, state.player.hungerMax)}</div>
-        <div class="row">イボ(${state.player.ibo}/${state.player.iboMax}) ITEM ${invToString()}</div>${nameInputGuide}`;
+        <div class="row">イボ(${state.player.ibo}/${state.player.iboMax}) ITEM ${invToString()}</div>${debugStatus}${nameInputGuide}`;
       if(nameInputWrapEl){
         nameInputWrapEl.classList.toggle("show", state.editingName);
       }
@@ -1427,6 +1433,108 @@ async function openChest(floorObject){
 
     async function endTurn(){ state.turns+=1; state.inputLocked=true; await enemyTurn(); if(state.gameOver){ state.inputLocked=false; return render(); } hungerTurn(); if(state.gameOver){ state.inputLocked=false; return render(); } iboTurn(); state.inputLocked=false; render(); }
 
+    function debugAdjustPlayer(label, adjuster){
+      const changed = adjuster();
+      if(!changed) return;
+      addLog(`[DEBUG] ${label}`);
+      render();
+    }
+
+    function debugJumpToFloor(targetFloor){
+      if(!Number.isInteger(targetFloor) || targetFloor < 1){
+        addLog(`[DEBUG] 無効な階指定: ${targetFloor}`);
+        return;
+      }
+      // デバッグ時は現在の育成状態を維持して階層だけ飛ばす
+      state.floor = targetFloor;
+      state.blockedWallMoveKey = null;
+      state.debugFloorBuffer = "";
+      addLog(`[DEBUG] 第${targetFloor}階へジャンプ`);
+      setupFloor();
+    }
+
+    function handleDebugKey(e){
+      if(state.editingName || state.gameOver || state.inputLocked) return false;
+      if(e.shiftKey && e.code === "KeyD"){
+        state.debugMode = !state.debugMode;
+        state.debugFloorBuffer = "";
+        addLog(`[DEBUG] 調整モード ${state.debugMode ? "ON" : "OFF"}`);
+        render();
+        return true;
+      }
+      if(e.shiftKey && /^Digit[0-9]$/.test(e.code)){
+        const digit = e.code.slice(-1);
+        state.debugFloorBuffer += digit;
+        if(state.debugFloorBuffer.length === 1){
+          addLog(`[DEBUG] ジャンプ入力: ${state.debugFloorBuffer}_`);
+          render();
+          return true;
+        }
+        const targetFloor = Number.parseInt(state.debugFloorBuffer, 10);
+        if(Number.isInteger(targetFloor) && targetFloor >= 1) debugJumpToFloor(targetFloor);
+        else {
+          addLog(`[DEBUG] 無効なジャンプ入力: ${state.debugFloorBuffer}`);
+          state.debugFloorBuffer = "";
+          render();
+        }
+        return true;
+      }
+      if(!state.debugMode) return false;
+      const code = (e.code || "").toLowerCase();
+      if(code === "keya"){
+        debugAdjustPlayer("ATK+1", ()=>{ state.player.baseAtk += 1; return true; });
+        return true;
+      }
+      if(code === "keys"){
+        debugAdjustPlayer("DEF+1", ()=>{ state.player.baseDef += 1; return true; });
+        return true;
+      }
+      if(code === "keyh"){
+        debugAdjustPlayer("HP全快", ()=>{
+          if(state.player.hp >= state.player.maxHp) return false;
+          state.player.hp = state.player.maxHp;
+          return true;
+        });
+        return true;
+      }
+      if(code === "keyj"){
+        debugAdjustPlayer("満腹度全快", ()=>{
+          if(state.player.hunger >= state.player.hungerMax) return false;
+          state.player.hunger = state.player.hungerMax;
+          updateHungerWarning();
+          return true;
+        });
+        return true;
+      }
+      if(code === "keyv"){
+        debugAdjustPlayer("視界+1", ()=>{
+          const nextVision = Math.min(state.player.visionMax, state.player.vision + 1);
+          if(nextVision === state.player.vision) return false;
+          state.player.vision = nextVision;
+          return true;
+        });
+        return true;
+      }
+      if(code === "keyb"){
+        debugAdjustPlayer("視界-1", ()=>{
+          const nextVision = Math.max(state.player.visionMin, state.player.vision - 1);
+          if(nextVision === state.player.vision) return false;
+          state.player.vision = nextVision;
+          return true;
+        });
+        return true;
+      }
+      if(code === "keye"){
+        debugAdjustPlayer("経験値付与", ()=>{
+          state.player.exp += expToNextLevel();
+          maybeLevelUp();
+          return true;
+        });
+        return true;
+      }
+      return false;
+    }
+
     function initializeRunState(){
       state.floor = 1;
       state.player = createInitialPlayer();
@@ -1449,6 +1557,8 @@ async function openChest(floorObject){
       state.nameInputError = "";
       state.isComposingName = false;
       state.blockedWallMoveKey = null;
+      state.debugFloorBuffer = "";
+      state.debugMode = false;
     }
 
     function restartGame(){
@@ -1500,6 +1610,10 @@ async function openChest(floorObject){
         return;
       }
       if(state.blockedWallMoveKey && key!==state.blockedWallMoveKey) state.blockedWallMoveKey = null;
+      if(DEBUG_BUILD && handleDebugKey(e)){
+        e.preventDefault();
+        return;
+      }
       if(key === "Delete"){
         e.preventDefault();
         resetBestScore();
