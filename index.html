@@ -10,7 +10,7 @@
     body { margin:0; min-height:100vh; display:grid; place-items:center; background:var(--bg); color:var(--text); font-family:system-ui,"Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif; padding:12px; }
     .wrap { width:min(100%,980px); background:var(--panel); border:1px solid #333; border-radius:10px; padding:12px; box-shadow:0 8px 30px rgba(0,0,0,.35); }
     h1 { margin:0 0 8px; color:var(--accent); font-size:20px; }
-    #grid { position:relative; margin:0; display:grid; grid-template-columns:repeat(40,24px); grid-auto-rows:24px; width:fit-content; background:#0d0d0d; border:1px solid #444; padding:8px; overflow:auto; user-select:none; min-height:calc(25 * 24px + 16px); }
+    #grid { position:relative; margin:0; display:grid; grid-template-columns:repeat(13,24px); grid-auto-rows:24px; width:fit-content; background:#0d0d0d; border:1px solid #444; padding:8px; overflow:hidden; user-select:none; min-height:calc(13 * 24px + 16px); }
     #projectile-layer { position:absolute; inset:0; pointer-events:none; z-index:2; }
     .projectile { position:absolute; width:24px; height:24px; line-height:24px; text-align:center; font-size:20px; }
     .cell { width:24px; height:24px; line-height:24px; text-align:center; font-size:20px; }
@@ -77,8 +77,12 @@
   <script>
     "use strict";
 
-    const WIDTH = 40;
-    const HEIGHT = 25;
+    const MAP_W = 32;
+    const MAP_H = 32;
+    const WIDTH = MAP_W;
+    const HEIGHT = MAP_H;
+    const CAMERA_SIZE = 13;
+    const CAMERA_HALF = Math.floor(CAMERA_SIZE / 2);
     const MAX_LOG = 100;
     const TILE_WALL = "#";
     const TILE_FLOOR = ".";
@@ -1089,14 +1093,37 @@ ${kills || "なし"}</div>`;
       return ch;
     }
 
+    function getCameraOrigin(){
+      // プレイヤー中心を基本に、端ではマップ外参照を避ける
+      const maxX = Math.max(0, WIDTH - CAMERA_SIZE);
+      const maxY = Math.max(0, HEIGHT - CAMERA_SIZE);
+      const x = clamp(state.player.x - CAMERA_HALF, 0, maxX);
+      const y = clamp(state.player.y - CAMERA_HALF, 0, maxY);
+      return {x,y};
+    }
+
+    function worldToCamera(x,y){
+      const camera = getCameraOrigin();
+      const cx = x - camera.x;
+      const cy = y - camera.y;
+      return {
+        x: cx,
+        y: cy,
+        inView: cx>=0 && cx<CAMERA_SIZE && cy>=0 && cy<CAMERA_SIZE
+      };
+    }
+
     function buildMapHtml(){
       const hasMap = state.map.length===HEIGHT;
       const cells=[];
-      for(let y=0;y<HEIGHT;y++){
-        for(let x=0;x<WIDTH;x++){
-          const visibleNow = state.visibleNow[y][x];
-          const seen = state.seen[y][x];
-          const ch = getCellChar(x, y, visibleNow, seen, hasMap);
+      const camera = getCameraOrigin();
+      for(let y=0;y<CAMERA_SIZE;y++){
+        for(let x=0;x<CAMERA_SIZE;x++){
+          const worldX = camera.x + x;
+          const worldY = camera.y + y;
+          const visibleNow = state.visibleNow[worldY][worldX];
+          const seen = state.seen[worldY][worldX];
+          const ch = getCellChar(worldX, worldY, visibleNow, seen, hasMap);
           cells.push(`<div class="cell">${ch}</div>`);
         }
       }
@@ -1648,7 +1675,16 @@ async function openChest(floorObject){
     function waitTurn(){ if(state.gameOver||state.inputLocked) return; addLog("その場で待機した。"); endTurn(); }
     function eatIbo(){ if(state.gameOver||state.inputLocked) return; if(state.player.ibo<1){ addLog("イボがない！"); return; } state.player.ibo-=1; state.player.hunger=Math.min(state.player.hungerMax,state.player.hunger+60); updateHungerWarning(); addLog("イボをたべた！ 満腹+60"); endTurn(); }
     const sleep = (ms)=>new Promise((resolve)=>setTimeout(resolve,ms));
-    function setProjectilePos(el,x,y){ el.style.left=`${GRID_PADDING + x*CELL_SIZE}px`; el.style.top=`${GRID_PADDING + y*CELL_SIZE}px`; }
+    function setProjectilePos(el,x,y){
+      const pos = worldToCamera(x,y);
+      if(!pos.inView){
+        el.style.display="none";
+        return;
+      }
+      el.style.display="block";
+      el.style.left=`${GRID_PADDING + pos.x*CELL_SIZE}px`;
+      el.style.top=`${GRID_PADDING + pos.y*CELL_SIZE}px`;
+    }
 
     async function bowShot(){
       if(state.gameOver||state.inputLocked) return false;
