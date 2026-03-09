@@ -1075,27 +1075,35 @@ ${kills || "なし"}</div>`;
       }
     }
 
-    function render(){
-      state.score=calcScore(); updateSeen();
+    function getCellChar(x, y, visibleNow, seen, hasMap){
+      if(!visibleNow && !seen) return " ";
+
+      let ch = hasMap && state.map[y] && state.map[y][x]===TILE_WALL ? SPRITES.wall : SPRITES.floor;
+      if(visibleNow){
+        if(state.ladder.x===x&&state.ladder.y===y) ch=SPRITES.ladder;
+        const it=itemAt(x,y); if(it) ch=it.char;
+        const floorObject=objectAt(x,y); if(floorObject) ch=floorObject.char;
+        const en=enemyAt(x,y); if(en) ch=en.char;
+      }
+      if(state.player.x===x&&state.player.y===y) ch=SPRITES.player;
+      return ch;
+    }
+
+    function buildMapHtml(){
       const hasMap = state.map.length===HEIGHT;
       const cells=[];
       for(let y=0;y<HEIGHT;y++){
         for(let x=0;x<WIDTH;x++){
           const visibleNow = state.visibleNow[y][x];
           const seen = state.seen[y][x];
-          if(!visibleNow && !seen){ cells.push(`<div class="cell"> </div>`); continue; }
-          let ch = hasMap && state.map[y] && state.map[y][x]===TILE_WALL ? SPRITES.wall : SPRITES.floor;
-          if(visibleNow){
-            if(state.ladder.x===x&&state.ladder.y===y) ch=SPRITES.ladder;
-            const it=itemAt(x,y); if(it) ch=it.char;
-            const floorObject=objectAt(x,y); if(floorObject) ch=floorObject.char;
-            const en=enemyAt(x,y); if(en) ch=en.char;
-          }
-          if(state.player.x===x&&state.player.y===y) ch=SPRITES.player;
+          const ch = getCellChar(x, y, visibleNow, seen, hasMap);
           cells.push(`<div class="cell">${ch}</div>`);
         }
       }
-      mapEl.innerHTML=cells.join(""); if(!mapEl.contains(projectileLayer)) mapEl.appendChild(projectileLayer);
+      return cells.join("");
+    }
+
+    function buildStatusHtml(){
       const status = state.player.poison ? "☠️POISON" : "";
       const monsterAlert = state.floorEventType === "monsterHouse" ? "<span class=\"monster-alert\">❗️❗️❗️モンスターハウス❗️❗️❗️</span>" : "";
       const bossAlert = state.floor===30 ? "<span class=\"monster-alert\">🌋 BOSS FLOOR</span>" : "";
@@ -1109,10 +1117,18 @@ ${kills || "なし"}</div>`;
       const debugStatus = DEBUG_BUILD
         ? `<div class="row" style="color:#ffd166;">DEBUG_BUILD${state.debugMode ? " / DEBUG MODE ON" : ""}${state.debugFloorBuffer ? ` / JUMP: ${state.debugFloorBuffer}_` : ""}</div>`
         : "";
-      statusEl.innerHTML = `
+
+      return `
         <div class="row">${playerName()} / 階 ${state.floor} / Lv ${state.player.level} / EXP ${state.player.exp}/${expToNextLevel()} / 視界 ${state.player.vision}/${state.player.visionMax} / ${atkText} / ${defText} / SCORE ${state.score} / BEST ${bestText} / SE ${state.soundEnabled ? "ON" : "OFF"} ${status} ${monsterAlert} ${bossAlert}</div>
         <div class="row">${gaugeHtml("HP", state.player.hp, state.player.maxHp)} ${gaugeHtml("満腹度", state.player.hunger, state.player.hungerMax)}</div>
         <div class="row">イボ(${state.player.ibo}/${state.player.iboMax}) ITEM ${invToString()}</div>${debugStatus}${nameInputGuide}`;
+    }
+
+    function render(){
+      state.score=calcScore(); updateSeen();
+      mapEl.innerHTML=buildMapHtml();
+      if(!mapEl.contains(projectileLayer)) mapEl.appendChild(projectileLayer);
+      statusEl.innerHTML = buildStatusHtml();
       if(nameInputWrapEl){
         nameInputWrapEl.classList.toggle("show", state.editingName);
       }
