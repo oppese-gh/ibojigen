@@ -36,6 +36,18 @@
     #name-input-wrap.show { display:block; }
     #name-ime-input { width:min(100%, 280px); font-size:16px; padding:6px 8px; border:1px solid #555; border-radius:4px; background:#0f0f0f; color:var(--text); }
     .line { margin-bottom:3px; }
+    #ending-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.52); display:flex; align-items:center; justify-content:center; opacity:0; pointer-events:none; transition:opacity 1.6s ease; z-index:30; }
+    #ending-overlay.show { opacity:1; pointer-events:auto; }
+    #ending-content { width:min(100%,720px); max-height:90vh; overflow:hidden; text-align:center; padding:20px; color:#fff; }
+    .ending-title { font-size:44px; letter-spacing:.08em; }
+    .ending-credits-wrap { position:relative; height:70vh; overflow:hidden; }
+    .ending-credits-roll { position:absolute; left:50%; transform:translateX(-50%); width:100%; white-space:pre-line; line-height:1.8; font-size:24px; animation:ending-credits-scroll 15s linear forwards; }
+    .ending-stats { white-space:pre-line; line-height:1.8; font-size:28px; }
+    .ending-thanks { font-size:42px; letter-spacing:.08em; }
+    @keyframes ending-credits-scroll {
+      from { transform:translate(-50%, 100%); }
+      to { transform:translate(-50%, -100%); }
+    }
   </style>
 </head>
 <body>
@@ -53,6 +65,9 @@
       <input id="name-ime-input" type="text" inputmode="text" autocomplete="off" />
     </div>
   </main>
+  <div id="ending-overlay" aria-hidden="true">
+    <div id="ending-content"></div>
+  </div>
 
   <script>
     "use strict";
@@ -273,6 +288,8 @@
     const logHistoryEl = document.getElementById("log-history");
     const nameImeInputEl = document.getElementById("name-ime-input");
     const nameInputWrapEl = document.getElementById("name-input-wrap");
+    const endingOverlayEl = document.getElementById("ending-overlay");
+    const endingContentEl = document.getElementById("ending-content");
     const projectileLayer = document.createElement("div");
     if(versionEl) versionEl.textContent = APP_VERSION;
     projectileLayer.id = "projectile-layer";
@@ -309,6 +326,7 @@
       floor:1,map:[],rooms:[],enemies:[],items:[],floorObjects:[],floorEventType:"normal",ladder:{x:0,y:0},logs:[],revealed:false,seen:[],visibleNow:[],gameOver:false,gameClear:false,inputLocked:false,
       invSize:INITIAL_INV_SIZE,inventory:createEmptyInventory(INITIAL_INV_SIZE),bestScore:initialBestScore,bestName:initialBestName,playerName:initialPlayerName,editingName:false,nameInput:initialPlayerName,nameInputError:"",isComposingName:false,score:0,turns:0,
       floorHasShield:false,floorHasAxe:false,
+      bossCleared:false,clearLadder:null,endingVisible:false,endingPhase:"hidden",endingStarted:false,bestUpdatedOnClear:false,
       kills:buildEmptyKillMap(),
       player:createInitialPlayer(),
       iboCooldown:0,starving:false,hungerLowNotified:false,
@@ -457,7 +475,9 @@
 
     function finalizeScore(reasonText=""){
       state.score = calcScore();
-      if(state.score > state.bestScore){ state.bestScore = state.score; state.bestName = playerName(); saveProfile(); addLog(`新記録！ BEST ${state.bestScore} (${reasonText})`); }
+      const didBestUpdate = state.score > state.bestScore;
+      if(reasonText === "GAME CLEAR") state.bestUpdatedOnClear = didBestUpdate;
+      if(didBestUpdate){ state.bestScore = state.score; state.bestName = playerName(); saveProfile(); addLog(`新記録！ BEST ${state.bestScore} (${reasonText})`); }
       else addLog(`SCORE ${state.score} / BEST ${state.bestScore} (${reasonText})`);
     }
 
@@ -508,6 +528,8 @@
       state.seen = createVisibilityGrid();
       state.visibleNow = createVisibilityGrid();
       state.floorHasShield=false; state.floorHasAxe=false;
+      state.bossCleared = false;
+      state.clearLadder = null;
       state.player.floorAtkBuff = 0; state.player.floorDefBuff = 0; state.player.diamondWard = false;
       state.inputLocked=false; state.iboCooldown=0;
       const startRoom=state.rooms[0]; state.player.x=startRoom.cx; state.player.y=startRoom.cy;
@@ -543,6 +565,8 @@
       state.seen = createVisibilityGrid();
       state.visibleNow = createVisibilityGrid();
       state.floorHasShield=false; state.floorHasAxe=false;
+      state.bossCleared = false;
+      state.clearLadder = null;
       state.player.floorAtkBuff = 0; state.player.floorDefBuff = 0; state.player.diamondWard = false;
       state.inputLocked=false; state.iboCooldown=0;
 
@@ -830,6 +854,72 @@
     }
 
     // ===== Render / UI =====
+    const ENDING_CREDITS_TEXT = `🧔BOJIROGUE🧔
+
+🦁Game Design🦁
+Masaki / Mia (ChatGPT)
+
+🗡️Programming🗡️
+OpenAI Codex
+
+🛡️Assistant Programming🛡️
+Masaki / Mia (ChatGPT)
+
+🧪Game Balance🧪
+Masaki
+
+📜Text & Scenario📜
+Masaki / Mia (ChatGPT)
+
+🌟AI Platform🌟
+OpenAI / Microsoft
+
+⛰️Assistant Director⛰️
+Mia (ChatGPT)
+
+🌋Director / Producer🌋
+Masaki
+
+💎Special Thanks💎
+Players
+
+🐕制作・著作🍖
+Bojigen`;
+
+    function endingKillsText(){
+      return ENEMY_DEFS
+        .filter((def)=>(state.kills[def.key]||0) > 0)
+        .map((def)=>`${def.char} ${state.kills[def.key]}`)
+        .join("\n");
+    }
+
+    function renderEndingOverlay(){
+      if(!endingOverlayEl || !endingContentEl) return;
+      endingOverlayEl.classList.toggle("show", state.endingVisible);
+      endingOverlayEl.setAttribute("aria-hidden", state.endingVisible ? "false" : "true");
+      if(!state.endingVisible){
+        endingContentEl.innerHTML = "";
+        return;
+      }
+      if(state.endingPhase === "fade") endingContentEl.innerHTML = "";
+      else if(state.endingPhase === "title") endingContentEl.innerHTML = `<div class="ending-title">ぼじろーぐ 完</div>`;
+      else if(state.endingPhase === "credits") endingContentEl.innerHTML = `<div class="ending-credits-wrap"><div class="ending-credits-roll">${ENDING_CREDITS_TEXT}</div></div>`;
+      else if(state.endingPhase === "stats"){
+        const bestNameText = state.bestUpdatedOnClear ? `⭐️${state.bestName}` : state.bestName;
+        const kills = endingKillsText();
+        endingContentEl.innerHTML = `<div class="ending-stats">FINAL SCORE
+
+SCORE   ${state.score}
+BEST    ${state.bestScore} ${bestNameText}
+FLOOR   ${state.floor}
+LEVEL   ${state.player.level}
+TURNS   ${state.turns}
+
+KILLS
+${kills || "なし"}</div>`;
+      }else if(state.endingPhase === "thanks") endingContentEl.innerHTML = `<div class="ending-thanks">THANK YOU FOR PLAYING!</div>`;
+    }
+
     function render(){
       state.score=calcScore(); updateSeen();
       const hasMap = state.map.length===HEIGHT;
@@ -870,6 +960,7 @@
       if(nameInputWrapEl){
         nameInputWrapEl.classList.toggle("show", state.editingName);
       }
+      renderEndingOverlay();
     }
 
     // ===== Inventory =====
@@ -989,7 +1080,10 @@
       state.player.exp += enemy.exp;
       if(enemyKey === "bossAsahiyama"){
         maybeLevelUp();
-        endAsGameClear();
+        state.bossCleared = true;
+        state.clearLadder = {x:enemy.x, y:enemy.y};
+        state.ladder = {x:enemy.x, y:enemy.y};
+        addLog("大噴火あさひやま🌋を倒した❗️❗️");
         return;
       }
       const dropRule = enemy.dropRule || enemyDropRule(def || enemyKey);
@@ -1019,13 +1113,33 @@
     }
 
     function endAsGameOver(causeInfo={cause:"generic"}){ state.player.hp=Math.max(0,state.player.hp); state.gameOver=true; addLog(buildDeathMessage(causeInfo)); finalizeScore("GAME OVER"); }
-    function endAsGameClear(){
+    async function endAsGameClear(){
+      if(state.endingStarted) return;
+      state.endingStarted = true;
       state.gameClear = true;
-      state.inputLocked = false;
-      addLog("🌋あさひやまを打ち倒した！");
+      state.inputLocked = true;
       addLog("ぼじろーぐ クリア！");
       finalizeScore("GAME CLEAR");
       addLog("Rで再スタート");
+      state.endingVisible = true;
+      state.endingPhase = "fade";
+      render();
+      await sleep(1800);
+      if(!state.endingStarted) return;
+      state.endingPhase = "title";
+      render();
+      await sleep(2200);
+      if(!state.endingStarted) return;
+      state.endingPhase = "credits";
+      render();
+      await sleep(15500);
+      if(!state.endingStarted) return;
+      state.endingPhase = "stats";
+      render();
+      await sleep(5000);
+      if(!state.endingStarted) return;
+      state.endingPhase = "thanks";
+      state.inputLocked = false;
       render();
     }
 
@@ -1263,7 +1377,14 @@ async function openChest(floorObject){
       state.player.x=nx; state.player.y=ny; walkRegen();
       await triggerFloorObject();
       await pickupItem();
-      if(nx===state.ladder.x&&ny===state.ladder.y){ state.floor+=1; addLog("🪜 次の階へ進む！"); setupFloor(); return; }
+      if(nx===state.ladder.x&&ny===state.ladder.y){
+        if(state.floor===30 && state.bossCleared && state.clearLadder && nx===state.clearLadder.x && ny===state.clearLadder.y){
+          addLog("🪜 脱出した！");
+          endAsGameClear();
+          return;
+        }
+        state.floor+=1; addLog("🪜 次の階へ進む！"); setupFloor(); return;
+      }
       endTurn();
     }
 
@@ -1652,6 +1773,12 @@ async function openChest(floorObject){
       state.hungerLowNotified = false;
       state.floorEventType = "normal";
       state.floorObjects = [];
+      state.bossCleared = false;
+      state.clearLadder = null;
+      state.endingVisible = false;
+      state.endingPhase = "hidden";
+      state.endingStarted = false;
+      state.bestUpdatedOnClear = false;
       state.seen = createVisibilityGrid();
       state.visibleNow = createVisibilityGrid();
       state.kills = buildEmptyKillMap();
