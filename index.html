@@ -573,6 +573,10 @@
       return true;
     }
 
+    function hasEnemyWithinDistance(x,y,distance){
+      return state.enemies.some((enemy)=>Math.abs(enemy.x-x)+Math.abs(enemy.y-y)<=distance);
+    }
+
     function randomFloorPos(){
       const cells=[];
       for(let y=1;y<HEIGHT-1;y++) for(let x=1;x<WIDTH-1;x++) if(state.map[y][x]===TILE_FLOOR) cells.push({x,y});
@@ -1190,20 +1194,30 @@ async function openChest(floorObject){
       star: async (_item, slotIndex)=>{ state.inventory[slotIndex]=null; await starBurst(); return {consumed:false,endTurn:false}; },
       scroll: async ()=>{
         const warpCandidates = [];
+        const safeWarpCandidates = [];
         for(let y=0;y<HEIGHT;y++){
           for(let x=0;x<WIDTH;x++){
-            if(positionFree(x,y)) warpCandidates.push({x,y});
+            if(!positionFree(x,y)) continue;
+            warpCandidates.push({x,y});
+            if(!hasEnemyWithinDistance(x,y,3)) safeWarpCandidates.push({x,y});
           }
         }
-        if(!warpCandidates.length){
-          addLog("📜転移先が見つからない！");
-          return {consumed:false,endTurn:false};
+        if(safeWarpCandidates.length){
+          const target = safeWarpCandidates[randInt(0, safeWarpCandidates.length-1)];
+          state.player.x = target.x;
+          state.player.y = target.y;
+          addLog("📜転移の巻物を使った！ 安全な場所へワープ！");
+          return {consumed:true,endTurn:true};
         }
-        const target = pick(warpCandidates);
-        state.player.x = target.x;
-        state.player.y = target.y;
-        addLog("📜転移の巻物を使った！ ランダムワープ！");
-        return {consumed:true,endTurn:true};
+        if(warpCandidates.length){
+          const target = warpCandidates[randInt(0, warpCandidates.length-1)];
+          state.player.x = target.x;
+          state.player.y = target.y;
+          addLog("📜転移の巻物を使った！ 近くに敵がいる場所へワープした！");
+          return {consumed:true,endTurn:true};
+        }
+        addLog("📜転移先が見つからない！");
+        return {consumed:false,endTurn:false};
       },
       poop: async ()=>{ const didFire = await poopShot(); return {consumed:didFire,endTurn:didFire}; },
       bean: async (_item, _slotIndex, ctx={})=>{
