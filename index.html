@@ -454,11 +454,18 @@
       return seAudioCtx;
     }
 
-    function unlockAudioContext(){
-      const ctx = ensureAudioContext();
-      if(!ctx || ctx.state !== "suspended") return;
-      ctx.resume().catch(()=>{});
-    }
+async function unlockAudioContext(){
+  const ctx = ensureAudioContext();
+  if(!ctx) return null;
+
+  if(ctx.state === "suspended"){
+    try{
+      await ctx.resume();
+    }catch{}
+  }
+
+  return ctx;
+}
 
     function playSe(type){
       if(!state.soundEnabled) return;
@@ -507,16 +514,19 @@
       setTimeout(()=>{ try { master.disconnect(); } catch {} }, Math.ceil((tail + 0.1) * 1000));
     }
 
-    function toggleSound(){
-      state.soundEnabled = !state.soundEnabled;
-      saveProfile();
-      addLog(state.soundEnabled ? "効果音 ON" : "効果音 OFF");
-      if(state.soundEnabled){
-        unlockAudioContext();
-        playSe("item");
-      }
-      render();
-    }
+async function toggleSound(){
+  state.soundEnabled = !state.soundEnabled;
+
+  saveProfile();
+  addLog(state.soundEnabled ? "効果音 ON" : "効果音 OFF");
+
+  if(state.soundEnabled){
+    await unlockAudioContext();
+    playSe("item");
+  }
+
+  render();
+}
 
     function renderLogs(){
       logLatestEl.innerHTML = state.logs.slice(0,2).map((m)=>`<div class="line">${m}</div>`).join("");
@@ -2043,7 +2053,7 @@ async function openChest(floorObject){
         return;
       }
       if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"," ","a","A","b","B","m","M","r","R","n","N","1","2","3","4","5","6"].includes(key)) e.preventDefault();
-      unlockAudioContext();
+      unlockAudioContext().catch(()=>{});
       if(key==="m"||key==="M") return toggleSound();
       if((key==="n"||key==="N") && (state.turns===0 || state.gameOver || state.gameClear)) return beginNameInputMode();
       if(key==="r"||key==="R") return restartGame();
