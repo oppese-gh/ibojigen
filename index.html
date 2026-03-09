@@ -7,23 +7,31 @@
   <style>
     :root { --bg:#111; --panel:#1b1b1b; --text:#f2f2f2; --accent:#7ad1ff; }
     * { box-sizing: border-box; }
-    body { margin:0; min-height:100vh; display:grid; place-items:center; background:var(--bg); color:var(--text); font-family:system-ui,"Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif; padding:12px; }
-    .wrap { width:min(100%,980px); background:var(--panel); border:1px solid #333; border-radius:10px; padding:12px; box-shadow:0 8px 30px rgba(0,0,0,.35); }
-    h1 { margin:0 0 8px; color:var(--accent); font-size:20px; }
-    #grid { position:relative; margin:0; display:grid; grid-template-columns:repeat(13,24px); grid-auto-rows:24px; width:fit-content; background:#0d0d0d; border:1px solid #444; padding:8px; overflow:hidden; user-select:none; min-height:calc(13 * 24px + 16px); }
+    body { margin:0; min-height:100vh; display:grid; place-items:center; background:var(--bg); color:var(--text); font-family:system-ui,"Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif; padding:8px; }
+    .game-screen { width:min(calc(100vw - 16px), calc((100vh - 16px) * 16 / 9)); aspect-ratio:16/9; background:var(--panel); border:1px solid #333; border-radius:12px; box-shadow:0 8px 30px rgba(0,0,0,.35); display:grid; grid-template-columns:repeat(16,1fr); grid-template-rows:repeat(9,1fr); gap:0; overflow:hidden; }
+    .region { padding:4px; min-width:0; min-height:0; }
+    .panel { width:100%; height:100%; border:1px solid #3b3b3b; background:#121212; padding:6px; overflow:hidden; }
+    #region-main { grid-column:1/10; grid-row:1/10; }
+    #region-text-top { grid-column:10/17; grid-row:1/2; }
+    #region-item-slots { grid-column:10/16; grid-row:2/3; }
+    #region-reserved { grid-column:16/17; grid-row:2/3; }
+    #region-status { grid-column:10/17; grid-row:3/5; }
+    #region-text-main { grid-column:10/17; grid-row:5/8; }
+    #region-minimap { grid-column:10/12; grid-row:8/10; }
+    #region-help { grid-column:12/17; grid-row:8/9; }
+    #region-system { grid-column:12/17; grid-row:9/10; }
+    #grid { position:relative; margin:0; display:grid; grid-template-columns:repeat(13,minmax(0,1fr)); grid-template-rows:repeat(13,minmax(0,1fr)); width:100%; height:100%; background:#0d0d0d; border:1px solid #444; padding:1.2%; overflow:hidden; user-select:none; }
     #projectile-layer { position:absolute; inset:0; pointer-events:none; z-index:2; }
-    .projectile { position:absolute; width:24px; height:24px; line-height:24px; text-align:center; font-size:20px; }
-    .cell { width:24px; height:24px; line-height:24px; text-align:center; font-size:20px; }
-    .play-area { display:flex; gap:12px; align-items:flex-start; flex-wrap:wrap; }
-    #minimap-wrap { background:#0d0d0d; border:1px solid #444; padding:8px; }
-    #minimap-title { font-size:12px; color:#bfbfbf; margin-bottom:6px; }
-    #minimap { display:block; width:128px; height:128px; background:#070707; image-rendering:pixelated; }
-    #status { margin-top:8px; padding:8px; border:1px solid #3b3b3b; background:#141414; font-size:16px; line-height:1.45; white-space:normal; }
+    .projectile { position:absolute; display:flex; align-items:center; justify-content:center; text-align:center; }
+    .cell { display:flex; align-items:center; justify-content:center; text-align:center; font-size:clamp(14px,2.1vmin,34px); }
+    #minimap-wrap { width:100%; height:100%; background:#0d0d0d; border:1px solid #444; padding:4px; display:flex; align-items:center; justify-content:center; }
+    #minimap { display:block; width:100%; height:100%; max-width:100%; max-height:100%; background:#070707; image-rendering:pixelated; }
+    #status { width:100%; height:100%; padding:2px; background:#141414; font-size:clamp(11px,1.35vmin,18px); line-height:1.35; white-space:normal; overflow:auto; }
     .row { display:flex; gap:24px; align-items:center; flex-wrap:wrap; }
     .monster-alert { color:#ff5252; font-weight:700; }
     .stat { display:flex; align-items:center; gap:6px; }
     .label { min-width:2.2em; }
-    .meter { width:180px; height:12px; border:1px solid #666; background:#242424; border-radius:3px; overflow:hidden; }
+    .meter { width:min(16vw,180px); height:10px; border:1px solid #666; background:#242424; border-radius:3px; overflow:hidden; }
     .fill { display:block; height:100%; width:0; background:#2ecc71; border-radius:inherit; }
     .tone-yellow .fill { background:#2ecc71; }
     .tone-orange .fill { background:#ff9800; }
@@ -32,13 +40,21 @@
     .tone-orange .num { color:#ff9800; }
     .tone-red .num { color:#e74c3c; }
     .meter.tone-red { border-color:#e74c3c; }
-    #log { margin-top:8px; border:1px solid #3b3b3b; background:#101010; padding:8px; font-size:14px; line-height:1.35; }
-    #log-latest { min-height:40px; border-bottom:1px solid #2f2f2f; margin-bottom:6px; padding-bottom:4px; }
-    #log-history { max-height:160px; overflow-y:auto; }
-    #help { margin-top:8px; color:#ccc; font-size:13px; }
-    #name-input-wrap { margin-top:8px; display:none; }
+    #log-top { width:100%; height:100%; border:1px solid #3b3b3b; background:#101010; padding:6px; font-size:clamp(11px,1.25vmin,17px); line-height:1.3; overflow:auto; }
+    #log { width:100%; height:100%; border:1px solid #3b3b3b; background:#101010; padding:6px; font-size:clamp(11px,1.2vmin,16px); line-height:1.3; display:flex; flex-direction:column; }
+    #log-latest { min-height:0; border-bottom:1px solid #2f2f2f; margin-bottom:6px; padding-bottom:4px; }
+    #log-history { min-height:0; flex:1; overflow-y:auto; }
+    #help { width:100%; height:100%; color:#ccc; font-size:clamp(10px,1.1vmin,15px); line-height:1.35; overflow:auto; }
+    #name-input-wrap { margin-top:4px; display:none; }
     #name-input-wrap.show { display:block; }
-    #name-ime-input { width:min(100%, 280px); font-size:16px; padding:6px 8px; border:1px solid #555; border-radius:4px; background:#0f0f0f; color:var(--text); }
+    #name-ime-input { width:min(100%, 280px); font-size:14px; padding:4px 6px; border:1px solid #555; border-radius:4px; background:#0f0f0f; color:var(--text); }
+    #item-slots { width:100%; height:100%; display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:4px; }
+    .item-slot { border:1px solid #4a4a4a; background:#0d0d0d; display:flex; flex-direction:column; justify-content:center; align-items:center; font-size:clamp(10px,1.2vmin,16px); line-height:1.1; }
+    .item-slot .slot-key { color:#8fc9ff; font-size:0.9em; }
+    .item-slot .slot-item { font-size:1.2em; }
+    #system-info { width:100%; height:100%; font-size:clamp(10px,1.05vmin,14px); line-height:1.25; color:#c6c6c6; overflow:auto; }
+    #app-title { margin:0 0 4px; color:var(--accent); font-size:clamp(12px,1.5vmin,20px); }
+    #reserved-space { width:100%; height:100%; }
     .line { margin-bottom:3px; }
     #ending-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.52); display:flex; align-items:center; justify-content:center; opacity:0; pointer-events:none; transition:opacity 1.6s ease; z-index:30; }
     #ending-overlay.show { opacity:1; pointer-events:auto; }
@@ -60,25 +76,65 @@
   </style>
 </head>
 <body>
-  <main class="wrap">
-    <h1 id="app-title">ぼじろーぐ <span id="version"></span></h1>
-    <div class="play-area">
-      <div id="grid" aria-label="game map" role="img"></div>
+  <main class="game-screen">
+    <section id="region-main" class="region">
+      <div class="panel">
+        <div id="grid" aria-label="game map" role="img"></div>
+      </div>
+    </section>
+
+    <section id="region-text-top" class="region">
+      <div id="log-top">
+        <h1 id="app-title">ぼじろーぐ <span id="version"></span></h1>
+        <div id="name-input-wrap" aria-live="polite">
+          <label for="name-ime-input">名前入力</label>
+          <input id="name-ime-input" type="text" inputmode="text" autocomplete="off" />
+        </div>
+      </div>
+    </section>
+
+    <section id="region-item-slots" class="region">
+      <div class="panel">
+        <div id="item-slots"></div>
+      </div>
+    </section>
+
+    <section id="region-reserved" class="region">
+      <div class="panel">
+        <div id="reserved-space" aria-hidden="true"></div>
+      </div>
+    </section>
+
+    <section id="region-status" class="region">
+      <div class="panel">
+        <div id="status"></div>
+      </div>
+    </section>
+
+    <section id="region-text-main" class="region">
+      <div id="log">
+        <div id="log-latest"></div>
+        <div id="log-history"></div>
+      </div>
+    </section>
+
+    <section id="region-minimap" class="region">
       <div id="minimap-wrap">
-        <div id="minimap-title">MINIMAP</div>
         <canvas id="minimap" width="128" height="128" aria-label="minimap" role="img"></canvas>
       </div>
-    </div>
-    <div id="status"></div>
-    <div id="log">
-      <div id="log-latest"></div>
-      <div id="log-history"></div>
-    </div>
-    <div id="help">操作: ↑↓←→移動 / Space 待機 / A いぼビーム / B イボ食い / 1-6 アイテム使用 / Shift+1-6 アイテムを足元に置く / M SE ON/OFF / R リスタート / N 名前入力</div>
-    <div id="name-input-wrap" aria-live="polite">
-      <label for="name-ime-input">名前入力</label>
-      <input id="name-ime-input" type="text" inputmode="text" autocomplete="off" />
-    </div>
+    </section>
+
+    <section id="region-help" class="region">
+      <div class="panel">
+        <div id="help">操作: ↑↓←→移動 / Space 待機 / A いぼビーム / B イボ食い / 1-6 アイテム使用 / Shift+1-6 アイテムを足元に置く / M SE ON/OFF / R リスタート / N 名前入力</div>
+      </div>
+    </section>
+
+    <section id="region-system" class="region">
+      <div class="panel">
+        <div id="system-info"></div>
+      </div>
+    </section>
   </main>
   <div id="ending-overlay" aria-hidden="true">
     <div id="ending-content"></div>
@@ -97,8 +153,6 @@
     const TILE_WALL = "#";
     const TILE_FLOOR = ".";
     const PROJECTILE_STEP_MS = 40;
-    const CELL_SIZE = 24;
-    const GRID_PADDING = 8;
     const MINIMAP_SIZE = 128;
     const MINIMAP_TILE = 4;
     // wizardは遠距離攻撃が強いため、近接攻撃を少し弱くする
@@ -324,6 +378,8 @@
     const minimapCtx = minimapEl ? minimapEl.getContext("2d") : null;
     const versionEl = document.getElementById("version");
     const statusEl = document.getElementById("status");
+    const systemInfoEl = document.getElementById("system-info");
+    const itemSlotsEl = document.getElementById("item-slots");
     const logLatestEl = document.getElementById("log-latest");
     const logHistoryEl = document.getElementById("log-history");
     const nameImeInputEl = document.getElementById("name-ime-input");
@@ -1164,22 +1220,34 @@ ${kills || "なし"}</div>`;
       const bossAlert = state.floor===30 ? "<span class=\"monster-alert\">🌋 BOSS FLOOR</span>" : "";
       const atkText = formatBuffStat("ATK", state.player.baseAtk, playerAtkValue(), "🪓");
       const defText = formatBuffStat("DEF", state.player.baseDef, playerDefValue(), "💎");
-      const bestNameText = state.titleBestStar ? `⭐️${state.bestName}` : state.bestName;
-      const bestText = `${state.bestScore}(${bestNameText})`;
-      const nameInputGuide = state.editingName
-        ? `<div class="row">名前入力中: ${state.nameInput || ""}<span style="opacity:.8;">|</span> Enterで確定 / Escでキャンセル${state.nameInputError ? ` / <span style="color:#ff8a8a;">${state.nameInputError}</span>` : ""}</div>`
-        : "";
-      const debugStatus = DEBUG_BUILD
-        ? `<div class="row" style="color:#ffd166;">DEBUG_BUILD${state.debugMode ? " / DEBUG MODE ON" : ""}${state.debugFloorBuffer ? ` / JUMP: ${state.debugFloorBuffer}_` : ""}</div>`
-        : "";
 
       return `
-        <div class="row">${playerName()} / 階 ${state.floor} / Lv ${state.player.level} / EXP ${state.player.exp}/${expToNextLevel()} / 視界 ${state.player.vision}/${state.player.visionMax} / ${atkText} / ${defText} / SCORE ${state.score} / BEST ${bestText} / SE ${state.soundEnabled ? "ON" : "OFF"} ${status} ${monsterAlert} ${bossAlert}</div>
-        <div class="row">${gaugeHtml("HP", state.player.hp, state.player.maxHp)} ${gaugeHtml("満腹度", state.player.hunger, state.player.hungerMax)}</div>
-        <div class="row">イボ(${state.player.ibo}/${state.player.iboMax}) ITEM ${invToString()}</div>${debugStatus}${nameInputGuide}`;
+        <div class="row">${playerName()} / 階 ${state.floor} / Lv ${state.player.level} / EXP ${state.player.exp}/${expToNextLevel()} / 視界 ${state.player.vision}/${state.player.visionMax}</div>
+        <div class="row">${atkText} / ${defText} / イボ(${state.player.ibo}/${state.player.iboMax}) ${status} ${monsterAlert} ${bossAlert}</div>
+        <div class="row">${gaugeHtml("HP", state.player.hp, state.player.maxHp)} ${gaugeHtml("満腹度", state.player.hunger, state.player.hungerMax)}</div>`;
+    }
+
+    function buildSystemInfoHtml(){
+      const bestNameText = state.titleBestStar ? `⭐️${state.bestName}` : state.bestName;
+      const bestText = `${state.bestScore}(${bestNameText})`;
+      const debugStatus = DEBUG_BUILD
+        ? `DEBUG_BUILD${state.debugMode ? " / DEBUG MODE ON" : ""}${state.debugFloorBuffer ? ` / JUMP: ${state.debugFloorBuffer}_` : ""}`
+        : "RELEASE_BUILD";
+      return `SCORE ${state.score} / BEST ${bestText}<br>SE ${state.soundEnabled ? "ON" : "OFF"}<br>${APP_VERSION}<br>${debugStatus}`;
+    }
+
+    function buildItemSlotsHtml(){
+      normalizeInventorySize();
+      return Array.from({length:6}, (_,idx)=>{
+        const slot = state.inventory[idx];
+        const itemText = slot ? slot.char : "▢";
+        const keyText = `${idx+1}`;
+        return `<div class="item-slot"><div class="slot-key">${keyText}</div><div class="slot-item">${itemText}</div></div>`;
+      }).join("");
     }
 
     function renderMiniMap(){
+
       if(!minimapCtx) return;
       minimapCtx.clearRect(0,0,MINIMAP_SIZE,MINIMAP_SIZE);
       minimapCtx.fillStyle = "#070707";
@@ -1227,6 +1295,8 @@ ${kills || "なし"}</div>`;
       if(!mapEl.contains(projectileLayer)) mapEl.appendChild(projectileLayer);
       renderMiniMap();
       statusEl.innerHTML = buildStatusHtml();
+      if(systemInfoEl) systemInfoEl.innerHTML = buildSystemInfoHtml();
+      if(itemSlotsEl) itemSlotsEl.innerHTML = buildItemSlotsHtml();
       if(nameInputWrapEl){
         nameInputWrapEl.classList.toggle("show", state.editingName);
       }
@@ -1746,15 +1816,30 @@ async function openChest(floorObject){
     function waitTurn(){ if(state.gameOver||state.inputLocked) return; addLog("その場で待機した。"); endTurn(); }
     function eatIbo(){ if(state.gameOver||state.inputLocked) return; if(state.player.ibo<1){ addLog("イボがない！"); return; } state.player.ibo-=1; state.player.hunger=Math.min(state.player.hungerMax,state.player.hunger+60); updateHungerWarning(); addLog("イボをたべた！ 満腹+60"); endTurn(); }
     const sleep = (ms)=>new Promise((resolve)=>setTimeout(resolve,ms));
+    function getGridMetrics(){
+      const rect = mapEl.getBoundingClientRect();
+      const style = getComputedStyle(mapEl);
+      const padX = parseFloat(style.paddingLeft) || 0;
+      const padY = parseFloat(style.paddingTop) || 0;
+      const cellW = (rect.width - padX * 2) / CAMERA_SIZE;
+      const cellH = (rect.height - padY * 2) / CAMERA_SIZE;
+      const cell = Math.min(cellW, cellH);
+      return {padX, padY, cell};
+    }
+
     function setProjectilePos(el,x,y){
       const pos = worldToCamera(x,y);
       if(!pos.inView){
         el.style.display="none";
         return;
       }
-      el.style.display="block";
-      el.style.left=`${GRID_PADDING + pos.x*CELL_SIZE}px`;
-      el.style.top=`${GRID_PADDING + pos.y*CELL_SIZE}px`;
+      const metrics = getGridMetrics();
+      el.style.display="flex";
+      el.style.width=`${metrics.cell}px`;
+      el.style.height=`${metrics.cell}px`;
+      el.style.fontSize=`${Math.max(12, metrics.cell * 0.78)}px`;
+      el.style.left=`${metrics.padX + pos.x*metrics.cell}px`;
+      el.style.top=`${metrics.padY + pos.y*metrics.cell}px`;
     }
 
     async function bowShot(){
