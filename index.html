@@ -1965,86 +1965,90 @@ async function openChest(floorObject){
     }
 
     function handleDebugKey(e){
-      if(state.editingName || state.gameOver || state.gameClear || state.inputLocked) return false;
-      if(e.shiftKey && e.code === "KeyD"){
-        state.debugMode = !state.debugMode;
-        state.debugFloorBuffer = "";
-        addLog(`[DEBUG] 調整モード ${state.debugMode ? "ON" : "OFF"}`);
-        render();
-        return true;
-      }
-      if(e.shiftKey && /^Digit[0-9]$/.test(e.code)){
-        const digit = e.code.slice(-1);
-        state.debugFloorBuffer += digit;
-        if(state.debugFloorBuffer.length === 1){
-          addLog(`[DEBUG] ジャンプ入力: ${state.debugFloorBuffer}_`);
-          render();
-          return true;
-        }
-        const targetFloor = Number.parseInt(state.debugFloorBuffer, 10);
-        if(Number.isInteger(targetFloor) && targetFloor >= 1) debugJumpToFloor(targetFloor);
-        else {
-          addLog(`[DEBUG] 無効なジャンプ入力: ${state.debugFloorBuffer}`);
-          state.debugFloorBuffer = "";
-          render();
-        }
-        return true;
-      }
-      if(!state.debugMode) return false;
-      const code = (e.code || "").toLowerCase();
-      if(code === "keya"){
-        debugAdjustPlayer("ATK+1", ()=>{ state.player.baseAtk += 1; return true; });
-        return true;
-      }
-      if(code === "keys"){
-        debugAdjustPlayer("DEF+1", ()=>{ state.player.baseDef += 1; return true; });
-        return true;
-      }
-      if(code === "keyh"){
-        debugAdjustPlayer("HP全快", ()=>{
-          if(state.player.hp >= state.player.maxHp) return false;
-          state.player.hp = state.player.maxHp;
-          return true;
-        });
-        return true;
-      }
-      if(code === "keyj"){
-        debugAdjustPlayer("満腹度全快", ()=>{
-          if(state.player.hunger >= state.player.hungerMax) return false;
-          state.player.hunger = state.player.hungerMax;
-          updateHungerWarning();
-          return true;
-        });
-        return true;
-      }
-      if(code === "keyv"){
-        debugAdjustPlayer("視界+1", ()=>{
-          const nextVision = Math.min(state.player.visionMax, state.player.vision + 1);
-          if(nextVision === state.player.vision) return false;
-          state.player.vision = nextVision;
-          return true;
-        });
-        return true;
-      }
-      if(code === "keyb"){
-        debugAdjustPlayer("視界-1", ()=>{
-          const nextVision = Math.max(state.player.visionMin, state.player.vision - 1);
-          if(nextVision === state.player.vision) return false;
-          state.player.vision = nextVision;
-          return true;
-        });
-        return true;
-      }
-      if(code === "keye"){
-        debugAdjustPlayer("経験値付与", ()=>{
-          state.player.exp += expToNextLevel();
-          maybeLevelUp();
-          return true;
-        });
-        return true;
-      }
-      return false;
+  if(state.editingName || state.gameOver || state.gameClear || state.inputLocked) return false;
+
+  if(e.shiftKey && e.code === "KeyD"){
+    state.debugMode = !state.debugMode;
+    state.debugFloorBuffer = "";
+    addLog(`[DEBUG] 調整モード ${state.debugMode ? "ON" : "OFF"}`);
+    render();
+    return true;
+  }
+
+  if(!state.debugMode) return false;
+
+  if(e.shiftKey && /^Digit[0-9]$/.test(e.code)){
+    const digit = e.code.slice(-1);
+    state.debugFloorBuffer += digit;
+    if(state.debugFloorBuffer.length === 1){
+      addLog(`[DEBUG] ジャンプ入力: ${state.debugFloorBuffer}_`);
+      render();
+      return true;
     }
+    const targetFloor = Number.parseInt(state.debugFloorBuffer, 10);
+    if(Number.isInteger(targetFloor) && targetFloor >= 1) debugJumpToFloor(targetFloor);
+    else {
+      addLog(`[DEBUG] 無効なジャンプ入力: ${state.debugFloorBuffer}`);
+      state.debugFloorBuffer = "";
+      render();
+    }
+    return true;
+  }
+
+  const code = (e.code || "").toLowerCase();
+  if(code === "keya"){
+    debugAdjustPlayer("ATK+1", ()=>{ state.player.baseAtk += 1; return true; });
+    return true;
+  }
+  if(code === "keys"){
+    debugAdjustPlayer("DEF+1", ()=>{ state.player.baseDef += 1; return true; });
+    return true;
+  }
+  if(code === "keyh"){
+    debugAdjustPlayer("HP全快", ()=>{
+      if(state.player.hp >= state.player.maxHp) return false;
+      state.player.hp = state.player.maxHp;
+      return true;
+    });
+    return true;
+  }
+  if(code === "keyj"){
+    debugAdjustPlayer("満腹度全快", ()=>{
+      if(state.player.hunger >= state.player.hungerMax) return false;
+      state.player.hunger = state.player.hungerMax;
+      updateHungerWarning();
+      return true;
+    });
+    return true;
+  }
+  if(code === "keyv"){
+    debugAdjustPlayer("視界+1", ()=>{
+      const nextVision = Math.min(state.player.visionMax, state.player.vision + 1);
+      if(nextVision === state.player.vision) return false;
+      state.player.vision = nextVision;
+      return true;
+    });
+    return true;
+  }
+  if(code === "keyb"){
+    debugAdjustPlayer("視界-1", ()=>{
+      const nextVision = Math.max(state.player.visionMin, state.player.vision - 1);
+      if(nextVision === state.player.vision) return false;
+      state.player.vision = nextVision;
+      return true;
+    });
+    return true;
+  }
+  if(code === "keye"){
+    debugAdjustPlayer("経験値付与", ()=>{
+      state.player.exp += expToNextLevel();
+      maybeLevelUp();
+      return true;
+    });
+    return true;
+  }
+  return false;
+}
 
     function initializeRunState(){
       state.floor = 1;
