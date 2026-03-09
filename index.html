@@ -14,13 +14,14 @@
       --line-soft:#2e2e2e;
       --panel-inner:#101010;
       --panel-shadow:inset 0 0 0 1px rgba(255,255,255,.02), inset 0 8px 18px rgba(0,0,0,.2);
+      --mono-font:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
     }
     * { box-sizing: border-box; }
     body { margin:0; min-height:100vh; display:grid; place-items:center; background:radial-gradient(circle at 50% 30%, #161616, #101010 70%); color:var(--text); font-family:system-ui,"Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif; padding:clamp(6px,0.9vw,16px); }
     .game-screen { width:min(calc(100vw - clamp(12px,1.6vw,30px)), calc((100vh - clamp(12px,1.6vw,30px)) * 16 / 9)); aspect-ratio:16/9; background:linear-gradient(180deg,#1d1d1d,#161616); border:1px solid #3a3a3a; border-radius:14px; box-shadow:0 12px 36px rgba(0,0,0,.42); display:grid; grid-template-columns:repeat(16,1fr); grid-template-rows:repeat(9,1fr); gap:0; overflow:hidden; }
     .region { padding:2px; min-width:0; min-height:0; }
     .panel { width:100%; height:100%; border:1px solid var(--line); background:var(--panel-inner); padding:clamp(4px,0.4vw,8px); overflow:hidden; box-shadow:var(--panel-shadow); }
-    .game-main-panel { padding:clamp(4px,0.35vw,8px); display:flex; align-items:center; justify-content:center; }
+    .game-main-panel { padding:clamp(2px,0.2vw,4px); display:flex; align-items:center; justify-content:center; }
     #game-main-frame { width:100%; height:100%; aspect-ratio:1 / 1; max-width:100%; max-height:100%; display:flex; align-items:stretch; justify-content:stretch; }
     #region-main { grid-column:1/10; grid-row:1/10; }
     #region-text-top { grid-column:10/17; grid-row:1/2; }
@@ -34,17 +35,20 @@
     #grid { position:relative; margin:0; display:grid; grid-template-columns:repeat(13,minmax(0,1fr)); grid-template-rows:repeat(13,minmax(0,1fr)); width:100%; height:100%; aspect-ratio:1 / 1; background:#0d0d0d; border:1px solid #4f4f4f; padding:0; overflow:hidden; user-select:none; box-shadow:inset 0 0 22px rgba(0,0,0,.45); }
     #projectile-layer { position:absolute; inset:0; pointer-events:none; z-index:2; }
     .projectile { position:absolute; display:flex; align-items:center; justify-content:center; text-align:center; }
-    .cell { display:flex; align-items:center; justify-content:center; text-align:center; line-height:1; font-size:var(--cell-font-size,24px); }
+    .cell { display:flex; align-items:center; justify-content:center; text-align:center; line-height:.95; letter-spacing:-0.02em; font-size:var(--cell-font-size,24px); font-family:var(--mono-font); }
     #minimap-wrap { width:100%; height:100%; background:#0d0d0d; border:1px solid #555; padding:clamp(3px,0.4vw,8px); display:flex; align-items:center; justify-content:center; box-shadow:var(--panel-shadow); }
     #minimap { display:block; width:100%; height:100%; max-width:100%; max-height:100%; background:#070707; image-rendering:pixelated; }
-    #status { width:100%; height:100%; max-width:48ch; margin:0 auto; padding:clamp(5px,0.6vw,11px); background:#141414; border:1px solid var(--line-soft); font-size:clamp(13px,1.46vmin,22px); line-height:1.3; white-space:normal; overflow:auto; box-shadow:var(--panel-shadow); display:grid; gap:clamp(6px,0.6vw,11px); align-content:start; }
-    .status-line { display:grid; grid-template-columns:repeat(auto-fit,minmax(12ch,1fr)); gap:clamp(4px,0.6vw,10px); }
+    #status { width:100%; height:100%; margin:0; padding:clamp(5px,0.6vw,10px); background:#141414; border:1px solid var(--line-soft); font-size:clamp(12px,1.2vmin,18px); line-height:1.25; white-space:normal; overflow:auto; box-shadow:var(--panel-shadow); display:grid; gap:clamp(4px,0.45vw,8px); align-content:start; font-family:var(--mono-font); }
+    .status-line { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:clamp(3px,0.4vw,7px); }
+    .status-line.line-top { grid-template-columns:minmax(0,2fr) repeat(2,minmax(0,1fr)); }
+    .status-line.line-exp { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .status-line.line-gauge { grid-template-columns:repeat(2,minmax(0,1fr)); align-items:center; }
     .status-pill { border:1px solid #3b3b3b; background:#101010; border-radius:4px; padding:2px 6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .status-alerts { display:flex; gap:8px; flex-wrap:wrap; }
     .monster-alert { color:#ff5252; font-weight:700; }
-    .stat { display:flex; align-items:center; gap:6px; min-width:0; }
+    .stat { display:flex; align-items:center; gap:4px; min-width:0; }
     .label { min-width:2.2em; }
-    .meter { width:min(100%,220px); height:clamp(11px,1.05vmin,16px); border:1px solid #666; background:#242424; border-radius:4px; overflow:hidden; }
+    .meter { width:min(100%,220px); height:clamp(10px,0.9vmin,14px); border:1px solid #666; background:#242424; border-radius:4px; overflow:hidden; }
     .fill { display:block; height:100%; width:0; background:#2ecc71; border-radius:inherit; }
     .tone-yellow .fill { background:#2ecc71; }
     .tone-orange .fill { background:#ff9800; }
@@ -53,23 +57,22 @@
     .tone-orange .num { color:#ff9800; }
     .tone-red .num { color:#e74c3c; }
     .meter.tone-red { border-color:#e74c3c; }
-    #log-top { width:100%; height:100%; border:1px solid var(--line); background:#101010; padding:clamp(6px,0.62vw,12px); font-size:clamp(13px,1.35vmin,21px); line-height:1.38; overflow:auto; box-shadow:var(--panel-shadow); }
-    #log { width:100%; height:100%; border:1px solid var(--line); background:#101010; padding:clamp(6px,0.62vw,12px); font-size:clamp(12px,1.15vmin,18px); line-height:1.45; display:grid; grid-template-rows:auto 1fr; gap:clamp(6px,0.6vw,10px); box-shadow:var(--panel-shadow); }
-    #log-latest, #log-history { width:100%; max-width:60ch; margin:0 auto; }
-    #log-latest { min-height:0; }
-    #log-history { min-height:0; overflow-y:auto; display:grid; gap:clamp(4px,0.4vw,8px); align-content:start; }
+    #log-top { width:100%; height:100%; border:1px solid var(--line); background:#101010; padding:clamp(5px,0.55vw,10px); font-size:clamp(12px,1.15vmin,18px); line-height:1.35; overflow:auto; box-shadow:var(--panel-shadow); font-family:var(--mono-font); }
+    #log { width:100%; height:100%; border:1px solid var(--line); background:#101010; padding:clamp(5px,0.55vw,10px); font-size:clamp(12px,1.05vmin,16px); line-height:1.35; display:grid; gap:clamp(5px,0.45vw,8px); box-shadow:var(--panel-shadow); align-content:start; justify-items:center; font-family:var(--mono-font); }
+    #log-latest { min-height:0; display:grid; gap:clamp(4px,0.35vw,6px); }
+    #log-history { display:none; }
     .log-block { border:1px solid #3f3f3f; background:#141414; border-radius:5px; padding:clamp(4px,0.45vw,8px) clamp(6px,0.6vw,10px); }
     .log-block.latest { border-color:#5b7da2; box-shadow:inset 0 0 0 1px rgba(122,209,255,.2); }
-    .log-line { min-height:1.35em; white-space:normal; overflow-wrap:anywhere; }
-    #help-system { width:100%; height:100%; max-width:60ch; margin:0 auto; display:grid; grid-template-rows:auto 1fr; gap:clamp(5px,0.5vw,9px); }
-    #help { color:#ccc; font-size:clamp(11px,1.05vmin,15px); line-height:1.35; border:1px solid #383838; background:#101010; border-radius:4px; padding:clamp(4px,0.45vw,8px); }
+    .log-line { min-height:1.2em; width:30ch; max-width:100%; white-space:nowrap; overflow:hidden; text-overflow:clip; }
+    #help-system { width:100%; height:100%; margin:0; display:grid; grid-template-rows:auto 1fr; gap:clamp(4px,0.4vw,7px); font-family:var(--mono-font); }
+    #help { color:#ccc; font-size:clamp(10px,0.92vmin,13px); line-height:1.3; border:1px solid #383838; background:#101010; border-radius:4px; padding:clamp(4px,0.4vw,7px); }
     #name-input-wrap { margin-top:4px; display:none; }
     #name-input-wrap.show { display:block; }
-    #name-ime-input { width:min(100%, 320px); font-size:clamp(13px,1.28vmin,18px); padding:clamp(4px,0.42vw,8px) clamp(7px,0.7vw,12px); border:1px solid #555; border-radius:5px; background:#0f0f0f; color:var(--text); }
-    #item-slots { width:100%; height:100%; display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:clamp(4px,0.45vw,9px); }
-    .item-slot { border:1px solid #5b5b5b; background:linear-gradient(180deg,#141414,#0d0d0d); display:grid; grid-template-rows:auto 1fr; align-items:stretch; gap:2px; font-size:clamp(10px,1.02vmin,14px); line-height:1.1; border-radius:4px; padding:clamp(2px,0.3vw,5px); box-shadow:inset 0 0 0 1px rgba(255,255,255,.03); min-height:0; }
+    #name-ime-input { width:min(100%, 30ch); font-size:clamp(12px,1.05vmin,15px); padding:clamp(4px,0.38vw,7px) clamp(6px,0.55vw,10px); border:1px solid #555; border-radius:5px; background:#0f0f0f; color:var(--text); font-family:var(--mono-font); }
+    #item-slots { width:100%; height:100%; display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:clamp(3px,0.3vw,6px); }
+    .item-slot { width:100%; aspect-ratio:1; border:1px solid #5b5b5b; background:linear-gradient(180deg,#141414,#0d0d0d); display:flex; flex-direction:column; align-items:center; justify-content:space-between; font-size:clamp(10px,0.8vmin,12px); line-height:1.1; border-radius:4px; padding:clamp(2px,0.2vw,4px); box-shadow:inset 0 0 0 1px rgba(255,255,255,.03); min-height:0; }
     .item-slot .slot-key { color:#8fc9ff; font-size:0.9em; font-weight:700; justify-self:start; }
-    .item-slot .slot-item { font-size:clamp(15px,1.7vmin,24px); display:grid; place-items:center; min-height:1.2em; }
+    .item-slot .slot-item { font-size:clamp(18px,2.4vmin,34px); display:flex; align-items:center; justify-content:center; flex:1; width:100%; }
     .item-slot.empty { border-style:dashed; opacity:0.9; }
     #system-info { width:100%; height:100%; font-size:clamp(10px,1vmin,14px); line-height:1.35; color:#c6c6c6; overflow:auto; border:1px solid var(--line-soft); background:#111; padding:clamp(4px,0.45vw,8px); box-shadow:var(--panel-shadow); border-radius:4px; }
     #app-title { margin:0 0 clamp(4px,0.4vw,9px); color:var(--accent); font-size:clamp(16px,1.82vmin,28px); line-height:1.1; letter-spacing:.02em; }
@@ -114,7 +117,7 @@
         <h1 id="app-title">ぼじろーぐ <span id="version"></span></h1>
         <div id="name-input-wrap" aria-live="polite">
           <label for="name-ime-input">名前入力</label>
-          <input id="name-ime-input" type="text" inputmode="text" autocomplete="off" />
+          <input id="name-ime-input" type="text" inputmode="text" autocomplete="off" maxlength="10" />
         </div>
       </div>
     </section>
@@ -507,10 +510,26 @@
       return name || DEFAULT_PLAYER_NAME;
     }
 
+    function playerNameUnits(text){
+      return Array.from(text).reduce((sum, ch)=>sum + (/^[\u0020-\u007E]$/.test(ch) ? 1 : 2), 0);
+    }
+
+    function trimPlayerNameToLimit(text, maxUnits = MAX_PLAYER_NAME_LENGTH){
+      let used = 0;
+      let out = "";
+      for(const ch of Array.from(text)){
+        const unit = (/^[\u0020-\u007E]$/.test(ch) ? 1 : 2);
+        if(used + unit > maxUnits) break;
+        used += unit;
+        out += ch;
+      }
+      return out;
+    }
+
     function confirmPlayerName(){
-      const nextName = normalizePlayerName(state.nameInput);
-      if(Array.from(nextName).length > MAX_PLAYER_NAME_LENGTH){
-        state.nameInputError = "10文字以内にしてください";
+      const nextName = normalizePlayerName(trimPlayerNameToLimit(state.nameInput));
+      if(playerNameUnits(nextName) > MAX_PLAYER_NAME_LENGTH){
+        state.nameInputError = "全角5文字/半角10文字以内にしてください";
         render();
         return;
       }
@@ -674,7 +693,6 @@ async function toggleSound(){
 
     function renderLogs(){
       const latest = state.logs.slice(0,3);
-      const history = state.logs.slice(3,12);
       const blockHtml = (m, latest=false)=>{
         const parts = String(m).split("<br>");
         const lines = [parts[0] || "", parts[1] || ""];
@@ -682,7 +700,7 @@ async function toggleSound(){
         return `<div class="${cls}"><div class="log-line">${lines[0]}</div><div class="log-line">${lines[1]}</div></div>`;
       };
       logLatestEl.innerHTML = latest.map((m)=>blockHtml(m, true)).join("");
-      logHistoryEl.innerHTML = history.map((m)=>blockHtml(m, false)).join("");
+      logHistoryEl.innerHTML = "";
     }
     function addLog(message){ state.logs.unshift(message); if(state.logs.length>MAX_LOG) state.logs.pop(); renderLogs(); }
     function updateHungerWarning(){
@@ -1255,20 +1273,22 @@ ${kills || "なし"}</div>`;
       const defText = formatBuffStat("DEF", state.player.baseDef, playerDefValue(), "💎");
 
       return `
-        <div class="status-line">
+        <div class="status-line line-top">
           <div class="status-pill">${playerName()}</div>
           <div class="status-pill">階 ${state.floor}</div>
           <div class="status-pill">Lv ${state.player.level}</div>
+        </div>
+        <div class="status-line line-exp">
           <div class="status-pill">EXP ${state.player.exp}/${expToNextLevel()}</div>
           <div class="status-pill">視界 ${state.player.vision}/${state.player.visionMax}</div>
         </div>
-        <div class="status-line">
+        <div class="status-line line-mid">
           <div class="status-pill">${atkText}</div>
           <div class="status-pill">${defText}</div>
           <div class="status-pill">イボ ${state.player.ibo}/${state.player.iboMax}</div>
         </div>
         <div class="status-alerts">${status} ${monsterAlert} ${bossAlert}</div>
-        <div class="status-line">
+        <div class="status-line line-gauge">
           ${gaugeHtml("HP", state.player.hp, state.player.maxHp)}
           ${gaugeHtml("満腹度", state.player.hunger, state.player.hungerMax)}
         </div>`;
@@ -2447,7 +2467,9 @@ async function openChest(floorObject){
     if(nameImeInputEl){
       nameImeInputEl.addEventListener("input", ()=>{
         if(!state.editingName) return;
-        state.nameInput = nameImeInputEl.value;
+        const trimmed = trimPlayerNameToLimit(nameImeInputEl.value);
+        if(nameImeInputEl.value !== trimmed) nameImeInputEl.value = trimmed;
+        state.nameInput = trimmed;
         state.nameInputError = "";
         render();
       });
@@ -2458,7 +2480,9 @@ async function openChest(floorObject){
       nameImeInputEl.addEventListener("compositionend", ()=>{
         if(!state.editingName) return;
         state.isComposingName = false;
-        state.nameInput = nameImeInputEl.value;
+        const trimmed = trimPlayerNameToLimit(nameImeInputEl.value);
+        if(nameImeInputEl.value !== trimmed) nameImeInputEl.value = trimmed;
+        state.nameInput = trimmed;
         state.nameInputError = "";
         render();
       });
