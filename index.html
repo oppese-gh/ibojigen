@@ -464,7 +464,7 @@
       if(ctx.state === "suspended") return;
       const now = ctx.currentTime;
       const master = ctx.createGain();
-      master.gain.setValueAtTime(0.0001, now);
+      master.gain.setValueAtTime(0.5, now);
       master.connect(ctx.destination);
 
       const tonesByType = {
