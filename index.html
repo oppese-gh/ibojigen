@@ -44,6 +44,11 @@
     .ending-credits-roll { position:absolute; left:50%; transform:translateX(-50%); width:100%; white-space:pre-line; line-height:1.8; font-size:24px; animation:ending-credits-scroll 15s linear forwards; }
     .ending-stats { white-space:pre-line; line-height:1.8; font-size:28px; }
     .ending-thanks { font-size:42px; letter-spacing:.08em; }
+    .ending-return-prompt { margin-top:56px; font-size:24px; opacity:.9; }
+    .ending-return-name-wrap { display:flex; justify-content:center; align-items:center; gap:8px; min-height:180px; }
+    .ending-return-star { font-size:56px; opacity:0; transition:opacity 2s ease; }
+    .ending-return-star.show { opacity:1; }
+    .ending-return-name { font-size:64px; letter-spacing:.08em; }
     @keyframes ending-credits-scroll {
       from { transform:translate(-50%, 100%); }
       to { transform:translate(-50%, -100%); }
@@ -346,6 +351,7 @@
       invSize:INITIAL_INV_SIZE,inventory:createEmptyInventory(INITIAL_INV_SIZE),bestScore:initialBestScore,bestName:initialBestName,playerName:initialPlayerName,editingName:false,nameInput:initialPlayerName,nameInputError:"",isComposingName:false,score:0,turns:0,
       floorHasShield:false,floorHasAxe:false,
       bossCleared:false,clearLadder:null,endingVisible:false,endingPhase:"hidden",endingStarted:false,bestUpdatedOnClear:false,
+      endingReturnPromptVisible:false,endingReturnReady:false,endingReturnStarted:false,endingReturnStarVisible:false,titleBestStar:false,
       kills:buildEmptyKillMap(),
       player:createInitialPlayer(),
       iboCooldown:0,starving:false,hungerLowNotified:false,
@@ -629,6 +635,7 @@ async function toggleSound(){
       if(state.turns===0 || state.gameOver===true){
         state.bestScore = 0;
         state.bestName = DEFAULT_PLAYER_NAME;
+        state.titleBestStar = false;
         saveProfile();
         localStorage.removeItem("bojirogue_bestScore");
         addLog("ハイスコアをリセットした。");
@@ -1061,7 +1068,12 @@ TURNS   ${state.turns}
 
 KILLS
 ${kills || "なし"}</div>`;
-      }else if(state.endingPhase === "thanks") endingContentEl.innerHTML = `<div class="ending-thanks">THANK YOU FOR PLAYING!</div>`;
+      }else if(state.endingPhase === "thanks"){
+        endingContentEl.innerHTML = `<div class="ending-thanks">THANK YOU FOR PLAYING!</div>${state.endingReturnPromptVisible ? '<div class="ending-return-prompt">Rを押すとタイトル画面にもどります</div>' : ""}`;
+      }else if(state.endingPhase === "returnName"){
+        const starClass = state.endingReturnStarVisible ? "ending-return-star show" : "ending-return-star";
+        endingContentEl.innerHTML = `<div class="ending-return-name-wrap"><span class="${starClass}">⭐️</span><span class="ending-return-name">${playerName()}</span></div>`;
+      }
     }
 
     function render(){
@@ -1090,7 +1102,8 @@ ${kills || "なし"}</div>`;
       const bossAlert = state.floor===30 ? "<span class=\"monster-alert\">🌋 BOSS FLOOR</span>" : "";
       const atkText = formatBuffStat("ATK", state.player.baseAtk, playerAtkValue(), "🪓");
       const defText = formatBuffStat("DEF", state.player.baseDef, playerDefValue(), "💎");
-      const bestText = `${state.bestScore}(${state.bestName})`;
+      const bestNameText = state.titleBestStar ? `⭐️${state.bestName}` : state.bestName;
+      const bestText = `${state.bestScore}(${bestNameText})`;
       const nameInputGuide = state.editingName
         ? `<div class="row">名前入力中: ${state.nameInput || ""}<span style="opacity:.8;">|</span> Enterで確定 / Escでキャンセル${state.nameInputError ? ` / <span style="color:#ff8a8a;">${state.nameInputError}</span>` : ""}</div>`
         : "";
@@ -1265,7 +1278,26 @@ ${kills || "なし"}</div>`;
       return "あなたは力尽きた…。 Rで再開";
     }
 
-    function endAsGameOver(causeInfo={cause:"generic"}){ state.player.hp=Math.max(0,state.player.hp); state.gameOver=true; addLog(buildDeathMessage(causeInfo)); playSe("gameover"); finalizeScore("GAME OVER"); }
+    function endAsGameOver(causeInfo={cause:"generic"}){ state.player.hp=Math.max(0,state.player.hp); state.gameOver=true; addLog(buildDeathMessage(causeInfo)); finalizeScore("GAME OVER"); }
+    async function startEndingReturnSequence(){
+      if(!state.gameClear || state.endingPhase !== "thanks" || !state.endingReturnReady || state.endingReturnStarted) return;
+      state.endingReturnStarted = true;
+      state.inputLocked = true;
+      state.endingPhase = "returnName";
+      state.endingReturnStarVisible = false;
+      render();
+      await sleep(1000);
+      if(!state.endingReturnStarted) return;
+      state.endingReturnStarVisible = true;
+      render();
+      await sleep(2000);
+      if(!state.endingReturnStarted) return;
+      await sleep(2000);
+      if(!state.endingReturnStarted) return;
+      state.titleBestStar = state.bestUpdatedOnClear;
+      restartGame();
+    }
+
     async function endAsGameClear(){
       if(state.endingStarted) return;
       state.endingStarted = true;
@@ -1277,6 +1309,10 @@ ${kills || "なし"}</div>`;
       addLog("Rで再スタート");
       state.endingVisible = true;
       state.endingPhase = "fade";
+      state.endingReturnPromptVisible = false;
+      state.endingReturnReady = false;
+      state.endingReturnStarted = false;
+      state.endingReturnStarVisible = false;
       render();
       await sleep(1800);
       if(!state.endingStarted) return;
@@ -1293,6 +1329,11 @@ ${kills || "なし"}</div>`;
       await sleep(5000);
       if(!state.endingStarted) return;
       state.endingPhase = "thanks";
+      render();
+      await sleep(3000);
+      if(!state.endingStarted || state.endingPhase !== "thanks") return;
+      state.endingReturnPromptVisible = true;
+      state.endingReturnReady = true;
       state.inputLocked = false;
       render();
     }
@@ -2026,6 +2067,10 @@ async function openChest(floorObject){
       state.endingPhase = "hidden";
       state.endingStarted = false;
       state.bestUpdatedOnClear = false;
+      state.endingReturnPromptVisible = false;
+      state.endingReturnReady = false;
+      state.endingReturnStarted = false;
+      state.endingReturnStarVisible = false;
       state.seen = createVisibilityGrid();
       state.visibleNow = createVisibilityGrid();
       state.kills = buildEmptyKillMap();
@@ -2100,7 +2145,13 @@ async function openChest(floorObject){
       unlockAudioContext().catch(()=>{});
       if(key==="m"||key==="M") return toggleSound();
       if((key==="n"||key==="N") && (state.turns===0 || state.gameOver || state.gameClear)) return beginNameInputMode();
-      if(key==="r"||key==="R") return restartGame();
+      if(key==="r"||key==="R"){
+        if(state.gameClear){
+          if(state.endingPhase === "thanks" && state.endingReturnReady && !state.endingReturnStarted) return startEndingReturnSequence();
+          if(state.endingPhase === "thanks" || state.endingPhase === "returnName") return;
+        }
+        return restartGame();
+      }
       if(state.gameOver||state.gameClear||state.inputLocked) return;
       if(key==="ArrowUp"){
         if(state.blockedWallMoveKey===key) return;
