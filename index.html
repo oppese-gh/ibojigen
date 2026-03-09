@@ -78,7 +78,7 @@
     const SPRITES = {
       player:"🧔", wall:"🧱", floor:".", ladder:"🪜", orb:"🟣", starBeam:"✨",
       dog:"🐕", wolf:"🐺", lion:"🦁", dragon:"🐉", ghost:"👻", zombie:"🧟", skull:"☠️", invader:"👾", spider:"🕷️", chick:"🐥", mimic:"🎁", rain:"🌧️",
-      food:"🍙", meat:"🥩", sushi:"🍣", feast:"🍖", potion:"🧪", map:"👁", shield:"🛡️", axe:"🪓", diamond:"💎", dagger:"🗡️", star:"🌟", sun:"🌤️", poop:"💩", bean:"🫘", asahiyama:"🏔️"
+      food:"🍙", meat:"🥩", sushi:"🍣", feast:"🍖", potion:"🧪", map:"👁", shield:"🛡️", axe:"🪓", diamond:"💎", dagger:"🗡️", star:"🌟", sun:"🌤️", poop:"💩", bean:"🫘", scroll:"📜", asahiyama:"🏔️"
     };
 
     const ENEMY_DEFS = [
@@ -110,7 +110,8 @@
       {id:11,key:"dagger",char:SPRITES.dagger,category:"weapon",rarity:3,effectKey:"dagger",pickupMode:"instant"},
       {id:12,key:"star",char:SPRITES.star,category:"utility",rarity:5,effectKey:"star",pickupMode:"inventory"},
       {id:13,key:"poop",char:SPRITES.poop,category:"junk",rarity:2,effectKey:"poop",pickupMode:"inventory"},
-      {id:14,key:"bean",char:SPRITES.bean,category:"growth",rarity:4,effectKey:"bean",pickupMode:"instant"}
+      {id:14,key:"bean",char:SPRITES.bean,category:"growth",rarity:4,effectKey:"bean",pickupMode:"instant"},
+      {id:15,key:"scroll",char:SPRITES.scroll,category:"utility",rarity:4,effectKey:"scroll",pickupMode:"inventory"}
     ];
     const ITEM_DEF_BY_KEY = Object.fromEntries(ITEM_DEFS.map((d)=>[d.key,d]));
     const ITEM_DEF_BY_ID = Object.fromEntries(ITEM_DEFS.map((d)=>[d.id,d]));
@@ -140,12 +141,12 @@
       floorCommon: normalizeDropPool([
         {key:"food",weight:0.15}, {key:"meat",weight:0.14}, {key:"sushi",weight:0.13}, {key:"potion",weight:0.18},
         {key:"map",weight:0.06}, {key:"sun",weight:0.06}, {key:"diamond",weight:0.05}, {key:"axe",weight:0.05},
-        {key:"dagger",weight:0.05}, {key:"shield",weight:0.05}, {key:"feast",weight:0.02}, {key:"star",weight:0.02},
+        {key:"dagger",weight:0.05}, {key:"shield",weight:0.05}, {key:"scroll",weight:0.03}, {key:"feast",weight:0.02}, {key:"star",weight:0.02},
         {key:"poop",weight:0.04}
       ]),
       enemyCommon: normalizeDropPool([
         {key:"food",weight:0.14}, {key:"meat",weight:0.13}, {key:"sushi",weight:0.16}, {key:"potion",weight:0.20},
-        {key:"map",weight:0.08}, {key:"sun",weight:0.05}, {key:"diamond",weight:0.035}, {key:"axe",weight:0.055},
+        {key:"map",weight:0.08}, {key:"sun",weight:0.05}, {key:"scroll",weight:0.03}, {key:"diamond",weight:0.035}, {key:"axe",weight:0.055},
         {key:"dagger",weight:0.04}, {key:"shield",weight:0.03}, {key:"feast",weight:0.02}, {key:"star",weight:0.02},
         {key:"poop",weight:0.04}
       ]),
@@ -1083,6 +1084,23 @@ async function openChest(floorObject){
       diamond: async ()=>{ applyFloorDefBuffFromFinal(Math.ceil(playerDefValue()*1.1+1)); state.player.diamondWard=true; addLog("💎を装備した！ DEF強化（このフロアのみ）"); return {consumed:true,endTurn:true}; },
       dagger: async (_item, _slotIndex, ctx={})=>{ state.player.baseAtk+=1; if(ctx.source==="pickup") instantPickupLog("🗡️", "ATK+1"); else addLog("🗡️を装備した！ ATK+1（恒久）"); return {consumed:true,endTurn:true}; },
       star: async (_item, slotIndex)=>{ state.inventory[slotIndex]=null; await starBurst(); return {consumed:false,endTurn:false}; },
+      scroll: async ()=>{
+        const warpCandidates = [];
+        for(let y=0;y<HEIGHT;y++){
+          for(let x=0;x<WIDTH;x++){
+            if(positionFree(x,y)) warpCandidates.push({x,y});
+          }
+        }
+        if(!warpCandidates.length){
+          addLog("📜転移先が見つからない！");
+          return {consumed:false,endTurn:false};
+        }
+        const target = pick(warpCandidates);
+        state.player.x = target.x;
+        state.player.y = target.y;
+        addLog("📜転移の巻物を使った！ ランダムワープ！");
+        return {consumed:true,endTurn:true};
+      },
       poop: async ()=>{ const didFire = await poopShot(); return {consumed:didFire,endTurn:didFire}; },
       bean: async (_item, _slotIndex, ctx={})=>{
         if(state.player.iboMax>=state.player.iboMaxCap){
