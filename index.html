@@ -14,6 +14,10 @@
     #projectile-layer { position:absolute; inset:0; pointer-events:none; z-index:2; }
     .projectile { position:absolute; width:24px; height:24px; line-height:24px; text-align:center; font-size:20px; }
     .cell { width:24px; height:24px; line-height:24px; text-align:center; font-size:20px; }
+    .play-area { display:flex; gap:12px; align-items:flex-start; flex-wrap:wrap; }
+    #minimap-wrap { background:#0d0d0d; border:1px solid #444; padding:8px; }
+    #minimap-title { font-size:12px; color:#bfbfbf; margin-bottom:6px; }
+    #minimap { display:block; width:128px; height:128px; background:#070707; image-rendering:pixelated; }
     #status { margin-top:8px; padding:8px; border:1px solid #3b3b3b; background:#141414; font-size:16px; line-height:1.45; white-space:normal; }
     .row { display:flex; gap:24px; align-items:center; flex-wrap:wrap; }
     .monster-alert { color:#ff5252; font-weight:700; }
@@ -58,7 +62,13 @@
 <body>
   <main class="wrap">
     <h1 id="app-title">ぼじろーぐ <span id="version"></span></h1>
-    <div id="grid" aria-label="game map" role="img"></div>
+    <div class="play-area">
+      <div id="grid" aria-label="game map" role="img"></div>
+      <div id="minimap-wrap">
+        <div id="minimap-title">MINIMAP</div>
+        <canvas id="minimap" width="128" height="128" aria-label="minimap" role="img"></canvas>
+      </div>
+    </div>
     <div id="status"></div>
     <div id="log">
       <div id="log-latest"></div>
@@ -89,6 +99,8 @@
     const PROJECTILE_STEP_MS = 40;
     const CELL_SIZE = 24;
     const GRID_PADDING = 8;
+    const MINIMAP_SIZE = 128;
+    const MINIMAP_TILE = 4;
     // wizardは遠距離攻撃が強いため、近接攻撃を少し弱くする
     const WIZARD_MELEE_ATK_PENALTY = 3;
     const DEFAULT_PLAYER_NAME = "あさひっこ";
@@ -308,6 +320,8 @@
     ];
 
     const mapEl = document.getElementById("grid");
+    const minimapEl = document.getElementById("minimap");
+    const minimapCtx = minimapEl ? minimapEl.getContext("2d") : null;
     const versionEl = document.getElementById("version");
     const statusEl = document.getElementById("status");
     const logLatestEl = document.getElementById("log-latest");
@@ -1165,10 +1179,53 @@ ${kills || "なし"}</div>`;
         <div class="row">イボ(${state.player.ibo}/${state.player.iboMax}) ITEM ${invToString()}</div>${debugStatus}${nameInputGuide}`;
     }
 
+    function renderMiniMap(){
+      if(!minimapCtx) return;
+      minimapCtx.clearRect(0,0,MINIMAP_SIZE,MINIMAP_SIZE);
+      minimapCtx.fillStyle = "#070707";
+      minimapCtx.fillRect(0,0,MINIMAP_SIZE,MINIMAP_SIZE);
+
+      for(let y=0;y<HEIGHT;y++){
+        for(let x=0;x<WIDTH;x++){
+          if(!state.seen[y][x]) continue;
+          const tile = state.map[y]?.[x];
+          if(!tile) continue;
+          const visible = state.visibleNow[y][x];
+          if(tile===TILE_WALL){
+            minimapCtx.fillStyle = visible ? "#8c8c8c" : "#4f4f4f";
+          } else {
+            minimapCtx.fillStyle = visible ? "#6f6f6f" : "#2f2f2f";
+          }
+          minimapCtx.fillRect(x*MINIMAP_TILE, y*MINIMAP_TILE, MINIMAP_TILE, MINIMAP_TILE);
+        }
+      }
+
+      if(state.ladder && state.seen[state.ladder.y]?.[state.ladder.x]){
+        minimapCtx.fillStyle = "#f6d743";
+        minimapCtx.fillRect(state.ladder.x*MINIMAP_TILE, state.ladder.y*MINIMAP_TILE, MINIMAP_TILE, MINIMAP_TILE);
+      }
+
+      for(const item of state.items){
+        if(!state.visibleNow[item.y]?.[item.x]) continue;
+        minimapCtx.fillStyle = "#2ecc71";
+        minimapCtx.fillRect(item.x*MINIMAP_TILE, item.y*MINIMAP_TILE, MINIMAP_TILE, MINIMAP_TILE);
+      }
+
+      for(const enemy of state.enemies){
+        if(!state.visibleNow[enemy.y]?.[enemy.x]) continue;
+        minimapCtx.fillStyle = "#9b59b6";
+        minimapCtx.fillRect(enemy.x*MINIMAP_TILE, enemy.y*MINIMAP_TILE, MINIMAP_TILE, MINIMAP_TILE);
+      }
+
+      minimapCtx.fillStyle = "#ff3b30";
+      minimapCtx.fillRect(state.player.x*MINIMAP_TILE, state.player.y*MINIMAP_TILE, MINIMAP_TILE, MINIMAP_TILE);
+    }
+
     function render(){
       state.score=calcScore(); updateSeen();
       mapEl.innerHTML=buildMapHtml();
       if(!mapEl.contains(projectileLayer)) mapEl.appendChild(projectileLayer);
+      renderMiniMap();
       statusEl.innerHTML = buildStatusHtml();
       if(nameInputWrapEl){
         nameInputWrapEl.classList.toggle("show", state.editingName);
