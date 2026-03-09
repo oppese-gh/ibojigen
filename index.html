@@ -65,6 +65,8 @@
     const PROJECTILE_STEP_MS = 40;
     const CELL_SIZE = 24;
     const GRID_PADDING = 8;
+    // wizardは遠距離攻撃が強いため、近接攻撃を少し弱くする
+    const WIZARD_MELEE_ATK_PENALTY = 3;
     const DEFAULT_PLAYER_NAME = "あさひっこ";
     const MAX_PLAYER_NAME_LENGTH = 10;
     const INITIAL_INV_SIZE = 5;
@@ -980,7 +982,13 @@
         return;
       }
 
-      const { damage, isCritical } = resolveAttackDamage(enemy.atk, playerDefValue(), true, enemyKey === "mimic" ? 2 : 1, enemy.char, "プレイヤー");
+      // wizardの近接攻撃弱体化
+      let attackPower = enemy.atk;
+      if(enemyKey === "wizard"){
+        attackPower = Math.max(1, enemy.atk - WIZARD_MELEE_ATK_PENALTY);
+      }
+
+      const { damage, isCritical } = resolveAttackDamage(attackPower, playerDefValue(), true, enemyKey === "mimic" ? 2 : 1, enemy.char, "プレイヤー");
       applyDamage(state.player, damage, "", false);
       if(!isCritical) addLog(`${enemy.char}は、${playerName()}に${damage}ダメージ！`);
 
