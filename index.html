@@ -102,7 +102,7 @@
     const SPRITES = {
       player:"🧔", wall:"🧱", floor:".", ladder:"🪜", orb:"🟣", starBeam:"✨",
       dog:"🐕", wolf:"🐺", lion:"🦁", dragon:"🐉", ghost:"👻", zombie:"🧟", skull:"☠️", invader:"👾", spider:"🕷️", bat:"🦇", snake:"🐍", dino:"🦖", chick:"🐥", mimic:"🎁", rain:"🌧️", wizard:"🧙‍♂️", bossAsahiyama:"🌋",
-      food:"🍙", meat:"🥩", sushi:"🍣", feast:"🍖", potion:"🧪", map:"👁", shield:"🛡️", axe:"🪓", diamond:"💎", dagger:"🗡️", bow:"🏹", star:"🌟", sun:"🌤️", poop:"💩", bean:"🫘", scroll:"📜", asahiyama:"🏔️"
+      food:"🍙", meat:"🥩", sushi:"🍣", feast:"🍖", potion:"🧪", map:"👁", shield:"🛡️", axe:"🪓", diamond:"💎", dagger:"🗡️", bow:"🏹", wand:"🪄", fire:"🔥", star:"🌟", sun:"🌤️", poop:"💩", bean:"🫘", scroll:"📜", asahiyama:"🏔️"
     };
 
     const ENEMY_DEFS = [
@@ -138,6 +138,7 @@
       {id:10,key:"diamond",char:SPRITES.diamond,category:"armor",rarity:3,effectKey:"diamond",pickupMode:"inventory"},
       {id:11,key:"dagger",char:SPRITES.dagger,category:"weapon",rarity:3,effectKey:"dagger",pickupMode:"instant"},
       {id:16,key:"bow",char:SPRITES.bow,category:"weapon",rarity:4,effectKey:"bow",pickupMode:"inventory"},
+      {id:17,key:"wand",char:SPRITES.wand,category:"weapon",rarity:5,effectKey:"wand",pickupMode:"inventory"},
       {id:12,key:"star",char:SPRITES.star,category:"utility",rarity:5,effectKey:"star",pickupMode:"inventory"},
       {id:13,key:"poop",char:SPRITES.poop,category:"junk",rarity:2,effectKey:"poop",pickupMode:"inventory"},
       {id:14,key:"bean",char:SPRITES.bean,category:"growth",rarity:4,effectKey:"bean",pickupMode:"instant"},
@@ -182,11 +183,11 @@
         {key:"poop",weight:0.04}
       ]),
       mimicRare: normalizeDropPool([
-        {key:"bow",weight:0.05}, {key:"diamond",weight:0.15}, {key:"axe",weight:0.15}, {key:"dagger",weight:0.20},
+        {key:"bow",weight:0.05}, {key:"wand",weight:0.03}, {key:"diamond",weight:0.15}, {key:"axe",weight:0.15}, {key:"dagger",weight:0.20},
         {key:"shield",weight:0.20}, {key:"feast",weight:0.10}, {key:"star",weight:0.05}, {key:"poop",weight:0.05}, {key:"bean",weight:0.05}
       ]),
       chestCommon: normalizeDropPool([
-        {key:"potion",weight:0.45}, {key:"feast",weight:0.05}, {key:"map",weight:0.10}, {key:"sun",weight:0.10}, {key:"poop",weight:0.25}, {key:"bean",weight:0.05}
+        {key:"potion",weight:0.45}, {key:"feast",weight:0.05}, {key:"map",weight:0.10}, {key:"sun",weight:0.10}, {key:"poop",weight:0.23}, {key:"bean",weight:0.05}, {key:"wand",weight:0.02}
       ]),
       starter: normalizeDropPool([
         {key:"feast",weight:0.10}, 
@@ -1553,6 +1554,16 @@ async function openChest(floorObject){
       bow: async ()=>{
         const didFire = await bowShot();
         return {consumed:false,endTurn:didFire};
+      },
+      wand: async ()=>{
+        const didFire = await fireWandShot();
+        if(!didFire) return {consumed:false,endTurn:false};
+        const isBroken = Math.random() < 0.02;
+        if(isBroken){
+          addLog("🪄は、砕け散った❗️❗️");
+          return {consumed:true,endTurn:true};
+        }
+        return {consumed:false,endTurn:true};
       }
     };
 
@@ -1676,6 +1687,76 @@ async function openChest(floorObject){
         render();
       } finally {
         el.remove();
+        state.inputLocked=false;
+      }
+      return true;
+    }
+
+    async function fireWandShot(){
+      if(state.gameOver||state.inputLocked) return false;
+      const facing = state.player.facing || {x:0,y:-1};
+      if((facing.x===0 && facing.y===0) || (Math.abs(facing.x)+Math.abs(facing.y)!==1)){
+        state.player.facing = {x:0,y:-1};
+      }
+      const dirX = state.player.facing.x;
+      const dirY = state.player.facing.y;
+      const maxDistance = randInt(2,5);
+      const path = [];
+      let hitWall = false;
+      for(let dist=1;dist<=maxDistance;dist++){
+        const tx = state.player.x + dirX*dist;
+        const ty = state.player.y + dirY*dist;
+        if(tx<0||tx>=WIDTH||ty<0||ty>=HEIGHT){
+          hitWall = true;
+          break;
+        }
+        if(!isWalkable(tx,ty)){
+          hitWall = true;
+          break;
+        }
+        path.push({x:tx,y:ty});
+      }
+      addLog("🪄から炎が吹き出した🔥");
+      playSe("beam");
+      if(!path.length){
+        addLog("炎は壁に阻まれた。");
+        render();
+        return true;
+      }
+
+      state.inputLocked=true;
+      const flames=[];
+      const hitSet = new Set();
+      let hitCount = 0;
+      try{
+        for(const cell of path){
+          const el=document.createElement("div");
+          el.className="projectile";
+          el.textContent=SPRITES.fire;
+          setProjectilePos(el,cell.x,cell.y);
+          projectileLayer.appendChild(el);
+          flames.push(el);
+
+          const en=enemyAt(cell.x,cell.y);
+          if(en && !hitSet.has(en)){
+            hitSet.add(en);
+            // 満腹度依存: 満腹ほど強く、空腹だとほぼ通らない最低1ダメージ。
+            const fullnessRatio = clamp01(state.player.hunger / Math.max(1, state.player.hungerMax));
+            const damage = Math.max(1, Math.floor(playerAtkValue() * fullnessRatio));
+            activateMimic(en);
+            applyDamage(en, damage, "", false);
+            addLog(`🔥が${en.char}を焼いた！ ${damage}ダメージ！`);
+            hitCount += 1;
+          }
+          render();
+          await sleep(Math.max(30, PROJECTILE_STEP_MS - 20));
+        }
+        if(hitWall) addLog("炎は壁でかき消えた。");
+        if(hitCount===0) addLog("炎は誰にも当たらなかった。");
+        for(const en of [...state.enemies]) if(en.hp<=0) killEnemy(en);
+      } finally {
+        await sleep(80);
+        for(const el of flames) el.remove();
         state.inputLocked=false;
       }
       return true;
