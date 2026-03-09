@@ -679,7 +679,19 @@ async function toggleSound(){
         setupBossFloor();
         return;
       }
-      const built = createMap();
+      // まれに部屋生成が0件になるため、安全に再生成する
+      let built = createMap();
+      let regenCount = 0;
+      while(built.rooms.length===0 && regenCount<8){
+        built = createMap();
+        regenCount++;
+      }
+      if(built.rooms.length===0){
+        const fallbackMap = Array.from({length:HEIGHT}, ()=>Array(WIDTH).fill(TILE_WALL));
+        const fallbackRoom = {x:1,y:1,w:WIDTH-2,h:HEIGHT-2,cx:Math.floor(WIDTH/2),cy:Math.floor(HEIGHT/2)};
+        for(let yy=fallbackRoom.y;yy<fallbackRoom.y+fallbackRoom.h;yy++) for(let xx=fallbackRoom.x;xx<fallbackRoom.x+fallbackRoom.w;xx++) fallbackMap[yy][xx]=TILE_FLOOR;
+        built = {map:fallbackMap, rooms:[fallbackRoom]};
+      }
       state.map=built.map; state.rooms=built.rooms; state.items=[]; state.enemies=[]; state.floorObjects=[]; state.revealed=false;
       state.seen = createVisibilityGrid();
       state.visibleNow = createVisibilityGrid();
@@ -1116,6 +1128,7 @@ ${kills || "なし"}</div>`;
 
     function buildMapHtml(){
       const hasMap = state.map.length===HEIGHT;
+      if(!hasMap) return Array.from({length:CAMERA_SIZE*CAMERA_SIZE}, ()=>`<div class="cell"> </div>`).join("");
       const cells=[];
       const camera = getCameraOrigin();
       for(let y=0;y<CAMERA_SIZE;y++){
