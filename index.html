@@ -111,7 +111,7 @@
 
     const ENEMY_DEFS = [
       {id:1,key:"dog",char:SPRITES.dog,baseHp:6,baseAtk:2,baseDef:0,exp:1,score:10,dropRuleRef:"enemyCommon"},
-    　{id:15,key:"bat",char:SPRITES.bat,baseHp:8,baseAtk:3,baseDef:0,exp:2,score:20,dropRuleRef:"enemyCommon"},
+      {id:15,key:"bat",char:SPRITES.bat,baseHp:8,baseAtk:3,baseDef:0,exp:2,score:20,dropRuleRef:"enemyCommon"},
       {id:2,key:"wolf",char:SPRITES.wolf,baseHp:10,baseAtk:4,baseDef:1,exp:3,score:35,dropRuleRef:"enemyCommon"},
       {id:3,key:"lion",char:SPRITES.lion,baseHp:12,baseAtk:6,baseDef:2,exp:5,score:60,dropRuleRef:"enemyCommon"},
       {id:4,key:"dragon",char:SPRITES.dragon,baseHp:20,baseAtk:8,baseDef:3,exp:10,score:120,dropRuleRef:"enemyCommon"},
@@ -432,6 +432,7 @@
     }
 
     // ===== Core utilities =====
+    const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
     const clamp01 = (v) => Math.max(0, Math.min(1, v));
     const randInt = (min,max) => Math.floor(Math.random()*(max-min+1))+min;
     function shuffle(arr){for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]];}return arr;}
