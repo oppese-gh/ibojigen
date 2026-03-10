@@ -75,7 +75,8 @@
     .status-line { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:clamp(2px,0.22vw,4px); }
     .status-line.line-top { grid-template-columns:minmax(0,2fr) repeat(2,minmax(0,1fr)); }
     .status-line.line-exp { grid-template-columns:repeat(2,minmax(0,1fr)); }
-    .status-line.line-gauge { grid-template-columns:repeat(2,minmax(0,1fr)); align-items:center; }
+    .status-line.line-mid { grid-template-columns:repeat(3,minmax(0,1fr)); }
+    .status-line.line-gauge { grid-template-columns:minmax(0,1fr); align-items:flex-start; justify-items:start; gap:clamp(4px,0.28vw,7px); }
     .status-pill { border:1px solid #3b3b3b; background:#0f0f0f; border-radius:4px; padding:1px 5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .status-alerts { display:flex; gap:4px; flex-wrap:wrap; min-height:1.08em; align-content:flex-start; }
     .monster-alert { color:#ff6565; font-weight:700; line-height:1.1; }
@@ -118,7 +119,7 @@
     #name-input-wrap.show { display:block; }
     #name-ime-input { width:min(100%,30ch); font-size:var(--font-base); padding:clamp(4px,0.26vw,7px) clamp(6px,0.42vw,10px); border:1px solid #555; border-radius:5px; background:#0f0f0f; color:var(--text); font-family:var(--mono-font); }
     #help { color:#ccc; font-size:var(--font-small); line-height:1.32; border:1px solid #383838; background:#101010; border-radius:4px; padding:clamp(5px,0.3vw,8px); overflow:hidden; }
-    #system-info { width:100%; height:100%; font-size:var(--font-small); line-height:1.35; color:#c6c6c6; overflow:hidden; border:1px solid var(--line-soft); background:#111; padding:clamp(5px,0.34vw,9px); box-shadow:var(--panel-shadow); border-radius:4px; }
+    #system-info { width:100%; height:100%; font-size:clamp(12px, calc(0.22vw + 0.3vh + var(--ui-scale) * 0.58rem), 18px); line-height:1.4; color:#c6c6c6; overflow:hidden; border:1px solid var(--line-soft); background:#111; padding:clamp(5px,0.34vw,9px); box-shadow:var(--panel-shadow); border-radius:4px; }
 
     #item-slot-panel { padding:clamp(3px,0.2vw,5px) clamp(3px,0.24vw,6px); }
     #item-slots { width:100%; height:100%; display:flex; align-items:stretch; justify-content:space-between; gap:clamp(4px,0.28vw,7px); }
@@ -179,7 +180,7 @@
               <input id="name-ime-input" type="text" inputmode="text" autocomplete="off" maxlength="10" />
             </div>
           </div>
-          <div id="help">操作: ↑↓←→移動 / Space 待機 / A いぼビーム / B イボ食い / 1-6 アイテム使用 / Shift+1-6 アイテムを足元に置く / M SE ON/OFF / R リスタート / N 名前入力</div>
+          <div id="help">操作: ↑↓←→移動 / Space 待機 / A いぼビーム / B イボ食い / 1-6 短押し:使用・長押し:足元ドロップ / M SE ON/OFF / R リスタート / N 名前入力</div>
           <div id="system-info"></div>
         </div>
       </div>
@@ -233,6 +234,7 @@
     const MAX_PLAYER_NAME_LENGTH = 10;
     const INITIAL_INV_SIZE = 5;
     const ASAHIYAMA_INV_SIZE = 6;
+    const INVENTORY_LONG_PRESS_MS = 500;
     const DEBUG_BUILD = true;
     const SOUND_STORAGE_KEY = "bojirogue_soundEnabled";
     const APP_VERSION =
@@ -507,6 +509,8 @@
       debugMode:false,
       soundEnabled:initialSoundEnabled
     };
+
+    const inventoryKeyDownAt = new Map();
 
     function saveProfile(){
       localStorage.setItem("bojirogue_profile", JSON.stringify({
@@ -1323,14 +1327,14 @@ ${kills || "なし"}</div>`;
           <div class="status-pill">階 ${state.floor}</div>
           <div class="status-pill">Lv ${state.player.level}</div>
         </div>
+        <div class="status-line line-mid">
+          <div class="status-pill">イボ ${state.player.ibo}/${state.player.iboMax}</div>
+          <div class="status-pill">${atkText}</div>
+          <div class="status-pill">${defText}</div>
+        </div>
         <div class="status-line line-exp">
           <div class="status-pill">EXP ${state.player.exp}/${expToNextLevel()}</div>
           <div class="status-pill">視界 ${state.player.vision}/${state.player.visionMax}</div>
-        </div>
-        <div class="status-line line-mid">
-          <div class="status-pill">${atkText}</div>
-          <div class="status-pill">${defText}</div>
-          <div class="status-pill">イボ ${state.player.ibo}/${state.player.iboMax}</div>
         </div>
         <div class="status-alerts">${status} ${monsterAlert} ${bossAlert}</div>
         <div class="status-line line-gauge">
@@ -1345,7 +1349,7 @@ ${kills || "なし"}</div>`;
       const debugStatus = DEBUG_BUILD
         ? `DEBUG_BUILD${state.debugMode ? " / DEBUG MODE ON" : ""}${state.debugFloorBuffer ? ` / JUMP: ${state.debugFloorBuffer}_` : ""}`
         : "RELEASE_BUILD";
-      return `SCORE ${state.score} / BEST ${bestText}<br>SE ${state.soundEnabled ? "ON" : "OFF"}<br>${APP_VERSION}<br>${debugStatus}`;
+      return `SCORE ${state.score} / BEST ${bestText} / SE ${state.soundEnabled ? "ON" : "OFF"}<br>${debugStatus}`;
     }
 
     function buildItemSlotsHtml(){
@@ -2580,7 +2584,8 @@ async function openChest(floorObject){
         resetBestScore();
         return;
       }
-      if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"," ","a","A","b","B","m","M","r","R","n","N","1","2","3","4","5","6"].includes(key)) e.preventDefault();
+      const isInventoryDigitCode = /^Digit[1-6]$/.test(e.code);
+      if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"," ","a","A","b","B","m","M","r","R","n","N"].includes(key) || isInventoryDigitCode) e.preventDefault();
       unlockAudioContext().catch(()=>{});
       if(key==="m"||key==="M") return toggleSound();
       if((key==="n"||key==="N") && (state.turns===0 || state.gameOver || state.gameClear)) return beginNameInputMode();
@@ -2611,12 +2616,20 @@ async function openChest(floorObject){
       else if(key===" ") waitTurn();
       else if(key==="a"||key==="A") iboBeam();
       else if(key==="b"||key==="B") eatIbo();
-      else if(key==="1") e.shiftKey ? dropInventorySlot(0) : useInventory(0);
-      else if(key==="2") e.shiftKey ? dropInventorySlot(1) : useInventory(1);
-      else if(key==="3") e.shiftKey ? dropInventorySlot(2) : useInventory(2);
-      else if(key==="4") e.shiftKey ? dropInventorySlot(3) : useInventory(3);
-      else if(key==="5") e.shiftKey ? dropInventorySlot(4) : useInventory(4);
-      else if(key==="6") e.shiftKey ? dropInventorySlot(5) : useInventory(5);
+      else if(/^Digit[1-6]$/.test(e.code) && !e.repeat && !inventoryKeyDownAt.has(e.code)) inventoryKeyDownAt.set(e.code, performance.now());
+    });
+
+    window.addEventListener("keyup", (e)=>{
+      if(state.editingName) return;
+      if(!/^Digit[1-6]$/.test(e.code)) return;
+      const downAt = inventoryKeyDownAt.get(e.code);
+      if(downAt===undefined) return;
+      inventoryKeyDownAt.delete(e.code);
+      if(state.gameOver || state.gameClear || state.inputLocked) return;
+      const slotIndex = Number.parseInt(e.code.slice(-1), 10) - 1;
+      const pressMs = performance.now() - downAt;
+      if(pressMs >= INVENTORY_LONG_PRESS_MS) dropInventorySlot(slotIndex);
+      else useInventory(slotIndex);
     });
 
     addLog("スタート画面: Rで開始 / Nで名前入力");
