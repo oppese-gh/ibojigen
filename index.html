@@ -51,6 +51,23 @@
     #grid { position:relative; margin:0; display:grid; grid-template-columns:repeat(13,minmax(0,1fr)); grid-template-rows:repeat(13,minmax(0,1fr)); width:100%; height:100%; aspect-ratio:1/1; background:#0d0d0d; border:1px solid #4f4f4f; overflow:hidden; user-select:none; box-shadow:inset 0 0 22px rgba(0,0,0,.45); }
     #projectile-layer { position:absolute; inset:0; pointer-events:none; z-index:2; }
     .projectile { position:absolute; display:flex; align-items:center; justify-content:center; text-align:center; }
+    .damage-popup {
+      position:absolute;
+      pointer-events:none;
+      z-index:3;
+      font-weight:900;
+      line-height:1;
+      animation:damagePopup 620ms ease-out forwards;
+      text-shadow:0 2px 0 rgba(0,0,0,.7), 0 0 4px rgba(0,0,0,.6);
+      will-change:transform, opacity;
+    }
+    .damage-normal { color:#fff; }
+    .damage-crit { color:#ffd84a; }
+    .damage-heal { color:#59e37f; }
+    @keyframes damagePopup {
+      0% { transform:translate(-50%, -15%); opacity:1; }
+      100% { transform:translate(-50%, -85%); opacity:0; }
+    }
     .cell { display:flex; align-items:center; justify-content:center; text-align:center; line-height:.92; letter-spacing:-0.01em; font-size:var(--cell-font-size,24px); font-family:var(--mono-font); }
 
     #minimap-wrap { width:100%; height:100%; background:#0d0d0d; border:1px solid #555; padding:clamp(3px,0.34vw,7px); display:flex; align-items:center; justify-content:center; box-shadow:var(--panel-shadow); border-radius:4px; }
@@ -78,15 +95,15 @@
     .status-line.line-mid { grid-template-columns:repeat(3,minmax(0,1fr)); }
     .status-line.line-gauge { grid-template-columns:minmax(0,1fr); align-items:stretch; justify-items:stretch; gap:clamp(5px,0.34vw,8px); }
     .status-pill { border:1px solid #3b3b3b; background:#0f0f0f; border-radius:4px; padding:1px 5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .status-pill:nth-child(2) { color:#9fd2ff; font-weight:700; }
+    .status-line.line-top .status-pill:nth-child(2) { color:#9fd2ff; font-weight:700; }
     .status-alerts { display:flex; gap:4px; flex-wrap:wrap; min-height:1.08em; align-content:flex-start; font-weight:700; letter-spacing:.04em; }
     .monster-alert { color:#ff6565; font-weight:700; line-height:1.1; }
     .status-alerts .monster-alert { background:#2a0000; border:1px solid #b00000; padding:2px 6px; border-radius:4px; }
-    .stat { display:flex; align-items:center; gap:6px; min-width:0; width:100%; }
-    .label { min-width:2.8em; white-space:nowrap; flex:0 0 auto; }
+    .stat { display:flex; align-items:center; flex-wrap:nowrap; gap:6px; min-width:0; width:100%; }
+    .label { min-width:3.8em; white-space:nowrap; flex:0 0 auto; }
     .meter { flex:1 1 auto; min-width:0; width:auto; height:clamp(11px, calc(var(--ui-scale) * 0.7rem), 15px); border:1px solid #666; background:#242424; border-radius:4px; overflow:hidden; }
     .fill { display:block; height:100%; width:0; background:#2ecc71; border-radius:inherit; }
-    .num { white-space:nowrap; flex:0 0 auto; }
+    .num { white-space:nowrap; flex:0 0 auto; min-width:max-content; text-align:right; }
     .status-line.line-gauge .stat { padding-right:2px; }
     .tone-yellow .fill { background:#2ecc71; }
     .tone-orange .fill { background:#ff9800; }
@@ -94,7 +111,7 @@
     .tone-yellow .num { color:#2ecc71; }
     .tone-orange .num { color:#ff9800; }
     .tone-red .num { color:#e74c3c; }
-    .meter.tone-red { border-color:#e74c3c; }
+    .stat.tone-red .meter { border-color:#e74c3c; }
 
     #log {
       width:100%; height:100%;
@@ -774,7 +791,7 @@ async function toggleSound(){
     function gaugeHtml(label, value, max) {
       const pct = meterPercent(value, max);
       const tone = statusTone(value, pct);
-      return `<div class="stat ${tone}"><span class="label">${label}</span><div class="meter ${value<=0?"tone-red":""}"><div class="fill" style="width:${pct}%"></div></div><span class="num">${value}/${max}</span></div>`;
+      return `<div class="stat ${tone}"><span class="label">${label}</span><div class="meter"><div class="fill" style="width:${pct}%"></div></div><span class="num">${value}/${max}</span></div>`;
     }
 
     function normalizeInventorySize(){
@@ -1126,8 +1143,10 @@ async function toggleSound(){
       if(state.invSize >= ASAHIYAMA_INV_SIZE) return;
       state.invSize = ASAHIYAMA_INV_SIZE;
       normalizeInventorySize();
+      const healedHp = Math.max(0, state.player.maxHp - state.player.hp);
       state.player.hp = state.player.maxHp;
       state.player.hunger = state.player.hungerMax;
+      if(healedHp>0) showDamagePopup(state.player.x, state.player.y, `+${healedHp}`, "heal");
       updateHungerWarning();
       addLog("『あさひやま効果』アイテムスロットが 1 増えた！（5→6）");
       addLog("あさひやまの恵みで HP と満腹度が全回復した！");
@@ -1486,6 +1505,7 @@ ${kills || "なし"}</div>`;
       playSe("attack");
       activateMimic(enemy);
       applyDamage(enemy, damage, "", false);
+      showDamagePopup(enemy.x, enemy.y, damage, isCritical ? "crit" : "normal");
       if(!isCritical) addLog(`${playerName()}は、${enemy.char}に <span style="color:#ffb3b3">${damage}</span> ダメージ！`);
       if(enemy.hp<=0) killEnemy(enemy);
     }
@@ -1674,11 +1694,13 @@ ${kills || "なし"}</div>`;
 
       const { damage, isCritical } = resolveAttackDamage(attackPower, playerDefValue(), true, enemyKey === "mimic" ? 2 : 1, enemy.char, "プレイヤー");
       applyPlayerDamage(damage);
+      showDamagePopup(state.player.x, state.player.y, damage, isCritical ? "crit" : "normal");
       if(!isCritical) addLog(`${enemy.char}は、${playerName()}に <span style="color:#ffb3b3">${damage}</span> ダメージ！`);
 
       if(enemyKey === "lion" && state.player.hp > 0 && Math.random() < 0.15){
         const { damage: extraDamage, isCritical: extraCritical } = resolveAttackDamage(enemy.atk, playerDefValue(), true, 1, enemy.char, "プレイヤー");
         applyPlayerDamage(extraDamage);
+        showDamagePopup(state.player.x, state.player.y, extraDamage, extraCritical ? "crit" : "normal");
         if(!extraCritical) addLog(`すばやい追撃をうけた！${extraDamage}ダメージ！！`);
       }
 
@@ -1790,6 +1812,7 @@ async function openChest(floorObject){
         updateHungerWarning();
         const healHp=Math.ceil((state.player.maxHp-state.player.hp)/3);
         state.player.hp=Math.min(state.player.maxHp,state.player.hp+healHp);
+        if(healHp>0) showDamagePopup(state.player.x, state.player.y, `+${healHp}`, "heal");
         addLog(`🍣を食べた！ 満腹+120 / HP+${healHp}`);
         return {consumed:true,endTurn:true};
       },
@@ -1800,12 +1823,14 @@ async function openChest(floorObject){
         updateHungerWarning();
         const healHp=Math.ceil((state.player.maxHp-state.player.hp)/1.5);
         state.player.hp=Math.min(state.player.maxHp,state.player.hp+healHp);
+        if(healHp>0) showDamagePopup(state.player.x, state.player.y, `+${healHp}`, "heal");
         addLog(`🍖を食べた！ 最大HP+1 & 最大満腹+25 & 満腹+200 / HP+${healHp}`);
         return {consumed:true,endTurn:true};
       },
       potion: async ()=>{
         const heal = Math.ceil(state.player.maxHp * 0.12 + 10 + randInt(-2,2));
         state.player.hp=Math.min(state.player.maxHp,state.player.hp+heal);
+        if(heal>0) showDamagePopup(state.player.x, state.player.y, `+${heal}`, "heal");
         addLog(`🧪を使った！ HP+${heal}`);
         if(state.player.poison){ state.player.poison=false; addLog("解毒した。"); }
         return {consumed:true,endTurn:true};
@@ -1909,7 +1934,7 @@ async function openChest(floorObject){
       render();
     }
 
-    function walkRegen(){ state.player.walkCount+=1; if(state.player.walkCount%20!==0||state.starving||state.player.hp>=state.player.maxHp) return; state.player.hp=Math.min(state.player.maxHp,state.player.hp+1); addLog("歩いて体勢を立て直した。HP+1"); }
+    function walkRegen(){ state.player.walkCount+=1; if(state.player.walkCount%20!==0||state.starving||state.player.hp>=state.player.maxHp) return; state.player.hp=Math.min(state.player.maxHp,state.player.hp+1); showDamagePopup(state.player.x, state.player.y, "+1", "heal"); addLog("歩いて体勢を立て直した。HP+1"); }
 
     // ===== Player action / turn =====
     async function movePlayer(dx,dy,moveKey){
@@ -1967,6 +1992,20 @@ async function openChest(floorObject){
         const iconSize = Math.max(20, Math.floor(slotRect.height * 0.78));
         gameScreenEl.style.setProperty("--slot-icon-size", `${iconSize}px`);
       }
+    }
+
+    function showDamagePopup(x, y, value, type="normal"){
+      const pos = worldToCamera(x,y);
+      if(!pos.inView) return;
+      const metrics = getGridMetrics();
+      const popup = document.createElement("div");
+      popup.className = `damage-popup damage-${type}`;
+      popup.textContent = String(value);
+      popup.style.fontSize = `${Math.max(12, metrics.cell * 0.42)}px`;
+      popup.style.left = `${metrics.padX + (pos.x + 0.5) * metrics.cell}px`;
+      popup.style.top = `${metrics.padY + pos.y * metrics.cell}px`;
+      projectileLayer.appendChild(popup);
+      popup.addEventListener("animationend", ()=>popup.remove(), {once:true});
     }
 
     function setProjectilePos(el,x,y){
