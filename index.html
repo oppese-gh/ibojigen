@@ -1364,6 +1364,7 @@ async function toggleSound(){
 
     function render(){
       state.score=calcScore(); updateSeen();
+      damagePopupLayer.replaceChildren();
       mapEl.innerHTML=buildMapHtml();
       if(!mapEl.contains(projectileLayer)) mapEl.appendChild(projectileLayer);
       if(!mapEl.contains(damagePopupLayer)) mapEl.appendChild(damagePopupLayer);
