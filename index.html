@@ -78,8 +78,10 @@
     .status-line.line-mid { grid-template-columns:repeat(3,minmax(0,1fr)); }
     .status-line.line-gauge { grid-template-columns:minmax(0,1fr); align-items:stretch; justify-items:stretch; gap:clamp(5px,0.34vw,8px); }
     .status-pill { border:1px solid #3b3b3b; background:#0f0f0f; border-radius:4px; padding:1px 5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .status-alerts { display:flex; gap:4px; flex-wrap:wrap; min-height:1.08em; align-content:flex-start; }
+    .status-pill:nth-child(2) { color:#9fd2ff; font-weight:700; }
+    .status-alerts { display:flex; gap:4px; flex-wrap:wrap; min-height:1.08em; align-content:flex-start; font-weight:700; letter-spacing:.04em; }
     .monster-alert { color:#ff6565; font-weight:700; line-height:1.1; }
+    .status-alerts .monster-alert { background:#2a0000; border:1px solid #b00000; padding:2px 6px; border-radius:4px; }
     .stat { display:flex; align-items:center; gap:6px; min-width:0; width:100%; }
     .label { min-width:2.8em; white-space:nowrap; flex:0 0 auto; }
     .meter { flex:1 1 auto; min-width:0; width:auto; height:clamp(11px, calc(var(--ui-scale) * 0.7rem), 15px); border:1px solid #666; background:#242424; border-radius:4px; overflow:hidden; }
@@ -125,7 +127,8 @@
 
     #item-slot-panel { padding:clamp(3px,0.2vw,5px) clamp(3px,0.24vw,6px); }
     #item-slots { width:100%; height:100%; display:flex; align-items:stretch; justify-content:space-between; gap:clamp(4px,0.28vw,7px); }
-    .item-slot { height:100%; aspect-ratio:0.94; border:1px solid #5b5b5b; background:linear-gradient(180deg,#161616,#0d0d0d); display:flex; flex-direction:column; align-items:center; justify-content:space-between; border-radius:4px; padding:clamp(2px,0.15vw,4px); box-shadow:inset 0 0 0 1px rgba(255,255,255,.03); overflow:hidden; }
+    .item-slot { height:100%; aspect-ratio:0.94; border:1px solid #5b5b5b; background:linear-gradient(180deg,#161616,#0d0d0d); display:flex; flex-direction:column; align-items:center; justify-content:space-between; border-radius:4px; padding:clamp(2px,0.15vw,4px); box-shadow:inset 0 0 0 1px rgba(255,255,255,.03); overflow:hidden; transition:transform .1s ease, box-shadow .1s ease; }
+    .item-slot:hover { transform:scale(1.05); box-shadow:0 0 6px rgba(122,209,255,.3); }
     .item-slot .slot-key { color:#9fd2ff; font-size:clamp(10px, calc(var(--ui-scale) * 0.72rem), 14px); font-weight:700; line-height:1; }
     .item-slot .slot-item { font-size:clamp(28px, var(--slot-icon-size, calc(var(--ui-scale) * 2.5rem)), 60px); display:flex; align-items:center; justify-content:center; flex:1; width:100%; line-height:.92; padding:0; }
     .item-slot.empty { border-style:dashed; color:#8f8f8f; }
@@ -137,7 +140,7 @@
       #status-layout, #aux-layout { gap:4px; }
       #item-slots { gap:4px; }
     }
-    #ending-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.52); display:flex; align-items:center; justify-content:center; opacity:0; pointer-events:none; transition:opacity 1.6s ease; z-index:30; }
+    #ending-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.52); display:flex; align-items:center; justify-content:center; opacity:0; pointer-events:none; transition:opacity 1.6s ease; z-index:30; backdrop-filter: blur(3px); }
     #ending-overlay.show { opacity:1; pointer-events:auto; }
     #ending-content { width:min(100%,720px); max-height:90vh; overflow:hidden; text-align:center; padding:20px; color:#fff; }
     .ending-title { font-size:44px; letter-spacing:.08em; }
@@ -1400,7 +1403,12 @@ ${kills || "なし"}</div>`;
       }
 
       minimapCtx.fillStyle = "#ff3b30";
-      minimapCtx.fillRect(state.player.x*MINIMAP_TILE, state.player.y*MINIMAP_TILE, MINIMAP_TILE, MINIMAP_TILE);
+      minimapCtx.fillRect(
+        state.player.x*MINIMAP_TILE-1,
+        state.player.y*MINIMAP_TILE-1,
+        MINIMAP_TILE+2,
+        MINIMAP_TILE+2
+      );
     }
 
     function render(){
@@ -1434,7 +1442,7 @@ ${kills || "なし"}</div>`;
     }
 
     // ===== Battle / damage =====
-    function applyDamage(target, amount, name="", shouldLog=true){ target.hp -= amount; if(shouldLog && name) addLog(`${name}に${amount}ダメージ！`); }
+    function applyDamage(target, amount, name="", shouldLog=true){ target.hp -= amount; if(shouldLog && name) addLog(`${name}に <span style="color:#ffb3b3">${amount}</span> ダメージ！`); }
     function applyPlayerDamage(amount){
       const damage = Math.max(0, Number(amount) || 0);
       if(damage<=0) return 0;
@@ -1478,7 +1486,7 @@ ${kills || "なし"}</div>`;
       playSe("attack");
       activateMimic(enemy);
       applyDamage(enemy, damage, "", false);
-      if(!isCritical) addLog(`${playerName()}は、${enemy.char}に${damage}ダメージ！`);
+      if(!isCritical) addLog(`${playerName()}は、${enemy.char}に <span style="color:#ffb3b3">${damage}</span> ダメージ！`);
       if(enemy.hp<=0) killEnemy(enemy);
     }
 
@@ -1666,7 +1674,7 @@ ${kills || "なし"}</div>`;
 
       const { damage, isCritical } = resolveAttackDamage(attackPower, playerDefValue(), true, enemyKey === "mimic" ? 2 : 1, enemy.char, "プレイヤー");
       applyPlayerDamage(damage);
-      if(!isCritical) addLog(`${enemy.char}は、${playerName()}に${damage}ダメージ！`);
+      if(!isCritical) addLog(`${enemy.char}は、${playerName()}に <span style="color:#ffb3b3">${damage}</span> ダメージ！`);
 
       if(enemyKey === "lion" && state.player.hp > 0 && Math.random() < 0.15){
         const { damage: extraDamage, isCritical: extraCritical } = resolveAttackDamage(enemy.atk, playerDefValue(), true, 1, enemy.char, "プレイヤー");
