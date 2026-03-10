@@ -62,11 +62,28 @@
       will-change:transform, opacity;
     }
     .damage-normal { color:#fff; }
-    .damage-crit { color:#ffd84a; }
+    .damage-crit {
+      color:#ffd84a;
+      animation-name:damagePopupCrit;
+    }
     .damage-heal { color:#59e37f; }
     @keyframes damagePopup {
       0% { transform:translate(-50%, -15%); opacity:1; }
       100% { transform:translate(-50%, -85%); opacity:0; }
+    }
+    @keyframes damagePopupCrit {
+      0% { transform:translate(-50%, -4%) scale(1.12); opacity:1; }
+      25% { transform:translate(calc(-50% - 2px), -28%) scale(1.06); opacity:1; }
+      50% { transform:translate(calc(-50% + 2px), -48%) scale(1.02); opacity:.98; }
+      100% { transform:translate(-50%, -92%) scale(1); opacity:0; }
+    }
+    .player-hit-flash {
+      animation:playerHitFlash 240ms ease-out;
+      filter:brightness(1.75) saturate(0.2);
+    }
+    @keyframes playerHitFlash {
+      0% { filter:brightness(2) saturate(0); }
+      100% { filter:brightness(1) saturate(1); }
     }
     .cell { display:flex; align-items:center; justify-content:center; text-align:center; line-height:.92; letter-spacing:-0.01em; font-size:var(--cell-font-size,24px); font-family:var(--mono-font); }
 
@@ -522,12 +539,14 @@
       player:createInitialPlayer(),
       iboCooldown:0,starving:false,hungerLowNotified:false,
       blockedWallMoveKey:null,
+      playerHitFlashUntil:0,
       debugFloorBuffer:"",
       debugMode:false,
       soundEnabled:initialSoundEnabled
     };
 
     const inventoryKeyDownAt = new Map();
+    let playerHitFlashTimer = 0;
 
     function saveProfile(){
       localStorage.setItem("bojirogue_profile", JSON.stringify({
@@ -1327,7 +1346,8 @@ ${kills || "なし"}</div>`;
           const visibleNow = state.visibleNow[worldY][worldX];
           const seen = state.seen[worldY][worldX];
           const ch = getCellChar(worldX, worldY, visibleNow, seen, hasMap);
-          cells.push(`<div class="cell">${ch}</div>`);
+          const isPlayerCell = state.player.x===worldX && state.player.y===worldY;
+          cells.push(`<div class="cell${isPlayerCell ? " player-cell" : ""}">${ch}</div>`);
         }
       }
       return cells.join("");
@@ -1432,8 +1452,10 @@ ${kills || "なし"}</div>`;
 
     function render(){
       state.score=calcScore(); updateSeen();
+      clearDamagePopups();
       mapEl.innerHTML=buildMapHtml();
       if(!mapEl.contains(projectileLayer)) mapEl.appendChild(projectileLayer);
+      syncPlayerHitFlash();
       renderMiniMap();
       statusEl.innerHTML = buildStatusHtml();
       if(systemInfoEl) systemInfoEl.innerHTML = buildSystemInfoHtml();
@@ -1466,8 +1488,38 @@ ${kills || "なし"}</div>`;
       const damage = Math.max(0, Number(amount) || 0);
       if(damage<=0) return 0;
       applyDamage(state.player, damage, "", false);
+      triggerPlayerHitFlash();
       playSe("hit");
       return damage;
+    }
+
+    function clearDamagePopups(){
+      projectileLayer.querySelectorAll(".damage-popup").forEach((popup)=>popup.remove());
+    }
+
+    function syncPlayerHitFlash(forceRestart=false){
+      const playerCell = mapEl.querySelector(".cell.player-cell");
+      if(!playerCell) return;
+      const active = Date.now() < state.playerHitFlashUntil;
+      if(!active){
+        playerCell.classList.remove("player-hit-flash");
+        return;
+      }
+      if(forceRestart){
+        playerCell.classList.remove("player-hit-flash");
+        void playerCell.offsetWidth;
+      }
+      playerCell.classList.add("player-hit-flash");
+    }
+
+    function triggerPlayerHitFlash(duration=240){
+      state.playerHitFlashUntil = Date.now() + duration;
+      syncPlayerHitFlash(true);
+      if(playerHitFlashTimer) clearTimeout(playerHitFlashTimer);
+      playerHitFlashTimer = setTimeout(()=>{
+        if(Date.now() >= state.playerHitFlashUntil) state.playerHitFlashUntil = 0;
+        syncPlayerHitFlash();
+      }, duration + 40);
     }
 
     function playerHungerCritBonus(){
@@ -2001,7 +2053,8 @@ async function openChest(floorObject){
       const popup = document.createElement("div");
       popup.className = `damage-popup damage-${type}`;
       popup.textContent = String(value);
-      popup.style.fontSize = `${Math.max(12, metrics.cell * 0.42)}px`;
+      const popupScale = type === "crit" ? 0.62 : 0.54;
+      popup.style.fontSize = `${Math.max(12, metrics.cell * popupScale)}px`;
       popup.style.left = `${metrics.padX + (pos.x + 0.5) * metrics.cell}px`;
       popup.style.top = `${metrics.padY + pos.y * metrics.cell}px`;
       projectileLayer.appendChild(popup);
