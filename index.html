@@ -132,7 +132,20 @@
     #log-history { display:none; }
     .log-block { border:1px solid #3f3f3f; background:#141414; border-radius:4px; padding:clamp(3px,0.3vw,6px) clamp(5px,0.46vw,8px); }
     .log-block.latest { border-color:#5b7da2; box-shadow:inset 0 0 0 1px rgba(122,209,255,.2); }
-    .log-line { min-height:1.2em; width:30ch; max-width:100%; white-space:nowrap; overflow:hidden; text-overflow:clip; font-family:var(--mono-font); }
+    .log-line {
+      min-height:1.2em;
+      width:100%;
+      max-width:100%;
+      white-space:normal;
+      overflow-wrap:anywhere;
+      word-break:break-word;
+      font-family:var(--mono-font);
+      line-height:1.3;
+      display:-webkit-box;
+      -webkit-box-orient:vertical;
+      -webkit-line-clamp:2;
+      overflow:hidden;
+    }
 
     #aux-layout { width:100%; height:100%; display:grid; grid-template-rows:auto auto 1fr; gap:clamp(4px,0.35vw,8px); }
     #log-top { width:100%; border:1px solid var(--line); background:#101010; padding:clamp(5px,0.35vw,8px); box-shadow:var(--panel-shadow); border-radius:4px; overflow:hidden; }
@@ -764,10 +777,8 @@ async function toggleSound(){
     function renderLogs(){
       const latest = state.logs.slice(0,3);
       const blockHtml = (m, latest=false)=>{
-        const parts = String(m).split("<br>");
-        const lines = [parts[0] || "", parts[1] || ""];
         const cls = latest ? "log-block latest" : "log-block";
-        return `<div class="${cls}"><div class="log-line">${lines[0]}</div><div class="log-line">${lines[1]}</div></div>`;
+        return `<div class="${cls}"><div class="log-line">${String(m)}</div></div>`;
       };
       logLatestEl.innerHTML = latest.map((m)=>blockHtml(m, true)).join("");
       logHistoryEl.innerHTML = "";
@@ -1418,7 +1429,7 @@ async function toggleSound(){
       return -0.02;
     }
 
-    function resolveAttackDamage(atk, def, isEnemyAttack, critMultiplier=1, attackerName="", targetName=""){
+    function resolveAttackDamage(atk, def, isEnemyAttack, critMultiplier=1){
       const normal = calcDamage(atk, def);
       let damage = normal;
       let isCritical = false;
@@ -1427,9 +1438,6 @@ async function toggleSound(){
       if(Math.random() < critChance){
         isCritical = true;
         damage = Math.ceil(normal * 2.5);
-        const from = attackerName || "こうげき";
-        const to = targetName || "あいて";
-        addLog(`💥<span style="color:#ffd6d6;font-weight:800;background:#7a0010;padding:0 4px;">【きゅうしょに　あたった！】${from}→${to}に ${damage}ダメージ！！</span>💥`);
       }
       if(isEnemyAttack && Math.random() < 0.5) damage += 1;
       return { damage, isCritical };
@@ -1441,12 +1449,11 @@ async function toggleSound(){
     }
 
     function playerAttack(enemy){
-      const { damage, isCritical } = resolveAttackDamage(playerAtkValue(), enemy.def, false, 1, "プレイヤー", enemy.char);
+      const { damage, isCritical } = resolveAttackDamage(playerAtkValue(), enemy.def, false, 1);
       playSe("attack");
       activateMimic(enemy);
       applyDamage(enemy, damage, "", false);
       showDamagePopup(enemy.x, enemy.y, damage, isCritical ? "crit" : "normal");
-      if(!isCritical) addLog(`${playerName()}は、${enemy.char}に <span style="color:#ffb3b3">${damage}</span> ダメージ！`);
       if(enemy.hp<=0) killEnemy(enemy);
     }
 
@@ -1573,16 +1580,14 @@ async function toggleSound(){
         attackPower = enemy.atk;
       }
 
-      const { damage, isCritical } = resolveAttackDamage(attackPower, playerDefValue(), true, enemyKey === "mimic" ? 2 : 1, enemy.char, "プレイヤー");
+      const { damage, isCritical } = resolveAttackDamage(attackPower, playerDefValue(), true, enemyKey === "mimic" ? 2 : 1);
       applyPlayerDamage(damage);
       showDamagePopup(state.player.x, state.player.y, damage, isCritical ? "crit" : "normal");
-      if(!isCritical) addLog(`${enemy.char}は、${playerName()}に <span style="color:#ffb3b3">${damage}</span> ダメージ！`);
 
       if(enemyKey === "lion" && state.player.hp > 0 && Math.random() < 0.15){
-        const { damage: extraDamage, isCritical: extraCritical } = resolveAttackDamage(enemy.atk, playerDefValue(), true, 1, enemy.char, "プレイヤー");
+        const { damage: extraDamage, isCritical: extraCritical } = resolveAttackDamage(enemy.atk, playerDefValue(), true, 1);
         applyPlayerDamage(extraDamage);
         showDamagePopup(state.player.x, state.player.y, extraDamage, extraCritical ? "crit" : "normal");
-        if(!extraCritical) addLog(`すばやい追撃をうけた！${extraDamage}ダメージ！！`);
       }
 
       if(enemyKey === "mimic" && state.player.hp>0 && Math.random()<0.05){
@@ -2194,7 +2199,7 @@ async function openChest(floorObject){
           render();
           await sleep(PROJECTILE_STEP_MS);
           if(x===state.player.x && y===state.player.y){
-            const { damage } = resolveAttackDamage(enemy.atk, playerDefValue(), true, 1, enemy.char, "プレイヤー");
+            const { damage } = resolveAttackDamage(enemy.atk, playerDefValue(), true, 1);
             applyPlayerDamage(damage);
             addLog(`⚡️が${playerName()}に${damage}ダメージ！`);
             if(state.player.hp<=0){
