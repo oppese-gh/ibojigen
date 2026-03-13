@@ -1318,7 +1318,8 @@ async function toggleSound(){
 
     function buildItemSlotsHtml(){
       normalizeInventorySize();
-      return Array.from({length:6}, (_,idx)=>{
+      const visibleSlotCount = Math.max(0, Math.min(state.invSize, 6));
+      return Array.from({length:visibleSlotCount}, (_,idx)=>{
         const slot = state.inventory[idx];
         const itemText = slot ? slot.char : "▢";
         const keyText = `${idx+1}`;
