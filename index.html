@@ -16,14 +16,19 @@
       --mono-font:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono","BIZ UDゴシック","Noto Sans Mono CJK JP",monospace;
     }
     * { box-sizing:border-box; }
-    body { margin:0; min-height:100vh; display:grid; place-items:center; background:radial-gradient(circle at 50% 30%, #161616, #101010 70%); color:var(--text); font-family:var(--mono-font); padding:clamp(6px,0.9vw,16px); }
+    body { margin:0; background:radial-gradient(circle at 50% 30%, #161616, #101010 70%); color:var(--text); font-family:var(--mono-font); overflow:auto; }
+    .screen-scroll { min-height:100vh; display:grid; place-items:center; padding:clamp(6px,0.9vw,16px); }
     .game-screen {
+      --game-min-width:960px;
+      --game-min-height:540px;
       --ui-scale:1;
       --font-base:clamp(12px, calc(0.28vw + 0.38vh + var(--ui-scale) * 0.58rem), 20px);
       --font-small:clamp(11px, calc(0.2vw + 0.24vh + var(--ui-scale) * 0.5rem), 16px);
       --font-title:clamp(15px, calc(0.38vw + 0.34vh + var(--ui-scale) * 0.78rem), 25px);
       --cell-font-size:clamp(26px, calc(0.46vw + 0.5vh + 0.95rem), 30px);
       width:min(calc(100vw - clamp(12px,1.6vw,30px)), calc((100vh - clamp(12px,1.6vw,30px)) * 16 / 9));
+      min-width:var(--game-min-width);
+      min-height:var(--game-min-height);
       aspect-ratio:16/9;
       background:linear-gradient(180deg,#1d1d1d,#161616);
       border:1px solid #3a3a3a;
@@ -191,7 +196,8 @@
   </style>
 </head>
 <body>
-  <main class="game-screen">
+  <div class="screen-scroll">
+    <main class="game-screen">
     <section id="region-main" class="region">
       <div class="panel game-main-panel">
         <div id="game-main-frame">
@@ -244,7 +250,8 @@
     <section id="region-text-main" class="region" aria-hidden="true"></section>
     <section id="region-reserved" class="region" aria-hidden="true"></section>
     <section id="region-system" class="region" aria-hidden="true"></section>
-  </main>
+    </main>
+  </div>
   <div id="ending-overlay" aria-hidden="true">
     <div id="ending-content"></div>
   </div>
