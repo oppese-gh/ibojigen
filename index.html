@@ -1379,7 +1379,7 @@ async function toggleSound(){
       const camera = getCameraOrigin();
       const prevCamera = state.prevCameraOrigin;
       if(prevCamera && (prevCamera.x !== camera.x || prevCamera.y !== camera.y)){
-        damagePopupLayer.innerHTML = "";
+        clearDamagePopups();
       }
       state.prevCameraOrigin = camera;
       state.score=calcScore(); updateSeen();
@@ -1881,7 +1881,13 @@ async function openChest(floorObject){
       }
     }
 
+    function clearDamagePopups(){
+      if(damagePopupLayer) damagePopupLayer.innerHTML = "";
+    }
+
     function showDamagePopup(x, y, value, type="normal"){
+      // 表示中のポップアップは破棄し、常に最新の数字だけを表示する
+      clearDamagePopups();
       const pos = worldToCamera(x,y);
       if(!pos.inView) return;
       const metrics = getGridMetrics();
