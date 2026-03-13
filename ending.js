@@ -51,12 +51,12 @@ function renderEndingOverlay(){
   else if(state.endingPhase === "title") endingContentEl.innerHTML = `<div class="ending-title">ぼじろーぐ 完</div>`;
   else if(state.endingPhase === "credits") endingContentEl.innerHTML = `<div class="ending-credits-wrap"><div class="ending-credits-roll">${ENDING_CREDITS_TEXT}</div></div>`;
   else if(state.endingPhase === "stats"){
-    const bestNameText = state.bestUpdatedOnClear ? `⭐️${state.bestName}` : state.bestName;
+    const bestNameText = state.bestName;
     const kills = endingKillsText();
     endingContentEl.innerHTML = `<div class="ending-stats">FINAL SCORE
 
 SCORE   ${state.score}
-BEST    ${state.bestScore} ${bestNameText}
+BEST    ${(state.bestUpdatedOnClear ? `⭐️${state.bestScore}⭐️` : state.bestScore)}(${bestNameText})
 FLOOR   ${state.floor}
 LEVEL   ${state.player.level}
 TURNS   ${state.turns}
