@@ -20,7 +20,7 @@ Masaki / Mia (ChatGPT)
 🌟AI Tools🌟
 ChatGPT / Codex
 
-⛰️Assistant Director⛰️
+⛰️Planning Support⛰️
 Mia (ChatGPT)
 
 🌋Director / Producer🌋
