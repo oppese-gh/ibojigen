@@ -1308,7 +1308,8 @@ async function toggleSound(){
 
     function buildSystemInfoHtml(){
       const bestNameText = state.titleBestStar ? `⭐️${state.bestName}` : state.bestName;
-      const bestText = `${state.bestScore}(${bestNameText})`;
+      const bestScoreText = state.gameClear ? `⭐️${state.bestScore}⭐️` : `${state.bestScore}`;
+      const bestText = `${bestScoreText}(${bestNameText})`;
       const debugStatus = DEBUG_BUILD
         ? `DEBUG_BUILD${state.debugMode ? " / DEBUG MODE ON" : ""}${state.debugFloorBuffer ? ` / JUMP: ${state.debugFloorBuffer}_` : ""}`
         : "RELEASE_BUILD";
