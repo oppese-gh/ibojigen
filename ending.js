@@ -17,8 +17,8 @@ Masaki
 📜Text & Scenario📜
 Masaki / Mia (ChatGPT)
 
-🌟AI Platform🌟
-OpenAI / Microsoft
+🌟AI Tools🌟
+ChatGPT / Codex
 
 ⛰️Assistant Director⛰️
 Mia (ChatGPT)
