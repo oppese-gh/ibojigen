@@ -252,7 +252,7 @@
               <input id="name-ime-input" type="text" inputmode="text" autocomplete="off" maxlength="10" />
             </div>
           </div>
-          <div id="help">操作: ↑↓←→移動 / Space 待機 / A いぼビーム / B イボ食い / 1-6 短押し:使用・長押し:足元ドロップ / M SE ON/OFF / R リスタート / N 名前入力</div>
+          <div id="help">操作: ↑↓←→移動 / Space 待機 / A いぼビーム / B イボ食い / 1-6・テンキー1-6 短押し:使用・長押し:足元ドロップ / M SE ON/OFF / R リスタート / N 名前入力</div>
           <div id="system-info"></div>
         </div>
       </div>
@@ -2535,6 +2535,12 @@ async function openChest(floorObject){
       renderMiniMap();
     });
 
+    function inventorySlotIndexFromCode(code){
+      const match = code.match(/^(?:Digit|Numpad)([1-6])$/);
+      if(!match) return null;
+      return Number.parseInt(match[1], 10) - 1;
+    }
+
     window.addEventListener("keydown", (e)=>{
       const key=e.key;
       if(state.editingName){
@@ -2562,7 +2568,8 @@ async function openChest(floorObject){
         resetBestScore();
         return;
       }
-      const isInventoryDigitCode = /^Digit[1-6]$/.test(e.code);
+      const slotIndex = inventorySlotIndexFromCode(e.code);
+      const isInventoryDigitCode = slotIndex !== null;
       if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"," ","a","A","b","B","m","M","r","R","n","N"].includes(key) || isInventoryDigitCode) e.preventDefault();
       unlockAudioContext().catch(()=>{});
       if(key==="m"||key==="M") return toggleSound();
@@ -2595,17 +2602,17 @@ async function openChest(floorObject){
       else if(key===" ") waitTurn();
       else if(key==="a"||key==="A") iboBeam();
       else if(key==="b"||key==="B") eatIbo();
-      else if(/^Digit[1-6]$/.test(e.code) && !e.repeat && !inventoryKeyDownAt.has(e.code)) inventoryKeyDownAt.set(e.code, performance.now());
+      else if(slotIndex !== null && !e.repeat && !inventoryKeyDownAt.has(e.code)) inventoryKeyDownAt.set(e.code, performance.now());
     });
 
     window.addEventListener("keyup", (e)=>{
       if(state.editingName) return;
-      if(!/^Digit[1-6]$/.test(e.code)) return;
+      const slotIndex = inventorySlotIndexFromCode(e.code);
+      if(slotIndex===null) return;
       const downAt = inventoryKeyDownAt.get(e.code);
       if(downAt===undefined) return;
       inventoryKeyDownAt.delete(e.code);
       if(state.gameOver || state.gameClear || state.inputLocked) return;
-      const slotIndex = Number.parseInt(e.code.slice(-1), 10) - 1;
       const pressMs = performance.now() - downAt;
       clearDamagePopups();
       if(pressMs >= INVENTORY_LONG_PRESS_MS) dropInventorySlot(slotIndex);
