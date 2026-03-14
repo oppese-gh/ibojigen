@@ -1420,6 +1420,9 @@ async function toggleSound(){
       }
       state.prevCameraOrigin = camera;
       state.score=calcScore(); updateSeen();
+      // map本体の再描画時にオーバーレイ層まで破棄しないよう、先に退避しておく
+      if(mapEl.contains(projectileLayer)) mapEl.removeChild(projectileLayer);
+      if(mapEl.contains(damagePopupLayer)) mapEl.removeChild(damagePopupLayer);
       mapEl.innerHTML=buildMapHtml();
       if(!mapEl.contains(projectileLayer)) mapEl.appendChild(projectileLayer);
       if(!mapEl.contains(damagePopupLayer)) mapEl.appendChild(damagePopupLayer);
