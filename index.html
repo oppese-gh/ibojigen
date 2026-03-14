@@ -1414,10 +1414,6 @@ async function toggleSound(){
 
     function render(){
       const camera = getCameraOrigin();
-      const prevCamera = state.prevCameraOrigin;
-      if(prevCamera && (prevCamera.x !== camera.x || prevCamera.y !== camera.y)){
-        clearDamagePopups();
-      }
       state.prevCameraOrigin = camera;
       state.score=calcScore(); updateSeen();
       // map本体の再描画前にオーバーレイ層を一時退避し、描画後に復元する
@@ -1927,8 +1923,6 @@ async function openChest(floorObject){
     }
 
     function showDamagePopup(x, y, value, type="normal"){
-      // 表示中のポップアップは破棄し、常に最新の数字だけを表示する
-      clearDamagePopups();
       const pos = worldToCamera(x,y);
       if(!pos.inView) return;
       const metrics = getGridMetrics();
@@ -2577,6 +2571,7 @@ async function openChest(floorObject){
         return restartGame();
       }
       if(state.gameOver||state.gameClear||state.inputLocked) return;
+      clearDamagePopups();
       if(key==="ArrowUp"){
         if(state.blockedWallMoveKey===key) return;
         movePlayer(0,-1,key);
@@ -2608,6 +2603,7 @@ async function openChest(floorObject){
       if(state.gameOver || state.gameClear || state.inputLocked) return;
       const slotIndex = Number.parseInt(e.code.slice(-1), 10) - 1;
       const pressMs = performance.now() - downAt;
+      clearDamagePopups();
       if(pressMs >= INVENTORY_LONG_PRESS_MS) dropInventorySlot(slotIndex);
       else useInventory(slotIndex);
     });
