@@ -1420,12 +1420,12 @@ async function toggleSound(){
       }
       state.prevCameraOrigin = camera;
       state.score=calcScore(); updateSeen();
-      // map本体の再描画時にオーバーレイ層まで破棄しないよう、先に退避しておく
-      if(mapEl.contains(projectileLayer)) mapEl.removeChild(projectileLayer);
-      if(mapEl.contains(damagePopupLayer)) mapEl.removeChild(damagePopupLayer);
+      // map本体の再描画前にオーバーレイ層を一時退避し、描画後に復元する
+      const detachedProjectileLayer = mapEl.contains(projectileLayer) ? mapEl.removeChild(projectileLayer) : projectileLayer;
+      const detachedDamagePopupLayer = mapEl.contains(damagePopupLayer) ? mapEl.removeChild(damagePopupLayer) : damagePopupLayer;
       mapEl.innerHTML=buildMapHtml();
-      if(!mapEl.contains(projectileLayer)) mapEl.appendChild(projectileLayer);
-      if(!mapEl.contains(damagePopupLayer)) mapEl.appendChild(damagePopupLayer);
+      mapEl.appendChild(detachedProjectileLayer);
+      mapEl.appendChild(detachedDamagePopupLayer);
       renderMiniMap();
       statusEl.innerHTML = buildStatusHtml();
       if(systemInfoEl) systemInfoEl.innerHTML = buildSystemInfoHtml();
