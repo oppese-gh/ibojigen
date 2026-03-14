@@ -1492,6 +1492,7 @@ async function toggleSound(){
       activateMimic(enemy);
       applyDamage(enemy, damage, "", false);
       showDamagePopup(enemy.x, enemy.y, damage, isCritical ? "crit" : "normal");
+      render();
       if(enemy.hp<=0) killEnemy(enemy);
     }
 
@@ -1998,8 +1999,9 @@ async function openChest(floorObject){
         }
         const damage = Math.max(1, calcDamage(playerAtkValue()-3, hitEnemy.def));
         activateMimic(hitEnemy);
-        applyDamage(hitEnemy, damage, hitEnemy.char);
-        addLog(`🏹が${hitEnemy.char}に命中！ ${damage}ダメージ！`);
+        applyDamage(hitEnemy, damage, "", false);
+        showDamagePopup(hitEnemy.x, hitEnemy.y, damage, "normal");
+        addLog(`🏹が${hitEnemy.char}に命中！`);
         if(hitEnemy.hp<=0) killEnemy(hitEnemy);
         render();
       } finally {
