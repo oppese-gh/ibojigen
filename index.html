@@ -1067,10 +1067,10 @@ async function toggleSound(){
       return SPRITES[itemKey] || SPRITES.star;
     };
 
-    function createItem(itemKey){
+    function createItem(itemKey, tier=0){
       const def = itemDefByKey(itemKey);
-      if(!def) return {key:itemKey, char:spriteForItemKey(itemKey)};
-      return {key:def.key, char:def.char, category:def.category, rarity:def.rarity, effectKey:def.effectKey, pickupMode:def.pickupMode || "inventory"};
+      if(!def) return {key:itemKey, char:spriteForItemKey(itemKey), tier};
+      return {key:def.key, char:def.char, category:def.category, rarity:def.rarity, effectKey:def.effectKey, pickupMode:def.pickupMode || "inventory", tier};
     }
 
     function placeItemAt(itemKey,x,y){
@@ -1108,11 +1108,11 @@ async function toggleSound(){
 
     function enemyPoolForFloor(){ return FLOOR_ENEMY_TABLES.find((row)=>state.floor>=row.min&&state.floor<=row.max).pool; }
 
-    function spawnEnemy(type,x,y){
+    function spawnEnemy(type,x,y,tier=0){
       const enemyKey = typeof type === "string" ? type : type?.key;
       const def = enemyDefByKey(enemyKey);
       if(!def) throw new Error(`Unknown enemy key: ${String(enemyKey)}`);
-      const tier = floorPowerTier();
+      const powerTier = floorPowerTier();
 
       // 後半のATK急上昇を抑える。
       // 以前は11階から実質的に強くなりすぎていたので、
@@ -1127,12 +1127,13 @@ async function toggleSound(){
         key:def.key,
         debugId: debugEnemyInstanceSeq++,
         char:def.char,
+        tier,
         exp:def.exp,
         score:def.score,
         dropRule:enemyDropRule(def),
-        hp: def.baseHp + tier * 3 + Math.floor(Math.max(0, state.floor - 5) / 2),
-        atk: def.baseAtk + Math.floor((tier + 3) / 2) + lateAtkBonus,
-        def: def.baseDef + Math.floor((tier + 2) / 4),
+        hp: def.baseHp + powerTier * 3 + Math.floor(Math.max(0, state.floor - 5) / 2),
+        atk: def.baseAtk + Math.floor((powerTier + 3) / 2) + lateAtkBonus,
+        def: def.baseDef + Math.floor((powerTier + 2) / 4),
         active:def.key!=="mimic"
       };
     }
