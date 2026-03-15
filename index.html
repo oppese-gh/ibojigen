@@ -1121,6 +1121,14 @@ async function toggleSound(){
         ? Math.floor((state.floor - 16) / 4) + 1
         : 0;
 
+      let hp = def.baseHp + powerTier * 3 + Math.floor(Math.max(0, state.floor - 5) / 2);
+      if(state.floor >= 12){
+        hp += Math.floor((state.floor - 12) / 3) + 1;
+      }
+      if(state.floor >= 20){
+        hp += Math.floor((state.floor - 20) / 2) + 3;
+      }
+
       return {
         x,
         y,
@@ -1131,7 +1139,7 @@ async function toggleSound(){
         exp:def.exp,
         score:def.score,
         dropRule:enemyDropRule(def),
-        hp: def.baseHp + powerTier * 3 + Math.floor(Math.max(0, state.floor - 5) / 2),
+        hp,
         atk: def.baseAtk + Math.floor((powerTier + 3) / 2) + lateAtkBonus,
         def: def.baseDef + Math.floor((powerTier + 2) / 4),
         active:def.key!=="mimic"
