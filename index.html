@@ -68,7 +68,14 @@
       will-change:transform, opacity;
     }
     .damage-normal { color:#fff; }
-    .damage-crit { color:#ffd84a; }
+    .damage-crit {
+      color:#ff9a2e;
+      font-size:1.4em;
+      font-weight:900;
+      text-shadow:
+        0 2px 0 rgba(0,0,0,.7),
+        0 0 6px rgba(255,140,0,.7);
+    }
     .damage-heal { color:#59e37f; }
     @keyframes damagePopup {
       0% { transform:translate(-50%, -15%); opacity:1; }
