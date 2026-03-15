@@ -79,7 +79,7 @@ async function startEndingReturnSequence(){
   render();
   await sleep(1000);
   if(!state.endingReturnStarted) return;
-  state.endingReturnStarVisible = true;
+  state.endingReturnStarVisible = state.bestUpdatedOnClear;
   render();
   await sleep(2000);
   if(!state.endingReturnStarted) return;
