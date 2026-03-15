@@ -579,6 +579,7 @@
       floor:1,map:[],rooms:[],enemies:[],items:[],floorObjects:[],floorEventType:"normal",ladder:{x:0,y:0},logs:[],revealed:false,seen:[],visibleNow:[],gameOver:false,gameClear:false,inputLocked:false,
       invSize:INITIAL_INV_SIZE,inventory:createEmptyInventory(INITIAL_INV_SIZE),bestScore:initialBestScore,bestScoreStarred:initialBestScoreStarred,bestName:initialBestName,playerName:initialPlayerName,editingName:false,nameInput:initialPlayerName,nameInputError:"",isComposingName:false,score:0,turns:0,
       floorHasShield:false,floorHasAxe:false,
+      // 今回のGAME CLEARでBEST更新したかを示す、エンディング演出専用の非永続フラグ。
       bossCleared:false,clearLadder:null,endingVisible:false,endingPhase:"hidden",endingStarted:false,bestUpdatedOnClear:false,
       endingReturnPromptVisible:false,endingReturnReady:false,endingReturnStarted:false,endingReturnStarVisible:false,
       kills:buildEmptyKillMap(),
@@ -887,12 +888,17 @@ async function toggleSound(){
     function finalizeScore(reasonText=""){
       state.score = calcScore();
       const didBestUpdate = state.score > state.bestScore;
-      if(reasonText === "GAME CLEAR") state.bestUpdatedOnClear = didBestUpdate;
+      const isGameClear = reasonText === "GAME CLEAR";
+
+      // 今回のGAME CLEARでBEST更新したか（エンディング演出用の一時フラグ）。
+      if(isGameClear) state.bestUpdatedOnClear = didBestUpdate;
       if(didBestUpdate){
         state.bestScore = state.score;
         state.bestName = playerName();
-        // BEST更新理由を保存して、再起動後も星付き表示を維持する。
-        state.bestScoreStarred = reasonText === "GAME CLEAR";
+
+        // GAME CLEARでBEST更新した場合のみ、BEST表示を星付きで永続化する。
+        state.bestScoreStarred = isGameClear;
+
         saveProfile();
         addLog(`新記録！ BEST ${state.bestScore} (${reasonText})`);
       }
