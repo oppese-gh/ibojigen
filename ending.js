@@ -51,12 +51,11 @@ function renderEndingOverlay(){
   else if(state.endingPhase === "title") endingContentEl.innerHTML = `<div class="ending-title">ぼじろーぐ 完</div>`;
   else if(state.endingPhase === "credits") endingContentEl.innerHTML = `<div class="ending-credits-wrap"><div class="ending-credits-roll">${ENDING_CREDITS_TEXT}</div></div>`;
   else if(state.endingPhase === "stats"){
-    const bestNameText = state.bestName;
     const kills = endingKillsText();
     endingContentEl.innerHTML = `<div class="ending-stats">FINAL SCORE
 
 SCORE   ${state.score}
-BEST    ${(state.bestUpdatedOnClear ? `⭐️${state.bestScore}⭐️` : state.bestScore)}(${bestNameText})
+BEST    ${bestScoreDisplayWithName()}
 FLOOR   ${state.floor}
 LEVEL   ${state.player.level}
 TURNS   ${state.turns}
@@ -84,7 +83,6 @@ async function startEndingReturnSequence(){
   render();
   await sleep(2000);
   if(!state.endingReturnStarted) return;
-  state.titleBestStar = state.bestUpdatedOnClear;
   restartGame();
 }
 
