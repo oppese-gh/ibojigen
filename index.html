@@ -6,7 +6,6 @@
   <title>ぼじろーぐ</title>
   <style>
     :root {
-      --bg:#111;
       --text:#f2f2f2;
       --accent:#7ad1ff;
       --line:#464646;
@@ -1534,9 +1533,6 @@ async function toggleSound(){
       const type = resolveDropType(rule);
       if(!type) return;
       if(placeItemAt(type,x,y)) addLog(`${spriteForItemKey(type)}が落ちた。`);
-    }
-    function dropItemFromTable(x,y,dropTable){
-      dropItemFromRule(x,y,{mode:DROP_MODE.POOL, pool:dropTable});
     }
     function dropItem(x,y,type){
       if(type){
