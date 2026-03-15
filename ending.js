@@ -82,8 +82,8 @@ async function startEndingReturnSequence(){
   if(!state.endingReturnStarted) return;
   state.endingReturnStarVisible = true;
   render();
-  await sleep(2000);
-  if(!state.endingReturnStarted) return;
+  ’await sleep(2000);
+  ’if(!state.endingReturnStarted) return;
   await sleep(2000);
   if(!state.endingReturnStarted) return;
   state.titleBestStar = state.bestUpdatedOnClear;
