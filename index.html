@@ -317,6 +317,7 @@
     const DEBUG_BUILD = true;
     const SOUND_STORAGE_KEY = "bojirogue_soundEnabled";
     const APP_VERSION = "build-#117";
+    let debugEnemyInstanceSeq = 1;
     const SPRITES = {
       player:"🧔", wall:"🧱", floor:".", ladder:"🪜", orb:"🟣", starBeam:"✨",
       dog:"🐕", wolf:"🐺", lion:"🦁", dragon:"🐉", ghost:"👻", zombie:"🧟", skull:"☠️", invader:"👾", spider:"🕷️", bat:"🦇", snake:"🐍", dino:"🦖", chick:"🐥", mimic:"🎁", rain:"🌧️", wizard:"🧙‍♂️", bossAsahiyama:"🌋",
@@ -993,10 +994,13 @@ async function toggleSound(){
       state.enemies = state.enemies.filter((enemy)=>enemy.key!=="bossAsahiyama");
       state.enemies.push(spawnEnemy("bossAsahiyama", bossX, bossY));
 
+      const bossList = state.enemies.filter((enemy)=>enemy.key==="bossAsahiyama");
       addLog("最深部にたどり着いた……");
       addLog("🌋あさひやまが、行く手を阻む！");
       addLog("[DEBUG] boss floor setup");
       addLog(`[DEBUG] enemy count: ${state.enemies.length}`);
+      addLog(`[DEBUG] boss count: ${bossList.length}`);
+      addLog(`[DEBUG] boss detail: ${bossList.map((boss)=>debugEnemyLabel(boss)).join(",") || "none"}`);
       addLog(`[DEBUG] boss pos: ${bossX},${bossY}`);
       addLog(`[DEBUG] player pos: ${state.player.x},${state.player.y}`);
       render();
@@ -1106,6 +1110,7 @@ async function toggleSound(){
         y,
         id:def.id,
         key:def.key,
+        debugId: debugEnemyInstanceSeq++,
         char:def.char,
         exp:def.exp,
         score:def.score,
@@ -1115,6 +1120,11 @@ async function toggleSound(){
         def: def.baseDef + Math.floor((tier + 2) / 4),
         active:def.key!=="mimic"
       };
+    }
+
+    function debugEnemyLabel(enemy){
+      if(!enemy) return "unknown";
+      return `${enemy.key}#${enemy.debugId ?? "no-id"}@(${enemy.x},${enemy.y})`;
     }
 
     function placeEnemies(multiplier=1){
@@ -1494,13 +1504,17 @@ async function toggleSound(){
     }
 
     function playerAttack(enemy){
+      const hpBefore = enemy.hp;
       const { damage, isCritical } = resolveAttackDamage(playerAtkValue(), enemy.def, false, 1);
       playSe("attack");
       activateMimic(enemy);
       applyDamage(enemy, damage, "", false);
+      const hpAfter = enemy.hp;
+      const isDead = enemy.hp<=0;
+      addLog(`[DEBUG] playerAttack target=${debugEnemyLabel(enemy)} key=${enemy.key} hpBefore=${hpBefore} damage=${damage} hpAfter=${hpAfter} dead=${isDead}`);
       showDamagePopup(enemy.x, enemy.y, damage, isCritical ? "crit" : "normal");
       render();
-      if(enemy.hp<=0) killEnemy(enemy);
+      if(isDead) killEnemy(enemy);
     }
 
     function maybeLevelUp(){
@@ -1553,7 +1567,15 @@ async function toggleSound(){
     }
 
     function killEnemy(enemy){
+      const beforeLen = state.enemies.length;
+      const beforeBoss = state.enemies.filter((e)=>e.key==="bossAsahiyama").map((e)=>debugEnemyLabel(e));
+      const existed = state.enemies.includes(enemy);
+      addLog(`[DEBUG] killEnemy enter target=${debugEnemyLabel(enemy)} existed=${existed} enemiesBefore=${beforeLen} bossBefore=${beforeBoss.join(",") || "none"}`);
       state.enemies = state.enemies.filter((e)=>e!==enemy);
+      const afterLen = state.enemies.length;
+      const afterBoss = state.enemies.filter((e)=>e.key==="bossAsahiyama").map((e)=>debugEnemyLabel(e));
+      const stillExists = state.enemies.includes(enemy);
+      addLog(`[DEBUG] killEnemy leave target=${debugEnemyLabel(enemy)} stillExists=${stillExists} enemiesAfter=${afterLen} bossAfter=${afterBoss.join(",") || "none"}`);
       const def = enemyDefFromInstance(enemy);
       const enemyKey = def?.key || enemy.key;
       if(enemyKey === "chick") addLog("🐥「たくましい子…」");
