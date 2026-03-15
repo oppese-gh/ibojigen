@@ -580,7 +580,7 @@
       invSize:INITIAL_INV_SIZE,inventory:createEmptyInventory(INITIAL_INV_SIZE),bestScore:initialBestScore,bestScoreStarred:initialBestScoreStarred,bestName:initialBestName,playerName:initialPlayerName,editingName:false,nameInput:initialPlayerName,nameInputError:"",isComposingName:false,score:0,turns:0,
       floorHasShield:false,floorHasAxe:false,
       bossCleared:false,clearLadder:null,endingVisible:false,endingPhase:"hidden",endingStarted:false,bestUpdatedOnClear:false,
-      endingReturnPromptVisible:false,endingReturnReady:false,endingReturnStarted:false,endingReturnStarVisible:false,titleBestStar:false,
+      endingReturnPromptVisible:false,endingReturnReady:false,endingReturnStarted:false,endingReturnStarVisible:false,
       kills:buildEmptyKillMap(),
       player:createInitialPlayer(),
       iboCooldown:0,starving:false,hungerLowNotified:false,
@@ -905,7 +905,6 @@ async function toggleSound(){
         state.bestScore = 0;
         state.bestScoreStarred = false;
         state.bestName = DEFAULT_PLAYER_NAME;
-        state.titleBestStar = false;
         state.bestUpdatedOnClear = false;
         saveProfile();
         localStorage.removeItem("bojirogue_bestScore");
