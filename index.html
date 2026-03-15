@@ -569,6 +569,7 @@
       savedProfile = null;
     }
     const initialBestScore = Number(savedProfile?.bestScore ?? localStorage.getItem("bojirogue_bestScore") ?? "0");
+    const initialBestScoreStarred = Boolean(savedProfile?.bestScoreStarred);
     const initialBestName = typeof savedProfile?.bestName === "string" && savedProfile.bestName.length > 0 ? savedProfile.bestName : DEFAULT_PLAYER_NAME;
     const initialPlayerName = typeof savedProfile?.playerName === "string" && savedProfile.playerName.length > 0 ? savedProfile.playerName : DEFAULT_PLAYER_NAME;
     const savedSoundEnabledRaw = savedProfile?.soundEnabled ?? localStorage.getItem(SOUND_STORAGE_KEY);
@@ -576,7 +577,7 @@
 
     const state = {
       floor:1,map:[],rooms:[],enemies:[],items:[],floorObjects:[],floorEventType:"normal",ladder:{x:0,y:0},logs:[],revealed:false,seen:[],visibleNow:[],gameOver:false,gameClear:false,inputLocked:false,
-      invSize:INITIAL_INV_SIZE,inventory:createEmptyInventory(INITIAL_INV_SIZE),bestScore:initialBestScore,bestName:initialBestName,playerName:initialPlayerName,editingName:false,nameInput:initialPlayerName,nameInputError:"",isComposingName:false,score:0,turns:0,
+      invSize:INITIAL_INV_SIZE,inventory:createEmptyInventory(INITIAL_INV_SIZE),bestScore:initialBestScore,bestScoreStarred:initialBestScoreStarred,bestName:initialBestName,playerName:initialPlayerName,editingName:false,nameInput:initialPlayerName,nameInputError:"",isComposingName:false,score:0,turns:0,
       floorHasShield:false,floorHasAxe:false,
       bossCleared:false,clearLadder:null,endingVisible:false,endingPhase:"hidden",endingStarted:false,bestUpdatedOnClear:false,
       endingReturnPromptVisible:false,endingReturnReady:false,endingReturnStarted:false,endingReturnStarVisible:false,titleBestStar:false,
@@ -595,6 +596,7 @@
     function saveProfile(){
       localStorage.setItem("bojirogue_profile", JSON.stringify({
         bestScore: state.bestScore,
+        bestScoreStarred: state.bestScoreStarred,
         bestName: state.bestName,
         playerName: state.playerName,
         soundEnabled: state.soundEnabled
@@ -604,6 +606,14 @@
     }
 
     function playerName(){ return state.playerName || DEFAULT_PLAYER_NAME; }
+
+    function bestScoreDisplayText(){
+      return state.bestScoreStarred ? `⭐️${state.bestScore}⭐️` : `${state.bestScore}`;
+    }
+
+    function bestScoreDisplayWithName(){
+      return `${bestScoreDisplayText()}(${state.bestName})`;
+    }
 
     function beginNameInputMode(){
       state.editingName = true;
@@ -879,15 +889,24 @@ async function toggleSound(){
       state.score = calcScore();
       const didBestUpdate = state.score > state.bestScore;
       if(reasonText === "GAME CLEAR") state.bestUpdatedOnClear = didBestUpdate;
-      if(didBestUpdate){ state.bestScore = state.score; state.bestName = playerName(); saveProfile(); addLog(`新記録！ BEST ${state.bestScore} (${reasonText})`); }
+      if(didBestUpdate){
+        state.bestScore = state.score;
+        state.bestName = playerName();
+        // BEST更新理由を保存して、再起動後も星付き表示を維持する。
+        state.bestScoreStarred = reasonText === "GAME CLEAR";
+        saveProfile();
+        addLog(`新記録！ BEST ${state.bestScore} (${reasonText})`);
+      }
       else addLog(`SCORE ${state.score} / BEST ${state.bestScore} (${reasonText})`);
     }
 
     function resetBestScore(){
       if(state.turns===0 || state.gameOver===true){
         state.bestScore = 0;
+        state.bestScoreStarred = false;
         state.bestName = DEFAULT_PLAYER_NAME;
         state.titleBestStar = false;
+        state.bestUpdatedOnClear = false;
         saveProfile();
         localStorage.removeItem("bojirogue_bestScore");
         addLog("ハイスコアをリセットした。");
@@ -1361,9 +1380,7 @@ async function toggleSound(){
     }
 
     function buildSystemInfoHtml(){
-      const bestNameText = state.bestName;
-      const bestScoreText = (state.bestUpdatedOnClear || state.titleBestStar) ? `⭐️${state.bestScore}⭐️` : `${state.bestScore}`;
-      const bestText = `${bestScoreText}(${bestNameText})`;
+      const bestText = bestScoreDisplayWithName();
       const debugStatus = DEBUG_BUILD
         ? `DEBUG_BUILD${state.debugMode ? " / DEBUG MODE ON" : ""}${state.debugFloorBuffer ? ` / JUMP: ${state.debugFloorBuffer}_` : ""}`
         : "RELEASE_BUILD";
@@ -2506,7 +2523,6 @@ async function openChest(floorObject){
       state.endingReturnReady = false;
       state.endingReturnStarted = false;
       state.endingReturnStarVisible = false;
-      state.titleBestStar = false;
       state.seen = createVisibilityGrid();
       state.visibleNow = createVisibilityGrid();
       state.kills = buildEmptyKillMap();
