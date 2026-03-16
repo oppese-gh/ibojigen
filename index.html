@@ -833,6 +833,7 @@ async function toggleSound(){
       logHistoryEl.innerHTML = "";
     }
     function addLog(message){ state.logs.unshift(message); if(state.logs.length>MAX_LOG) state.logs.pop(); renderLogs(); }
+    function addDebugLog(message){ if(!DEBUG_BUILD || !state.debugMode) return; addLog(message); }
     function updateHungerWarning(){
       const hungerRatio = state.player.hunger / state.player.hungerMax;
       if(hungerRatio >= 0.5){
@@ -1013,12 +1014,12 @@ async function toggleSound(){
       const bossList = state.enemies.filter((enemy)=>enemy.key==="bossAsahiyama");
       addLog("最深部にたどり着いた……");
       addLog("🌋あさひやまが、行く手を阻む！");
-      addLog("[DEBUG] boss floor setup");
-      addLog(`[DEBUG] enemy count: ${state.enemies.length}`);
-      addLog(`[DEBUG] boss count: ${bossList.length}`);
-      addLog(`[DEBUG] boss detail: ${bossList.map((boss)=>debugEnemyLabel(boss)).join(",") || "none"}`);
-      addLog(`[DEBUG] boss pos: ${bossX},${bossY}`);
-      addLog(`[DEBUG] player pos: ${state.player.x},${state.player.y}`);
+      addDebugLog("[DEBUG] boss floor setup");
+      addDebugLog(`[DEBUG] enemy count: ${state.enemies.length}`);
+      addDebugLog(`[DEBUG] boss count: ${bossList.length}`);
+      addDebugLog(`[DEBUG] boss detail: ${bossList.map((boss)=>debugEnemyLabel(boss)).join(",") || "none"}`);
+      addDebugLog(`[DEBUG] boss pos: ${bossX},${bossY}`);
+      addDebugLog(`[DEBUG] player pos: ${state.player.x},${state.player.y}`);
       render();
     }
 
@@ -1533,7 +1534,7 @@ async function toggleSound(){
       applyDamage(enemy, damage, "", false);
       const hpAfter = enemy.hp;
       const isDead = enemy.hp<=0;
-      addLog(`[DEBUG] playerAttack target=${debugEnemyLabel(enemy)} key=${enemy.key} hpBefore=${hpBefore} damage=${damage} hpAfter=${hpAfter} dead=${isDead}`);
+      addDebugLog(`[DEBUG] playerAttack target=${debugEnemyLabel(enemy)} key=${enemy.key} hpBefore=${hpBefore} damage=${damage} hpAfter=${hpAfter} dead=${isDead}`);
       showDamagePopup(enemy.x, enemy.y, damage, isCritical ? "crit" : "normal");
       render();
       if(isDead) killEnemy(enemy);
@@ -1592,12 +1593,12 @@ async function toggleSound(){
       const beforeLen = state.enemies.length;
       const beforeBoss = state.enemies.filter((e)=>e.key==="bossAsahiyama").map((e)=>debugEnemyLabel(e));
       const existed = state.enemies.includes(enemy);
-      addLog(`[DEBUG] killEnemy enter target=${debugEnemyLabel(enemy)} existed=${existed} enemiesBefore=${beforeLen} bossBefore=${beforeBoss.join(",") || "none"}`);
+      addDebugLog(`[DEBUG] killEnemy enter target=${debugEnemyLabel(enemy)} existed=${existed} enemiesBefore=${beforeLen} bossBefore=${beforeBoss.join(",") || "none"}`);
       state.enemies = state.enemies.filter((e)=>e!==enemy);
       const afterLen = state.enemies.length;
       const afterBoss = state.enemies.filter((e)=>e.key==="bossAsahiyama").map((e)=>debugEnemyLabel(e));
       const stillExists = state.enemies.includes(enemy);
-      addLog(`[DEBUG] killEnemy leave target=${debugEnemyLabel(enemy)} stillExists=${stillExists} enemiesAfter=${afterLen} bossAfter=${afterBoss.join(",") || "none"}`);
+      addDebugLog(`[DEBUG] killEnemy leave target=${debugEnemyLabel(enemy)} stillExists=${stillExists} enemiesAfter=${afterLen} bossAfter=${afterBoss.join(",") || "none"}`);
       const def = enemyDefFromInstance(enemy);
       const enemyKey = def?.key || enemy.key;
       if(enemyKey === "chick") addLog("🐥「たくましい子…」");
@@ -2400,20 +2401,20 @@ async function openChest(floorObject){
     function debugAdjustPlayer(label, adjuster){
       const changed = adjuster();
       if(!changed) return;
-      addLog(`[DEBUG] ${label}`);
+      addDebugLog(`[DEBUG] ${label}`);
       render();
     }
 
     function debugJumpToFloor(targetFloor){
       if(!Number.isInteger(targetFloor) || targetFloor < 1){
-        addLog(`[DEBUG] 無効な階指定: ${targetFloor}`);
+        addDebugLog(`[DEBUG] 無効な階指定: ${targetFloor}`);
         return;
       }
       // デバッグ時は現在の育成状態を維持して階層だけ飛ばす
       state.floor = targetFloor;
       state.blockedWallMoveKey = null;
       state.debugFloorBuffer = "";
-      addLog(`[DEBUG] 第${targetFloor}階へジャンプ`);
+      addDebugLog(`[DEBUG] 第${targetFloor}階へジャンプ`);
       setupFloor();
     }
 
@@ -2423,7 +2424,7 @@ async function openChest(floorObject){
   if(e.shiftKey && e.code === "KeyD"){
     state.debugMode = !state.debugMode;
     state.debugFloorBuffer = "";
-    addLog(`[DEBUG] 調整モード ${state.debugMode ? "ON" : "OFF"}`);
+    addDebugLog(`[DEBUG] 調整モード ${state.debugMode ? "ON" : "OFF"}`);
     render();
     return true;
   }
@@ -2434,14 +2435,14 @@ async function openChest(floorObject){
     const digit = e.code.slice(-1);
     state.debugFloorBuffer += digit;
     if(state.debugFloorBuffer.length === 1){
-      addLog(`[DEBUG] ジャンプ入力: ${state.debugFloorBuffer}_`);
+      addDebugLog(`[DEBUG] ジャンプ入力: ${state.debugFloorBuffer}_`);
       render();
       return true;
     }
     const targetFloor = Number.parseInt(state.debugFloorBuffer, 10);
     if(Number.isInteger(targetFloor) && targetFloor >= 1) debugJumpToFloor(targetFloor);
     else {
-      addLog(`[DEBUG] 無効なジャンプ入力: ${state.debugFloorBuffer}`);
+      addDebugLog(`[DEBUG] 無効なジャンプ入力: ${state.debugFloorBuffer}`);
       state.debugFloorBuffer = "";
       render();
     }
