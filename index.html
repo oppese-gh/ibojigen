@@ -325,23 +325,23 @@
     };
 
     const ENEMY_DEFS = [
-      {key:"dog",char:SPRITES.dog,tier:1,baseHp:6,baseAtk:2,baseDef:0,exp:1,score:10,dropRuleRef:"enemyCommon"},
-      {key:"bat",char:SPRITES.bat,tier:2,baseHp:8,baseAtk:3,baseDef:0,exp:2,score:20,dropRuleRef:"enemyCommon"},
-      {key:"wolf",char:SPRITES.wolf,tier:3,baseHp:10,baseAtk:4,baseDef:1,exp:3,score:35,dropRuleRef:"enemyCommon"},
-      {key:"lion",char:SPRITES.lion,tier:5,baseHp:12,baseAtk:6,baseDef:2,exp:5,score:60,dropRuleRef:"enemyCommon"},
-      {key:"dragon",char:SPRITES.dragon,tier:8,baseHp:20,baseAtk:8,baseDef:3,exp:10,score:120,dropRuleRef:"enemyCommon"},
-      {key:"ghost",char:SPRITES.ghost,tier:4,baseHp:12,baseAtk:4,baseDef:1,exp:6,score:70,dropRuleRef:"enemyCommon"},
-      {key:"zombie",char:SPRITES.zombie,tier:4,baseHp:13,baseAtk:4,baseDef:1,exp:5,score:45,dropRuleRef:"enemyCommon"},
-      {key:"skull",char:SPRITES.skull,tier:6,baseHp:15,baseAtk:5,baseDef:1,exp:7,score:80,dropRuleRef:"enemyCommon"},
-      {key:"invader",char:SPRITES.invader,tier:9,baseHp:18,baseAtk:8,baseDef:3,exp:15,score:160,dropRuleRef:"enemyCommon"},
-      {key:"spider",char:SPRITES.spider,tier:3,baseHp:7,baseAtk:4,baseDef:1,exp:3,score:30,dropRuleRef:"enemyCommon"},
-      {key:"chick",char:SPRITES.chick,tier:7,baseHp:100,baseAtk:0,baseDef:1,exp:50,score:0,dropRule:{mode:"none"}},
-      {key:"mimic",char:SPRITES.mimic,tier:7,baseHp:15,baseAtk:5,baseDef:2,exp:8,score:90,dropRule:{mode:"profile", ref:"mimicRare"},flags:["specialDrop"]},
-      {key:"rain",char:SPRITES.rain,tier:5,baseHp:15,baseAtk:1,baseDef:1,exp:5,score:55,dropRuleRef:"enemyCommon"},
-      {key:"wizard",char:SPRITES.wizard,tier:9,baseHp:12,baseAtk:8,baseDef:1,exp:14,score:150,dropRuleRef:"enemyCommon"},
-      {key:"snake",char:SPRITES.snake,tier:5,baseHp:13,baseAtk:6,baseDef:1,exp:5,score:50,dropRuleRef:"enemyCommon"},
-      {key:"dino",char:SPRITES.dino,tier:8,baseHp:25,baseAtk:9,baseDef:3,exp:9,score:105,dropRuleRef:"enemyCommon"},
-      {key:"bossAsahiyama",char:SPRITES.bossAsahiyama,tier:10,baseHp:250,baseAtk:12,baseDef:4,exp:100,score:1000,dropRule:{mode:"none"}}
+      {key:"dog",char:SPRITES.dog,tier:1,rarity:1,baseHp:6,baseAtk:2,baseDef:0,exp:1,score:10,dropRuleRef:"enemyCommon"},
+      {key:"bat",char:SPRITES.bat,tier:1,rarity:2,baseHp:8,baseAtk:3,baseDef:0,exp:2,score:20,dropRuleRef:"enemyCommon"},
+      {key:"wolf",char:SPRITES.wolf,tier:3,rarity:1,baseHp:10,baseAtk:4,baseDef:1,exp:3,score:35,dropRuleRef:"enemyCommon"},
+      {key:"spider",char:SPRITES.spider,tier:4,rarity:1,baseHp:7,baseAtk:4,baseDef:1,exp:3,score:30,dropRuleRef:"enemyCommon"},
+      {key:"ghost",char:SPRITES.ghost,tier:5,rarity:1,baseHp:12,baseAtk:4,baseDef:1,exp:6,score:70,dropRuleRef:"enemyCommon"},
+      {key:"zombie",char:SPRITES.zombie,tier:7,rarity:1,baseHp:16,baseAtk:3,baseDef:1,exp:5,score:45,dropRuleRef:"enemyCommon"},
+      {key:"skull",char:SPRITES.skull,tier:10,rarity:1,baseHp:15,baseAtk:5,baseDef:1,exp:7,score:80,dropRuleRef:"enemyCommon"},
+      {key:"rain",char:SPRITES.rain,tier:11,rarity:1,baseHp:15,baseAtk:1,baseDef:1,exp:5,score:55,dropRuleRef:"enemyCommon"},
+      {key:"lion",char:SPRITES.lion,tier:12,rarity:2,baseHp:12,baseAtk:6,baseDef:2,exp:5,score:60,dropRuleRef:"enemyCommon"},
+      {key:"snake",char:SPRITES.snake,tier:14,rarity:1,baseHp:13,baseAtk:6,baseDef:1,exp:5,score:50,dropRuleRef:"enemyCommon"},
+      {key:"dragon",char:SPRITES.dragon,tier:16,rarity:2,baseHp:20,baseAtk:8,baseDef:3,exp:10,score:120,dropRuleRef:"enemyCommon"},
+      {key:"chick",char:SPRITES.chick,tier:19,rarity:3,baseHp:100,baseAtk:0,baseDef:1,exp:50,score:0,dropRule:{mode:"none"}},
+      {key:"wizard",char:SPRITES.wizard,tier:20,rarity:1,baseHp:12,baseAtk:8,baseDef:1,exp:14,score:150,dropRuleRef:"enemyCommon"},
+      {key:"invader",char:SPRITES.invader,tier:23,rarity:3,baseHp:18,baseAtk:11,baseDef:3,exp:15,score:160,dropRuleRef:"enemyCommon"},
+      {key:"dino",char:SPRITES.dino,tier:26,rarity:1,baseHp:25,baseAtk:10,baseDef:3,exp:9,score:105,dropRuleRef:"enemyCommon"},
+      {key:"mimic",char:SPRITES.mimic,tier:5,rarity:5,baseHp:15,baseAtk:5,baseDef:2,exp:8,score:90,dropRule:{mode:"profile", ref:"mimicRare"},flags:["specialDrop"]},
+      {key:"bossAsahiyama",char:SPRITES.bossAsahiyama,tier:30,baseHp:250,baseAtk:12,baseDef:4,exp:100,score:1000,dropRule:{mode:"none"}}
     ];
 
     const ITEM_DEFS = [
