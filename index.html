@@ -1762,7 +1762,7 @@ async function openChest(floorObject){
         return {consumed:true,endTurn:true};
       },
       potion: async ()=>{
-        const heal = Math.ceil(state.player.maxHp * 0.12 + 10 + randInt(-2,2));
+        const heal = Math.ceil(state.player.maxHp * 0.25 + 10 + randInt(-2,2));
         state.player.hp=Math.min(state.player.maxHp,state.player.hp+heal);
         if(heal>0) showDamagePopup(state.player.x, state.player.y, `+${heal}`, "heal");
         addLog(`🧪を使った！ HP+${heal}`);
