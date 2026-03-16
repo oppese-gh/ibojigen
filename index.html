@@ -448,79 +448,6 @@
       }
     }
 
-    // 後半になるほど、強い敵が出現、ただし"chick"は,w:2 固定、mimicは、通常フロアには配置されない、30Fはモンスターのランダム配置なし。
-    const FLOOR_ENEMY_TABLES = [
-      {min:1,max:2,pool:[
-        {enemyKey:"dog",w:60},
-        {enemyKey:"bat",w:24},
-        {enemyKey:"wolf",w:28},
-        {enemyKey:"ghost",w:12}]},
-      {min:3,max:5,pool:[
-        {enemyKey:"dog",w:32},
-        {enemyKey:"bat",w:18},
-        {enemyKey:"wolf",w:30},
-        {enemyKey:"lion",w:16},
-        {enemyKey:"ghost",w:8},
-        {enemyKey:"spider",w:8}]},
-      {min:6,max:8,pool:[
-        {enemyKey:"wolf",w:28},
-        {enemyKey:"bat",w:10},
-        {enemyKey:"lion",w:22},
-        {enemyKey:"ghost",w:10},
-        {enemyKey:"zombie",w:12},
-        {enemyKey:"snake",w:12},
-        {enemyKey:"spider",w:7},
-        {enemyKey:"rain",w:5},
-        {enemyKey:"skull",w:5}]},
-      {min:9,max:14,pool:[
-        {enemyKey:"wolf",w:20},
-        {enemyKey:"lion",w:24},
-        {enemyKey:"bat",w:8},
-        {enemyKey:"dragon",w:10},
-        {enemyKey:"ghost",w:8},
-        {enemyKey:"zombie",w:14},
-        {enemyKey:"snake",w:14},
-        {enemyKey:"spider",w:8},
-        {enemyKey:"rain",w:6},
-        {enemyKey:"skull",w:4}]},
-      {min:15,max:19,pool:[
-        {enemyKey:"lion",w:22},
-        {enemyKey:"dragon",w:12},
-        {enemyKey:"ghost",w:8},
-        {enemyKey:"zombie",w:14},
-        {enemyKey:"snake",w:12},
-        {enemyKey:"spider",w:10},
-        {enemyKey:"rain",w:8},
-        {enemyKey:"skull",w:10},
-        {enemyKey:"chick",w:2}]},
-      {min:20,max:24,pool:[
-        {enemyKey:"lion",w:18},
-        {enemyKey:"dragon",w:13},
-        {enemyKey:"dino",w:10},
-        {enemyKey:"ghost",w:7},
-        {enemyKey:"zombie",w:12},
-        {enemyKey:"snake",w:10},
-        {enemyKey:"spider",w:8},
-        {enemyKey:"rain",w:7},
-        {enemyKey:"skull",w:14},
-        {enemyKey:"invader",w:8},
-        {enemyKey:"wizard",w:6},
-        {enemyKey:"chick",w:2}]},
-      {min:25,max:29,pool:[
-        {enemyKey:"lion",w:14},
-        {enemyKey:"dragon",w:15},
-        {enemyKey:"dino",w:16},
-        {enemyKey:"ghost",w:6},
-        {enemyKey:"zombie",w:10},
-        {enemyKey:"snake",w:8},
-        {enemyKey:"spider",w:6},
-        {enemyKey:"rain",w:6},
-        {enemyKey:"skull",w:12},
-        {enemyKey:"invader",w:10},
-        {enemyKey:"wizard",w:14},
-        {enemyKey:"chick",w:2}]}
-    ];
-
     const gameScreenEl = document.querySelector(".game-screen");
     const mapEl = document.getElementById("grid");
     const minimapEl = document.getElementById("minimap");
@@ -1110,7 +1037,21 @@ async function toggleSound(){
       return "normal";
     }
 
-    function enemyPoolForFloor(){ return FLOOR_ENEMY_TABLES.find((row)=>state.floor>=row.min&&state.floor<=row.max).pool; }
+    function rarityWeight(rarity=1){
+      const safeRarity = clamp(Math.floor(rarity || 1), 1, 5);
+      return 6 - safeRarity;
+    }
+
+    function enemyPoolForFloor(){
+      return ENEMY_DEFS
+        .filter((def)=>{
+          if(def.key === "mimic" || def.key === "bossAsahiyama") return false;
+          if(state.floor < def.tier) return false;
+          if(state.floor > def.tier + 10) return false;
+          return true;
+        })
+        .map((def)=>({enemyKey:def.key, w:rarityWeight(def.rarity)}));
+    }
 
     function spawnEnemy(type,x,y,tier=0){
       const enemyKey = typeof type === "string" ? type : type?.key;
@@ -1165,6 +1106,7 @@ async function toggleSound(){
 
       const count = (baseCount + floorBonus) * multiplier;
       const enemyPool = enemyPoolForFloor();
+      if(!enemyPool.length) return;
       let placed = 0;
 
       for(const p of pool){
@@ -1182,6 +1124,7 @@ async function toggleSound(){
     function placeExtraLadderRoomEnemy(ladderRoom, multiplier=1){
       if(!ladderRoom) return;
       const enemyPool = enemyPoolForFloor();
+      if(!enemyPool.length) return;
       const candidates=[];
       for(let y=Math.max(1,ladderRoom.y-1); y<=Math.min(HEIGHT-2, ladderRoom.y+ladderRoom.h); y++){
         for(let x=Math.max(1,ladderRoom.x-1); x<=Math.min(WIDTH-2, ladderRoom.x+ladderRoom.w); x++){
