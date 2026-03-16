@@ -1546,7 +1546,7 @@ async function toggleSound(){
         state.player.level += 1;
         let atkUp = randInt(0,1);
         let defUp = randInt(0,1);
-        const hpUp = randInt(2,3);
+        const hpUp = randInt(1,2);
         if(atkUp + defUp === 0){
           if(Math.random() < 0.5) atkUp = 1;
           else defUp = 1;
@@ -1555,12 +1555,13 @@ async function toggleSound(){
         state.player.baseAtk += atkUp;
         state.player.baseDef += defUp;
         state.player.maxHp += hpUp;
-        state.player.hp = state.player.maxHp;
+        const levelUpHeal = Math.floor(state.player.maxHp / 2);
+        state.player.hp = Math.min(state.player.maxHp, state.player.hp + levelUpHeal);
         state.player.iboChanceDenom = Math.max(
           state.player.iboChanceDenomMin,
           state.player.iboChanceDenom - iboRateUp
         );
-        addLog(`レベルアップ！ ATK+${atkUp} DEF+${defUp} MAXHP+${hpUp} イボ率 1/${state.player.iboChanceDenom}`);
+        addLog(`レベルアップ！ ATK+${atkUp} DEF+${defUp} MAXHP+${hpUp} HP+${levelUpHeal} イボ率 1/${state.player.iboChanceDenom}`);
         playSe("levelup");
       }
     }
