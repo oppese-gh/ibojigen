@@ -321,7 +321,7 @@
     const SPRITES = {
       player:"🧔", wall:"🧱", floor:".", ladder:"🪜", orb:"🟣", starBeam:"✨",
       dog:"🐕", wolf:"🐺", lion:"🦁", dragon:"🐉", ghost:"👻", zombie:"🧟", skull:"☠️", invader:"👾", spider:"🕷️", bat:"🦇", snake:"🐍", dino:"🦖", chick:"🐥", mimic:"🎁", rain:"🌧️", wizard:"🧙‍♂️", bossAsahiyama:"🌋",
-      food:"🍙", oden:"🍢", cake:"🍰", meat:"🥩", sushi:"🍣", feast:"🍖", potion:"🧪", map:"👁", shield:"🛡️", axe:"🪓", diamond:"💎", dagger:"🗡️", bow:"🏹", wand:"🪄", fire:"🔥", star:"🌟", sun:"🌤️", poop:"💩", bean:"🫘", scroll:"📜", asahiyama:"🏔️"
+      rice:"🍙", oden:"🍢", cake:"🍰", meat:"🥩", sushi:"🍣", feast:"🍖", potion:"🧪", map:"👁", shield:"🛡️", axe:"🪓", diamond:"💎", dagger:"🗡️", bow:"🏹", wand:"🪄", fire:"🔥", star:"🌟", sun:"🌤️", poop:"💩", bean:"🫘", scroll:"📜", asahiyama:"🏔️"
     };
 
     const ENEMY_DEFS = [
@@ -345,7 +345,7 @@
     ];
 
     const ITEM_DEFS = [
-      {key:"food",char:SPRITES.food,tier:1,category:"food",rarity:1,effectKey:"food",pickupMode:"inventory"},
+      {key:"rice",char:SPRITES.rice,tier:1,category:"food",rarity:1,effectKey:"rice",pickupMode:"inventory"},
       {key:"oden",char:SPRITES.oden,tier:1,category:"food",rarity:1,effectKey:"oden",pickupMode:"inventory"},
       {key:"cake",char:SPRITES.cake,tier:2,category:"food",rarity:1,effectKey:"cake",pickupMode:"inventory"},
       {key:"meat",char:SPRITES.meat,tier:2,category:"food",rarity:1,effectKey:"meat",pickupMode:"inventory"},
@@ -367,7 +367,10 @@
     ];
     const ITEM_DEF_BY_KEY = Object.fromEntries(ITEM_DEFS.map((d)=>[d.key,d]));
 
-    function itemDefByKey(key){ return ITEM_DEF_BY_KEY[key] || null; }
+    function itemDefByKey(key){
+      if(key==="food") return ITEM_DEF_BY_KEY.rice || null;
+      return ITEM_DEF_BY_KEY[key] || null;
+    }
     function itemKeyFromDropEntry(entry){
       if(!entry) return null;
       if(entry.key) return entry.key;
@@ -385,14 +388,14 @@
     const DROP_PROFILES = {
       // 旧テーブルをそのまま移植。重みは旧rate相当。
       floorCommon: normalizeDropPool([
-        {key:"food",weight:0.05}, {key:"oden",weight:0.05}, {key:"cake",weight:0.04}, {key:"meat",weight:0.13}, {key:"sushi",weight:0.12}, {key:"potion",weight:0.18},
+        {key:"rice",weight:0.05}, {key:"oden",weight:0.05}, {key:"cake",weight:0.04}, {key:"meat",weight:0.13}, {key:"sushi",weight:0.12}, {key:"potion",weight:0.18},
         {key:"map",weight:0.06}, {key:"sun",weight:0.06}, {key:"diamond",weight:0.05}, {key:"axe",weight:0.05},
         {key:"dagger",weight:0.05}, {key:"shield",weight:0.05}, {key:"scroll",weight:0.03}, {key:"feast",weight:0.05}, {key:"star",weight:0.02},
         {key:"bow",weight:0.02},
         {key:"poop",weight:0.04}
       ]),
       enemyCommon: normalizeDropPool([
-        {key:"food",weight:0.03}, {key:"oden",weight:0.05}, {key:"cake",weight:0.04}, {key:"meat",weight:0.11}, {key:"sushi",weight:0.10}, {key:"potion",weight:0.20},
+        {key:"rice",weight:0.03}, {key:"oden",weight:0.05}, {key:"cake",weight:0.04}, {key:"meat",weight:0.11}, {key:"sushi",weight:0.10}, {key:"potion",weight:0.20},
         {key:"map",weight:0.08}, {key:"sun",weight:0.05}, {key:"scroll",weight:0.03}, {key:"diamond",weight:0.035}, {key:"axe",weight:0.055},
         {key:"dagger",weight:0.04}, {key:"shield",weight:0.03}, {key:"feast",weight:0.03}, {key:"star",weight:0.02}, {key:"bow",weight:0.015},
         {key:"poop",weight:0.04}
@@ -1581,7 +1584,7 @@ async function toggleSound(){
       dropItemFromRule(x,y,ENEMY_DEFAULT_DROP_RULE);
     }
     function removeRandomFoodItem(){
-      const foodTypes = ["food","sushi","meat","feast"];
+      const foodTypes = ["rice","sushi","meat","feast"];
       const indexes = [];
       for(let i=0;i<state.inventory.length;i++) if(state.inventory[i] && foodTypes.includes(state.inventory[i].key)) indexes.push(i);
       if(!indexes.length) return false;
@@ -1780,7 +1783,7 @@ async function openChest(floorObject){
 
     // ===== Items =====
     const ITEM_EFFECTS = {
-      food: async ()=>{ state.player.hunger=Math.min(state.player.hungerMax,state.player.hunger+40); updateHungerWarning(); addLog("🍙を食べた！ 満腹+40"); return {consumed:true,endTurn:true}; },
+      rice: async ()=>{ state.player.hunger=Math.min(state.player.hungerMax,state.player.hunger+40); updateHungerWarning(); addLog("🍙を食べた！ 満腹+40"); return {consumed:true,endTurn:true}; },
       oden: async ()=>{ state.player.hunger=Math.min(state.player.hungerMax,state.player.hunger+45); updateHungerWarning(); addLog("🍢を食べた！ 満腹+45"); return {consumed:true,endTurn:true}; },
       cake: async ()=>{ state.player.hunger=Math.min(state.player.hungerMax,state.player.hunger+50); updateHungerWarning(); addLog("🍰を食べた！ 満腹+50"); return {consumed:true,endTurn:true}; },   
       meat: async ()=>{ state.player.hunger=Math.min(state.player.hungerMax,state.player.hunger+100); updateHungerWarning(); addLog("🥩を食べた！ 満腹+100"); return {consumed:true,endTurn:true}; },
