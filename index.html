@@ -1028,10 +1028,21 @@ async function toggleSound(){
 
     function floorPowerTier(){ if(state.floor<=2)return 0; if(state.floor<=4)return 1; if(state.floor<=6)return 2; if(state.floor<=8)return 3; if(state.floor<=10)return 4; return 5+Math.floor((state.floor-10)/2); }
 
-    function determineFloorEvent(){
+    function canTriggerAsahiyamaByStatus(){
       const hpLow = state.player.hp <= state.player.maxHp / 2;
       const hungerLow = state.player.hunger <= state.player.hungerMax / 2;
-      if(state.invSize < ASAHIYAMA_INV_SIZE && (hpLow || hungerLow || state.player.poison) && Math.random() < 0.5) return "asahiyama";
+      return hpLow || hungerLow || state.player.poison;
+    }
+
+    function determineFloorEvent(){
+      if(state.floor === 1) return "normal";
+
+      if(state.invSize < ASAHIYAMA_INV_SIZE){
+        const asahiyamaRoll = Math.random();
+        if(asahiyamaRoll < 0.1) return "asahiyama";
+        if(asahiyamaRoll < 0.3 && canTriggerAsahiyamaByStatus()) return "asahiyama";
+      }
+
       const inventoryFull = isInventoryFull();
       if(inventoryFull && Math.random() < 0.2) return "monsterHouse";
       return "normal";
