@@ -55,6 +55,23 @@
     #grid { position:relative; margin:0; display:grid; grid-template-columns:repeat(13,minmax(0,1fr)); grid-template-rows:repeat(13,minmax(0,1fr)); width:100%; height:100%; aspect-ratio:1/1; background:#0d0d0d; border:1px solid #4f4f4f; overflow:hidden; user-select:none; box-shadow:inset 0 0 22px rgba(0,0,0,.45); }
     #projectile-layer { position:absolute; inset:0; pointer-events:none; z-index:2; }
     #damage-popup-layer { position:absolute; inset:0; pointer-events:none; z-index:3; }
+    #gameover-overlay {
+      position:absolute;
+      inset:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:rgba(0,0,0,0.6);
+      color:#ff4d4f;
+      font-size:clamp(32px, 4vw, 64px);
+      font-weight:900;
+      letter-spacing:0.1em;
+      opacity:0;
+      pointer-events:none;
+      transition:opacity 0.3s ease;
+      z-index:10;
+    }
+    #gameover-overlay.show { opacity:1; }
     .projectile { position:absolute; display:flex; align-items:center; justify-content:center; text-align:center; }
     .damage-popup {
       position:absolute;
@@ -296,7 +313,9 @@
     <section id="region-main" class="region">
       <div class="panel game-main-panel">
         <div id="game-main-frame">
-          <div id="grid" aria-label="game map" role="img"></div>
+          <div id="grid" aria-label="game map" role="img">
+            <div id="gameover-overlay">GAME OVER</div>
+          </div>
         </div>
       </div>
     </section>
@@ -522,6 +541,7 @@
     const nameInputWrapEl = document.getElementById("name-input-wrap");
     const endingOverlayEl = document.getElementById("ending-overlay");
     const endingContentEl = document.getElementById("ending-content");
+    const gameOverOverlayEl = document.getElementById("gameover-overlay");
     const projectileLayer = document.createElement("div");
     const damagePopupLayer = document.createElement("div");
     const mapCellEls = [];
@@ -1380,6 +1400,7 @@ async function toggleSound(){
       mapEl.appendChild(fragment);
       mapEl.appendChild(projectileLayer);
       mapEl.appendChild(damagePopupLayer);
+      if(gameOverOverlayEl) mapEl.appendChild(gameOverOverlayEl);
     }
 
     function buildStatusHtml(){
@@ -1552,6 +1573,9 @@ async function toggleSound(){
       applySharedUiScale();
       if(nameInputWrapEl){
         nameInputWrapEl.classList.toggle("show", state.editingName);
+      }
+      if(gameOverOverlayEl){
+        gameOverOverlayEl.classList.toggle("show", state.gameOver === true);
       }
       renderEndingOverlay();
     }
