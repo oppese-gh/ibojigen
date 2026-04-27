@@ -61,17 +61,41 @@
       display:flex;
       align-items:center;
       justify-content:center;
-      background:rgba(0,0,0,0.6);
+      background:rgba(0,0,0,0.52);
+      opacity:0;
+      pointer-events:none;
+      transform:scale(0.96);
+      transition:opacity 0.45s ease, transform 0.45s ease;
+      z-index:10;
+    }
+    #gameover-overlay.show {
+      opacity:1;
+      transform:scale(1);
+    }
+    .gameover-text {
+      transform:translateY(-0.8em) scale(0.97);
       color:#ff4d4f;
       font-size:clamp(32px, 4vw, 64px);
       font-weight:900;
-      letter-spacing:0.1em;
-      opacity:0;
-      pointer-events:none;
-      transition:opacity 0.3s ease;
-      z-index:10;
+      letter-spacing:0.12em;
+      text-shadow:
+        0 0 8px rgba(255,0,0,0.7),
+        0 0 18px rgba(255,0,0,0.45),
+        0 3px 6px rgba(0,0,0,0.9);
+      animation:gameoverTextIn 0.45s ease both;
+      animation-play-state:paused;
     }
-    #gameover-overlay.show { opacity:1; }
+    #gameover-overlay.show .gameover-text { animation-play-state:running; }
+    @keyframes gameoverTextIn {
+      0% {
+        opacity:0;
+        transform:translateY(-0.8em) scale(0.92);
+      }
+      100% {
+        opacity:1;
+        transform:translateY(-0.8em) scale(1);
+      }
+    }
     .projectile { position:absolute; display:flex; align-items:center; justify-content:center; text-align:center; }
     .damage-popup {
       position:absolute;
@@ -314,7 +338,7 @@
       <div class="panel game-main-panel">
         <div id="game-main-frame">
           <div id="grid" aria-label="game map" role="img">
-            <div id="gameover-overlay">GAME OVER</div>
+            <div id="gameover-overlay"><div class="gameover-text">GAME OVER</div></div>
           </div>
         </div>
       </div>
