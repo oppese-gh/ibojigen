@@ -81,6 +81,9 @@
       100% { transform:translate(-50%, -85%); opacity:0; }
     }
     .cell { display:flex; align-items:center; justify-content:center; text-align:center; line-height:.92; letter-spacing:-0.01em; font-size:var(--cell-font-size,24px); font-family:var(--mono-font); }
+    .cell-hidden { opacity:0; }
+    .cell-seen { opacity:.7; }
+    .cell-visible { opacity:1; }
 
     #minimap-wrap { width:100%; height:100%; background:#0d0d0d; border:1px solid #555; padding:clamp(3px,0.34vw,7px); display:flex; align-items:center; justify-content:center; box-shadow:var(--panel-shadow); border-radius:4px; }
     #minimap { display:block; width:100%; height:100%; max-width:100%; max-height:100%; background:#070707; image-rendering:pixelated; }
@@ -465,6 +468,14 @@
     const endingContentEl = document.getElementById("ending-content");
     const projectileLayer = document.createElement("div");
     const damagePopupLayer = document.createElement("div");
+    const mapCellEls = [];
+    const mapCellStates = [];
+    const renderCache = {
+      latestLogHtml: "",
+      statusHtml: "",
+      systemInfoHtml: "",
+      itemSlotsHtml: ""
+    };
     if(versionEl) versionEl.textContent = APP_VERSION;
     projectileLayer.setAttribute("id", "projectile-layer");
     damagePopupLayer.setAttribute("id", "damage-popup-layer");
@@ -757,11 +768,13 @@ async function toggleSound(){
 
     function renderLogs(){
       const latest = state.logs.slice(0,3).reverse();
-      const blockHtml = (m)=>{
-        return `<div class="log-block"><div class="log-line">${String(m)}</div></div>`;
-      };
-      logLatestEl.innerHTML = latest.map((m)=>blockHtml(m)).join("");
-      logHistoryEl.innerHTML = "";
+      const blockHtml = (m)=>`<div class="log-block"><div class="log-line">${String(m)}</div></div>`;
+      const latestHtml = latest.map((m)=>blockHtml(m)).join("");
+      if(logLatestEl && latestHtml !== renderCache.latestLogHtml){
+        logLatestEl.innerHTML = latestHtml;
+        renderCache.latestLogHtml = latestHtml;
+      }
+      if(logHistoryEl && logHistoryEl.innerHTML !== "") logHistoryEl.innerHTML = "";
     }
     function addLog(message){ state.logs.unshift(message); if(state.logs.length>MAX_LOG) state.logs.pop(); renderLogs(); }
     function addDebugLog(message){ if(!DEBUG_BUILD || !state.debugMode) return; addLog(message); }
@@ -1296,22 +1309,24 @@ async function toggleSound(){
       };
     }
 
-    function buildMapHtml(){
-      const hasMap = state.map.length===HEIGHT;
-      if(!hasMap) return Array.from({length:CAMERA_SIZE*CAMERA_SIZE}, ()=>`<div class="cell"> </div>`).join("");
-      const cells=[];
-      const camera = getCameraOrigin();
-      for(let y=0;y<CAMERA_SIZE;y++){
-        for(let x=0;x<CAMERA_SIZE;x++){
-          const worldX = camera.x + x;
-          const worldY = camera.y + y;
-          const visibleNow = state.visibleNow[worldY][worldX];
-          const seen = state.seen[worldY][worldX];
-          const ch = getCellChar(worldX, worldY, visibleNow, seen, hasMap);
-          cells.push(`<div class="cell">${ch}</div>`);
-        }
+    function ensureMapGridCells(){
+      if(mapCellEls.length === CAMERA_SIZE * CAMERA_SIZE) return;
+      mapCellEls.length = 0;
+      mapCellStates.length = 0;
+      if(!mapEl) return;
+      mapEl.innerHTML = "";
+      const fragment = document.createDocumentFragment();
+      for(let i=0;i<CAMERA_SIZE*CAMERA_SIZE;i++){
+        const cell = document.createElement("div");
+        cell.className = "cell";
+        cell.textContent = " ";
+        mapCellEls.push(cell);
+        mapCellStates.push({char:" ", className:"cell", opacity:"1"});
+        fragment.appendChild(cell);
       }
-      return cells.join("");
+      mapEl.appendChild(fragment);
+      mapEl.appendChild(projectileLayer);
+      mapEl.appendChild(damagePopupLayer);
     }
 
     function buildStatusHtml(){
@@ -1364,7 +1379,6 @@ async function toggleSound(){
     }
 
     function renderMiniMap(){
-
       if(!minimapCtx) return;
       minimapCtx.clearRect(0,0,MINIMAP_SIZE,MINIMAP_SIZE);
       minimapCtx.fillStyle = "#070707";
@@ -1411,20 +1425,73 @@ async function toggleSound(){
       );
     }
 
-    function render(){
+    function renderMainMap(){
+      ensureMapGridCells();
+      const hasMap = state.map.length===HEIGHT;
       const camera = getCameraOrigin();
       state.prevCameraOrigin = camera;
-      state.score=calcScore(); updateSeen();
-      // map本体の再描画前にオーバーレイ層を一時退避し、描画後に復元する
-      const detachedProjectileLayer = mapEl.contains(projectileLayer) ? mapEl.removeChild(projectileLayer) : projectileLayer;
-      const detachedDamagePopupLayer = mapEl.contains(damagePopupLayer) ? mapEl.removeChild(damagePopupLayer) : damagePopupLayer;
-      mapEl.innerHTML=buildMapHtml();
-      mapEl.appendChild(detachedProjectileLayer);
-      mapEl.appendChild(detachedDamagePopupLayer);
+      let idx = 0;
+      for(let y=0;y<CAMERA_SIZE;y++){
+        for(let x=0;x<CAMERA_SIZE;x++){
+          const cellEl = mapCellEls[idx];
+          const worldX = camera.x + x;
+          const worldY = camera.y + y;
+          const visibleNow = hasMap ? state.visibleNow[worldY][worldX] : false;
+          const seen = hasMap ? state.seen[worldY][worldX] : false;
+          const ch = hasMap ? getCellChar(worldX, worldY, visibleNow, seen, hasMap) : " ";
+          const className = !seen ? "cell cell-hidden" : (visibleNow ? "cell cell-visible" : "cell cell-seen");
+          const opacity = !seen ? "0" : (visibleNow ? "1" : "0.7");
+          const prev = mapCellStates[idx];
+          if(prev.char !== ch){
+            cellEl.textContent = ch;
+            prev.char = ch;
+          }
+          if(prev.className !== className){
+            cellEl.className = className;
+            prev.className = className;
+          }
+          if(prev.opacity !== opacity){
+            cellEl.style.opacity = opacity;
+            prev.opacity = opacity;
+          }
+          idx += 1;
+        }
+      }
+    }
+
+    function renderStatus(){
+      if(!statusEl) return;
+      const html = buildStatusHtml();
+      if(html === renderCache.statusHtml) return;
+      statusEl.innerHTML = html;
+      renderCache.statusHtml = html;
+    }
+
+    function renderSystemInfo(){
+      if(!systemInfoEl) return;
+      const html = buildSystemInfoHtml();
+      if(html === renderCache.systemInfoHtml) return;
+      systemInfoEl.innerHTML = html;
+      renderCache.systemInfoHtml = html;
+    }
+
+    function renderItemSlots(){
+      if(!itemSlotsEl) return;
+      const html = buildItemSlotsHtml();
+      if(html === renderCache.itemSlotsHtml) return;
+      itemSlotsEl.innerHTML = html;
+      renderCache.itemSlotsHtml = html;
+    }
+
+    function render(){
+      state.score=calcScore();
+      updateSeen();
+      renderMainMap();
       renderMiniMap();
-      statusEl.innerHTML = buildStatusHtml();
-      if(systemInfoEl) systemInfoEl.innerHTML = buildSystemInfoHtml();
-      if(itemSlotsEl) itemSlotsEl.innerHTML = buildItemSlotsHtml();
+      renderStatus();
+      renderSystemInfo();
+      renderItemSlots();
+      renderLogs();
       applySharedUiScale();
       if(nameInputWrapEl){
         nameInputWrapEl.classList.toggle("show", state.editingName);
