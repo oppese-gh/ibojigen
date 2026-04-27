@@ -80,7 +80,63 @@
       0% { transform:translate(-50%, -15%); opacity:1; }
       100% { transform:translate(-50%, -85%); opacity:0; }
     }
-    .cell { display:flex; align-items:center; justify-content:center; text-align:center; line-height:.92; letter-spacing:-0.01em; font-size:var(--cell-font-size,24px); font-family:var(--mono-font); }
+    .cell {
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      text-align:center;
+      line-height:1;
+      letter-spacing:0;
+      font-size:var(--cell-font-size,24px);
+      font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",var(--mono-font);
+      overflow:hidden;
+      position:relative;
+      isolation:isolate;
+      text-rendering:optimizeLegibility;
+    }
+    .cell-floor {
+      background:
+        radial-gradient(circle at 20% 20%, rgba(255,255,255,.03), rgba(255,255,255,0) 35%),
+        linear-gradient(180deg, #141414, #0f0f0f);
+      color:#8c8c8c;
+    }
+    .cell-wall {
+      color:transparent;
+      background:
+        linear-gradient(0deg, rgba(0,0,0,.15), rgba(0,0,0,.15)),
+        repeating-linear-gradient(
+          0deg,
+          #8a4a38 0 20%,
+          #9a5643 20% 40%,
+          #7a4030 40% 60%,
+          #8b4a39 60% 80%,
+          #9a5643 80% 100%
+        );
+      box-shadow:
+        inset 0 0 0 1px rgba(0,0,0,.3),
+        inset 0 1px 0 rgba(255,255,255,.08),
+        inset 0 -1px 0 rgba(0,0,0,.35);
+    }
+    .cell-wall::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      background:
+        repeating-linear-gradient(
+          90deg,
+          rgba(0,0,0,0) 0 47%,
+          rgba(35,18,12,.65) 47% 53%,
+          rgba(0,0,0,0) 53% 100%
+        ),
+        repeating-linear-gradient(
+          0deg,
+          rgba(20,10,8,.6) 0 7%,
+          rgba(0,0,0,0) 7% 50%
+        );
+      opacity:.45;
+      pointer-events:none;
+      z-index:0;
+    }
     .cell-hidden { opacity:0; }
     .cell-seen { opacity:.7; }
     .cell-visible { opacity:1; }
@@ -1275,18 +1331,15 @@ async function toggleSound(){
     }
 
     // ===== Render / UI =====
-    function getCellChar(x, y, visibleNow, seen, hasMap){
+    function getCellSprite(x, y, visibleNow, seen, hasMap){
       if(!visibleNow && !seen) return " ";
-
-      let ch = hasMap && state.map[y] && state.map[y][x]===TILE_WALL ? SPRITES.wall : SPRITES.floor;
-      if(visibleNow){
-        if(state.ladder.x===x&&state.ladder.y===y) ch=SPRITES.ladder;
-        const it=itemAt(x,y); if(it) ch=it.char;
-        const floorObject=objectAt(x,y); if(floorObject) ch=floorObject.char;
-        const en=enemyAt(x,y); if(en) ch=en.char;
-      }
-      if(state.player.x===x&&state.player.y===y) ch=SPRITES.player;
-      return ch;
+      if(state.player.x===x&&state.player.y===y) return SPRITES.player;
+      if(!visibleNow) return " ";
+      if(state.ladder.x===x&&state.ladder.y===y) return SPRITES.ladder;
+      const it=itemAt(x,y); if(it) return it.char;
+      const floorObject=objectAt(x,y); if(floorObject) return floorObject.char;
+      const en=enemyAt(x,y); if(en) return en.char;
+      return hasMap && state.map[y] && state.map[y][x]===TILE_FLOOR ? SPRITES.floor : " ";
     }
 
     function getCameraOrigin(){
@@ -1438,8 +1491,12 @@ async function toggleSound(){
           const worldY = camera.y + y;
           const visibleNow = hasMap ? state.visibleNow[worldY][worldX] : false;
           const seen = hasMap ? state.seen[worldY][worldX] : false;
-          const ch = hasMap ? getCellChar(worldX, worldY, visibleNow, seen, hasMap) : " ";
-          const className = !seen ? "cell cell-hidden" : (visibleNow ? "cell cell-visible" : "cell cell-seen");
+          const tile = hasMap && state.map[worldY] ? state.map[worldY][worldX] : TILE_WALL;
+          const tileClass = tile===TILE_WALL ? "cell-wall" : "cell-floor";
+          const ch = hasMap ? getCellSprite(worldX, worldY, visibleNow, seen, hasMap) : " ";
+          const className = !seen
+            ? `cell ${tileClass} cell-hidden`
+            : (visibleNow ? `cell ${tileClass} cell-visible` : `cell ${tileClass} cell-seen`);
           const opacity = !seen ? "0" : (visibleNow ? "1" : "0.7");
           const prev = mapCellStates[idx];
           if(prev.char !== ch){
