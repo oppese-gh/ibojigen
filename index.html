@@ -135,6 +135,15 @@
       isolation:isolate;
       text-rendering:optimizeLegibility;
     }
+    .sprite-img {
+      display:block;
+      width:82%;
+      height:82%;
+      object-fit:contain;
+      image-rendering:auto;
+      pointer-events:none;
+      user-select:none;
+    }
     .cell-floor {
       background:
         radial-gradient(circle at 20% 20%, rgba(255,255,255,.03), rgba(255,255,255,0) 35%),
@@ -310,6 +319,7 @@
     @keyframes itemDropFlash { 0%{transform:scale(1.09);box-shadow:0 0 14px rgba(255,209,102,.7)} 100%{transform:scale(1);box-shadow:inset 0 0 0 1px rgba(255,255,255,.03)} }
     .item-slot .slot-key { color:#9fd2ff; font-size:clamp(10px, calc(var(--ui-scale) * 0.72rem), 14px); font-weight:700; line-height:1; }
     .item-slot .slot-item { font-size:clamp(28px, var(--slot-icon-size, calc(var(--ui-scale) * 2.5rem)), 60px); display:flex; align-items:center; justify-content:center; flex:1; width:100%; line-height:.92; padding:0; }
+    .item-slot .slot-item .sprite-img { width:86%; height:86%; }
     .item-slot.empty { border-style:dashed; color:#8f8f8f; }
 
     .line { margin:0; }
@@ -431,6 +441,52 @@
       player:"🧔", wall:"🧱", floor:".", ladder:"🪜", orb:"🟣", starBeam:"✨",
       dog:"🐕", wolf:"🐺", lion:"🦁", dragon:"🐉", ghost:"👻", zombie:"🧟", skull:"☠️", invader:"👾", spider:"🕷️", bat:"🦇", snake:"🐍", dino:"🦖", chick:"🐥", mimic:"🎁", rain:"🌧️", wizard:"🧙‍♂️", bossAsahiyama:"🌋",
       rice:"🍙", oden:"🍢", cake:"🍰", meat:"🥩", sushi:"🍣", feast:"🍖", potion:"🧪", pill:"💊", map:"👁", shield:"🛡️", axe:"🪓", diamond:"💎", dagger:"🗡️", bow:"🏹", wand:"🪄", fire:"🔥", star:"🌟", sun:"🌤️", poop:"💩", bean:"🫘", scroll:"📜", asahiyama:"🏔️"
+    };
+    const SPRITE_ASSETS = {
+      "🧔": "assets/noto-emoji/png/128/emoji_u1f9d4.png",
+      "🧱": "assets/noto-emoji/png/128/emoji_u1f9f1.png",
+      "🪜": "assets/noto-emoji/png/128/emoji_u1fa9c.png",
+      "🟣": "assets/noto-emoji/png/128/emoji_u1f7e3.png",
+      "✨": "assets/noto-emoji/png/128/emoji_u2728.png",
+      "🐕": "assets/noto-emoji/png/128/emoji_u1f415.png",
+      "🐺": "assets/noto-emoji/png/128/emoji_u1f43a.png",
+      "🦁": "assets/noto-emoji/png/128/emoji_u1f981.png",
+      "🐉": "assets/noto-emoji/png/128/emoji_u1f409.png",
+      "👻": "assets/noto-emoji/png/128/emoji_u1f47b.png",
+      "🧟": "assets/noto-emoji/png/128/emoji_u1f9df.png",
+      "☠️": "assets/noto-emoji/png/128/emoji_u2620_fe0f.png",
+      "👾": "assets/noto-emoji/png/128/emoji_u1f47e.png",
+      "🕷️": "assets/noto-emoji/png/128/emoji_u1f577_fe0f.png",
+      "🦇": "assets/noto-emoji/png/128/emoji_u1f987.png",
+      "🐍": "assets/noto-emoji/png/128/emoji_u1f40d.png",
+      "🦖": "assets/noto-emoji/png/128/emoji_u1f996.png",
+      "🐥": "assets/noto-emoji/png/128/emoji_u1f425.png",
+      "🎁": "assets/noto-emoji/png/128/emoji_u1f381.png",
+      "🌧️": "assets/noto-emoji/png/128/emoji_u1f327_fe0f.png",
+      "🧙‍♂️": "assets/noto-emoji/png/128/emoji_u1f9d9_200d_2642_fe0f.png",
+      "🌋": "assets/noto-emoji/png/128/emoji_u1f30b.png",
+      "🍙": "assets/noto-emoji/png/128/emoji_u1f359.png",
+      "🍢": "assets/noto-emoji/png/128/emoji_u1f362.png",
+      "🍰": "assets/noto-emoji/png/128/emoji_u1f370.png",
+      "🥩": "assets/noto-emoji/png/128/emoji_u1f969.png",
+      "🍣": "assets/noto-emoji/png/128/emoji_u1f363.png",
+      "🍖": "assets/noto-emoji/png/128/emoji_u1f356.png",
+      "🧪": "assets/noto-emoji/png/128/emoji_u1f9ea.png",
+      "💊": "assets/noto-emoji/png/128/emoji_u1f48a.png",
+      "👁": "assets/noto-emoji/png/128/emoji_u1f441.png",
+      "🛡️": "assets/noto-emoji/png/128/emoji_u1f6e1_fe0f.png",
+      "🪓": "assets/noto-emoji/png/128/emoji_u1fa93.png",
+      "💎": "assets/noto-emoji/png/128/emoji_u1f48e.png",
+      "🗡️": "assets/noto-emoji/png/128/emoji_u1f5e1_fe0f.png",
+      "🏹": "assets/noto-emoji/png/128/emoji_u1f3f9.png",
+      "🪄": "assets/noto-emoji/png/128/emoji_u1fa84.png",
+      "🔥": "assets/noto-emoji/png/128/emoji_u1f525.png",
+      "🌟": "assets/noto-emoji/png/128/emoji_u1f31f.png",
+      "🌤️": "assets/noto-emoji/png/128/emoji_u1f324_fe0f.png",
+      "💩": "assets/noto-emoji/png/128/emoji_u1f4a9.png",
+      "🫘": "assets/noto-emoji/png/128/emoji_u1fad8.png",
+      "📜": "assets/noto-emoji/png/128/emoji_u1f4dc.png",
+      "🏔️": "assets/noto-emoji/png/128/emoji_u1f3d4_fe0f.png"
     };
 
     const ENEMY_DEFS = [
@@ -733,6 +789,21 @@
     const clamp01 = (v) => Math.max(0, Math.min(1, v));
     const randInt = (min,max) => Math.floor(Math.random()*(max-min+1))+min;
     function shuffle(arr){for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]];}return arr;}
+    function escapeHtml(value){
+      return String(value).replace(/[&<>"']/g, (ch)=>({
+        "&":"&amp;",
+        "<":"&lt;",
+        ">":"&gt;",
+        '"':"&quot;",
+        "'":"&#39;"
+      }[ch]));
+    }
+    function spriteAsset(sprite){ return SPRITE_ASSETS[sprite] || ""; }
+    function spriteMarkup(sprite, className = "sprite-img"){
+      const src = spriteAsset(sprite);
+      if(!src) return escapeHtml(sprite);
+      return `<img class="${className}" src="${src}" alt="${escapeHtml(sprite)}" draggable="false">`;
+    }
     const expToNextLevel = (level = state.player.level) => level * 3;
     const calcDamage = (atk,def) => Math.max(1, atk - Math.floor(def * 0.6) + randInt(-1,1));
     // base + floor buff を最終ステータスとして扱う
@@ -1426,7 +1497,7 @@ async function toggleSound(){
         cell.className = "cell";
         cell.textContent = " ";
         mapCellEls.push(cell);
-        mapCellStates.push({char:" ", className:"cell", opacity:"1"});
+        mapCellStates.push({content:" ", className:"cell", opacity:"1"});
         fragment.appendChild(cell);
       }
       mapEl.appendChild(fragment);
@@ -1477,7 +1548,7 @@ async function toggleSound(){
       const visibleSlotCount = Math.max(0, Math.min(state.invSize, 6));
       return Array.from({length:visibleSlotCount}, (_,idx)=>{
         const slot = state.inventory[idx];
-        const itemText = slot ? slot.char : "▢";
+        const itemText = slot ? spriteMarkup(slot.char) : "▢";
         const keyText = `${idx+1}`;
         const emptyClass = slot ? "" : " empty";
         return `<div class="item-slot${emptyClass}" data-slot-index="${idx}"><div class="slot-key">${keyText}</div><div class="slot-item">${itemText}</div></div>`;
@@ -1552,9 +1623,10 @@ async function toggleSound(){
             : (visibleNow ? `cell ${tileClass} cell-visible` : `cell ${tileClass} cell-seen`);
           const opacity = !seen ? "0" : (visibleNow ? "1" : "0.7");
           const prev = mapCellStates[idx];
-          if(prev.char !== ch){
-            cellEl.textContent = ch;
-            prev.char = ch;
+          const content = spriteMarkup(ch);
+          if(prev.content !== content){
+            cellEl.innerHTML = content;
+            prev.content = content;
           }
           if(prev.className !== className){
             cellEl.className = className;
