@@ -52,7 +52,8 @@
 
     .game-main-panel { padding:clamp(2px,0.2vw,4px); display:flex; align-items:center; justify-content:center; }
     #game-main-frame { width:100%; height:100%; aspect-ratio:1/1; max-width:100%; max-height:100%; display:flex; }
-    #grid { position:relative; margin:0; display:grid; grid-template-columns:repeat(13,minmax(0,1fr)); grid-template-rows:repeat(13,minmax(0,1fr)); width:100%; height:100%; aspect-ratio:1/1; background:#0d0d0d; border:1px solid #4f4f4f; overflow:hidden; user-select:none; box-shadow:inset 0 0 22px rgba(0,0,0,.45); }
+    #grid { position:relative; margin:0; display:block; width:100%; height:100%; aspect-ratio:1/1; background:#0d0d0d; border:1px solid #4f4f4f; overflow:hidden; user-select:none; box-shadow:inset 0 0 22px rgba(0,0,0,.45); }
+    #map-cell-layer { position:absolute; left:0; top:0; z-index:1; display:grid; grid-template-columns:repeat(var(--map-render-size, 15), minmax(0,1fr)); grid-template-rows:repeat(var(--map-render-size, 15), minmax(0,1fr)); width:calc(100% * var(--map-render-size, 15) / var(--camera-size, 13)); height:calc(100% * var(--map-render-size, 15) / var(--camera-size, 13)); will-change:transform; }
     #projectile-layer { position:absolute; inset:0; pointer-events:none; z-index:2; }
     #damage-popup-layer { position:absolute; inset:0; pointer-events:none; z-index:3; }
     #gameover-overlay {
@@ -420,6 +421,8 @@
     const HEIGHT = MAP_H;
     const CAMERA_SIZE = 13;
     const CAMERA_HALF = Math.floor(CAMERA_SIZE / 2);
+    const MAP_RENDER_PAD = 1;
+    const MAP_RENDER_SIZE = CAMERA_SIZE + MAP_RENDER_PAD * 2;
     const MAX_LOG = 100;
     const TILE_WALL = "#";
     const TILE_FLOOR = ".";
@@ -629,6 +632,7 @@
     const endingOverlayEl = document.getElementById("ending-overlay");
     const endingContentEl = document.getElementById("ending-content");
     const gameOverOverlayEl = document.getElementById("gameover-overlay");
+    const mapCellLayer = document.createElement("div");
     const projectileLayer = document.createElement("div");
     const damagePopupLayer = document.createElement("div");
     const mapCellEls = [];
@@ -640,6 +644,7 @@
       itemSlotsHtml: ""
     };
     if(versionEl) versionEl.textContent = APP_VERSION;
+    mapCellLayer.setAttribute("id", "map-cell-layer");
     projectileLayer.setAttribute("id", "projectile-layer");
     damagePopupLayer.setAttribute("id", "damage-popup-layer");
 
@@ -1062,6 +1067,7 @@ async function toggleSound(){
     }
 
     function setupFloor(){
+      state.prevCameraOrigin = null;
       if(state.floor===30){
         setupBossFloor();
         return;
@@ -1486,13 +1492,16 @@ async function toggleSound(){
     }
 
     function ensureMapGridCells(){
-      if(mapCellEls.length === CAMERA_SIZE * CAMERA_SIZE) return;
+      if(mapCellEls.length === MAP_RENDER_SIZE * MAP_RENDER_SIZE) return;
       mapCellEls.length = 0;
       mapCellStates.length = 0;
       if(!mapEl) return;
       mapEl.innerHTML = "";
+      mapEl.style.setProperty("--camera-size", CAMERA_SIZE);
+      mapEl.style.setProperty("--map-render-size", MAP_RENDER_SIZE);
+      mapCellLayer.innerHTML = "";
       const fragment = document.createDocumentFragment();
-      for(let i=0;i<CAMERA_SIZE*CAMERA_SIZE;i++){
+      for(let i=0;i<MAP_RENDER_SIZE*MAP_RENDER_SIZE;i++){
         const cell = document.createElement("div");
         cell.className = "cell";
         cell.textContent = " ";
@@ -1500,7 +1509,8 @@ async function toggleSound(){
         mapCellStates.push({content:" ", className:"cell", opacity:"1"});
         fragment.appendChild(cell);
       }
-      mapEl.appendChild(fragment);
+      mapCellLayer.appendChild(fragment);
+      mapEl.appendChild(mapCellLayer);
       mapEl.appendChild(projectileLayer);
       mapEl.appendChild(damagePopupLayer);
       if(gameOverOverlayEl) mapEl.appendChild(gameOverOverlayEl);
@@ -1602,22 +1612,57 @@ async function toggleSound(){
       );
     }
 
+    function mapLayerBaseTransform(extraX = 0, extraY = 0){
+      if(!mapEl) return "translate(0, 0)";
+      const {cell} = getGridMetrics();
+      const x = -MAP_RENDER_PAD * cell + extraX;
+      const y = -MAP_RENDER_PAD * cell + extraY;
+      return `translate(${x}px, ${y}px)`;
+    }
+
+    function updateMapLayerBaseTransform(){
+      mapCellLayer.style.transition = "";
+      mapCellLayer.style.transform = mapLayerBaseTransform();
+    }
+
+    function animateMapScroll(prevCamera, camera){
+      if(!prevCamera || !camera || !mapEl) {
+        updateMapLayerBaseTransform();
+        return;
+      }
+      const dx = camera.x - prevCamera.x;
+      const dy = camera.y - prevCamera.y;
+      if(dx===0 && dy===0){
+        updateMapLayerBaseTransform();
+        return;
+      }
+      const {cell} = getGridMetrics();
+      mapCellLayer.style.transition = "none";
+      mapCellLayer.style.transform = mapLayerBaseTransform(dx * cell, dy * cell);
+      mapCellLayer.getBoundingClientRect();
+      requestAnimationFrame(()=>{
+        mapCellLayer.style.transition = "transform 120ms cubic-bezier(.2,.8,.2,1)";
+        mapCellLayer.style.transform = mapLayerBaseTransform();
+      });
+    }
+
     function renderMainMap(){
       ensureMapGridCells();
       const hasMap = state.map.length===HEIGHT;
       const camera = getCameraOrigin();
-      state.prevCameraOrigin = camera;
+      const prevCamera = state.prevCameraOrigin;
       let idx = 0;
-      for(let y=0;y<CAMERA_SIZE;y++){
-        for(let x=0;x<CAMERA_SIZE;x++){
+      for(let y=0;y<MAP_RENDER_SIZE;y++){
+        for(let x=0;x<MAP_RENDER_SIZE;x++){
           const cellEl = mapCellEls[idx];
-          const worldX = camera.x + x;
-          const worldY = camera.y + y;
-          const visibleNow = hasMap ? state.visibleNow[worldY][worldX] : false;
-          const seen = hasMap ? state.seen[worldY][worldX] : false;
-          const tile = hasMap && state.map[worldY] ? state.map[worldY][worldX] : TILE_WALL;
+          const worldX = camera.x + x - MAP_RENDER_PAD;
+          const worldY = camera.y + y - MAP_RENDER_PAD;
+          const inBounds = worldX>=0 && worldX<WIDTH && worldY>=0 && worldY<HEIGHT;
+          const visibleNow = hasMap && inBounds ? state.visibleNow[worldY][worldX] : false;
+          const seen = hasMap && inBounds ? state.seen[worldY][worldX] : false;
+          const tile = hasMap && inBounds && state.map[worldY] ? state.map[worldY][worldX] : TILE_WALL;
           const tileClass = tile===TILE_WALL ? "cell-wall" : "cell-floor";
-          const ch = hasMap ? getCellSprite(worldX, worldY, visibleNow, seen, hasMap) : " ";
+          const ch = hasMap && inBounds ? getCellSprite(worldX, worldY, visibleNow, seen, hasMap) : " ";
           const className = !seen
             ? `cell ${tileClass} cell-hidden`
             : (visibleNow ? `cell ${tileClass} cell-visible` : `cell ${tileClass} cell-seen`);
@@ -1639,6 +1684,8 @@ async function toggleSound(){
           idx += 1;
         }
       }
+      animateMapScroll(prevCamera, camera);
+      state.prevCameraOrigin = camera;
     }
 
     function renderStatus(){
@@ -2803,6 +2850,7 @@ async function openChest(floorObject){
 
     window.addEventListener("resize", () => {
       applySharedUiScale();
+      updateMapLayerBaseTransform();
       renderMiniMap();
     });
 
